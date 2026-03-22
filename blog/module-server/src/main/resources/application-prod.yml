@@ -1,0 +1,130 @@
+app:
+  url: ${APP_URL:https://blog.fxmarkbrown.top}
+
+server:
+  port: ${SERVER_PORT:8800}
+spring:
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+  datasource:
+    url: ${BLOG_DB_URL:jdbc:postgresql://127.0.0.1:5432/blog?currentSchema=public}
+    driver-class-name: org.postgresql.Driver
+    username: ${BLOG_DB_USERNAME:}
+    password: ${BLOG_DB_PASSWORD:}
+  data:
+    redis:
+      host: ${BLOG_REDIS_HOST:127.0.0.1}
+      port: ${BLOG_REDIS_PORT:6379}
+      timeout: ${BLOG_REDIS_TIMEOUT:3000}
+      database: ${BLOG_REDIS_DATABASE:8}
+
+blog:
+  ai:
+    enabled: true
+    max-history-messages: 8
+    max-article-context-chars: 6000
+    chat:
+      default-model-id: glm5
+      default-temperature: 0.4
+      models:
+        glm5:
+          label: GLM 5
+          provider: siliconflow
+          model: Pro/zai-org/GLM-5
+          temperature: 0.4
+          quota-multiplier: 1.0
+    embedding:
+      provider: siliconflow
+      model: Qwen/Qwen3-Embedding-8B
+    rerank:
+      enabled: true
+      provider: siliconflow
+      model: Qwen/Qwen3-Reranker-8B
+      timeout-millis: 15000
+    providers:
+      siliconflow:
+        base-url: ${BLOG_AI_SILICONFLOW_BASE_URL:https://api.siliconflow.cn}
+        api-key: ${BLOG_AI_SILICONFLOW_API_KEY:}
+    vector-store:
+      provider: qdrant
+      qdrant:
+        host: ${BLOG_QDRANT_HOST:127.0.0.1}
+        port: ${BLOG_QDRANT_PORT:6334}
+        use-tls: ${BLOG_QDRANT_USE_TLS:false}
+        collection-name: ${BLOG_QDRANT_COLLECTION_NAME:blog_markdown_chunk}
+        initialize-schema: ${BLOG_QDRANT_INITIALIZE_SCHEMA:true}
+    rag:
+      enabled: true
+      index-published-only: true
+      sync-on-startup: true
+      top-k: 6
+      similarity-threshold: 0.45
+      article-similarity-threshold: 0.42
+      global-similarity-threshold: 0.50
+      max-chunk-chars: 900
+      max-context-chars: 5000
+      rerank-fetch-top-k: 16
+      merge-adjacent-chunks: true
+      merge-max-gap: 1
+      merge-max-chars: 1800
+      article-supplement-enabled: true
+      article-own-min-top-k: 4
+      article-supplement-top-k: 2
+      article-recall-top-k: 14
+      global-recall-top-k: 18
+      short-query-threshold: 18
+      short-query-recall-boost: 6
+      global-max-chunks-per-article: 2
+
+
+#==============================knife4j配置==============================
+knife4j:
+  enable: ${BLOG_KNIFE4J_ENABLE:true}
+  basic:
+    enable: ${BLOG_KNIFE4J_BASIC_ENABLE:true}
+    username: ${BLOG_KNIFE4J_USERNAME:admin}
+    password: ${BLOG_KNIFE4J_PASSWORD:change-me}
+
+#==============================公众号配置==============================
+wechat:
+  app-id: ${BLOG_WECHAT_APP_ID:}
+  # 公众号AppSecret
+  secret: ${BLOG_WECHAT_SECRET:}
+  # 公众号Token
+  token: ${BLOG_WECHAT_TOKEN:}
+  # 公众号AES Key
+  aesKey: ${BLOG_WECHAT_AES_KEY:}
+
+  appletAppId: ${BLOG_WECHAT_APPLET_APP_ID:}
+  appletSecret: ${BLOG_WECHAT_APPLET_SECRET:}
+
+#==============================邮箱配置=======================================
+mail:
+  smtp:
+    host: ${BLOG_MAIL_SMTP_HOST:smtp.163.com}
+    port: ${BLOG_MAIL_SMTP_PORT:25}
+    email: ${BLOG_MAIL_SMTP_EMAIL:}
+    password: ${BLOG_MAIL_SMTP_PASSWORD:}
+
+#============================第三方登录配置信息===================================
+qq:
+  app-id: ${BLOG_QQ_APP_ID:}
+  app-secret: ${BLOG_QQ_APP_SECRET:}
+  redirect-url: ${app.url}/api/auth/callback/qq
+
+weibo:
+  app-id: ${BLOG_WEIBO_APP_ID:}
+  app-secret: ${BLOG_WEIBO_APP_SECRET:}
+  redirect-url: ${app.url}/api/auth/callback/weibo
+
+gitee:
+  app-id: ${BLOG_GITEE_APP_ID:}
+  app-secret: ${BLOG_GITEE_APP_SECRET:}
+  redirect-url: ${app.url}/api/auth/callback/gitee
+
+github:
+  app-id: ${BLOG_GITHUB_APP_ID:}
+  app-secret: ${BLOG_GITHUB_APP_SECRET:}
+  redirect-url: ${app.url}/api/auth/callback/github

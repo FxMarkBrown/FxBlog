@@ -1,0 +1,18 @@
+dependencies {
+    api(libs.mybatis.plus.starter)
+    api(libs.mybatis.plus.jsqlparser)
+    api(libs.sa.token.starter)
+    api(libs.sa.token.redis)
+    api(libs.knife4j.starter)
+    api(libs.ip2region)
+    api(libs.oshi)
+    api(libs.user.agent)
+    api(libs.spring.boot.starter.web)
+    api(libs.spring.boot.starter.validation)
+    api(libs.spring.boot.starter.aspectj)
+    api(libs.spring.boot.starter.data.redis)
+    api(libs.spring.boot.starter.mail)
+    api(libs.spring.boot.starter.cache)
+    api(libs.commons.pool2)
+    runtimeOnly(libs.postgresql)
+}

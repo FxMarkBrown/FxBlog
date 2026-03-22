@@ -1,0 +1,99 @@
+# =========================
+# 通用系统与编辑器垃圾
+# =========================
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+.idea/
+.vscode/
+.fleet/
+.history/
+
+*.iml
+*.ipr
+*.iws
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+*~
+
+# =========================
+# 日志与运行时输出
+# =========================
+logs/
+**/logs/
+*.log
+*.out
+*.err
+hs_err_pid*
+replay_pid*
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# =========================
+# Java / Gradle
+# =========================
+.gradle/
+**/.gradle/
+**/build/
+**/out/
+**/target/
+!**/gradle/wrapper/gradle-wrapper.jar
+
+# =========================
+# Node / 前端构建产物
+# =========================
+**/node_modules/
+**/dist/
+**/dist-ssr/
+**/.nuxt/
+**/.output/
+**/.data/
+**/.nitro/
+**/.cache/
+**/.turbo/
+**/.vite/
+**/coverage/
+**/.eslintcache
+**/stats.html
+**/pnpm-lock.yaml
+
+# =========================
+# 本地环境与敏感配置副本
+# =========================
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env*.example
+**/.env.production
+**/env.production
+**/backend-env.txt
+
+*.local
+.envrc
+.direnv/
+
+# =========================
+# Python / 脚本缓存
+# =========================
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# =========================
+# 临时文件
+# =========================
+tmp/
+temp/
+**/tmp/
+**/temp/
