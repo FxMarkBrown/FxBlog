@@ -8,6 +8,7 @@ import { favoriteArticleApi, getArticleDetailApi, likeArticleApi, unlikeArticleA
 import ArticleShareCard from '@/components/ArticleShareCard/index.vue'
 import Comment from '@/components/Comment/index.vue'
 import ImagePreview from '@/components/Common/ImagePreview.vue'
+import { usePageSeo } from '@/composables/useSeo'
 import type { ArticleDetail } from '@/types/article'
 import { unwrapResponseData } from '@/utils/response'
 
@@ -51,20 +52,15 @@ const canonicalUrl = computed(() => `${runtimeConfig.public.siteUrl}/post/${arti
 const currentUrl = computed(() => (import.meta.client ? window.location.href : canonicalUrl.value))
 const categoryName = computed(() => String(article.value?.category?.name || article.value?.categoryName || '未分类'))
 
-useSeoMeta({
+usePageSeo({
   title: () => article.value?.title ? `${article.value.title} - ${siteName.value}` : '文章详情',
   description: () => articleSummary.value,
-  ogTitle: () => article.value?.title ? `${article.value.title} - ${siteName.value}` : '文章详情',
-  ogDescription: () => articleSummary.value
+  path: () => `/post/${articleId.value}`,
+  image: () => String(article.value?.cover || siteStore.websiteInfo.logo || runtimeConfig.public.seoImage || ''),
+  type: 'article'
 })
 
 useHead(() => ({
-  link: [
-    {
-      rel: 'canonical',
-      href: canonicalUrl.value
-    }
-  ],
   script: article.value
     ? [
         {

@@ -2,6 +2,7 @@
 import { ElMessage } from 'element-plus'
 import { getAlbumDetailApi, getAlbumPhotosApi, verifyAlbumPasswordApi } from '@/api/album'
 import ImagePreview from '@/components/Common/ImagePreview.vue'
+import { usePageSeo } from '@/composables/useSeo'
 import type { AlbumPhoto, AlbumSummary } from '@/types/article'
 import { IMAGE_ERROR_PLACEHOLDER } from '@/utils/placeholders'
 import { unwrapResponseData } from '@/utils/response'
@@ -44,9 +45,11 @@ const isAuthenticated = ref(false)
 const pageTitle = computed(() => (album.name ? `${album.name} - 相册` : '相册详情'))
 const pageDescription = computed(() => album.description || '浏览相册照片')
 
-useSeoMeta({
+usePageSeo({
   title: () => pageTitle.value,
-  description: () => pageDescription.value
+  description: () => pageDescription.value,
+  path: () => `/photos/${albumId.value}`,
+  image: () => String(album.cover || '')
 })
 
 await checkAlbumAuth()

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { getCategoriesApi } from '@/api/article'
 import Sidebar from '@/components/Sidebar/index.vue'
+import { usePageSeo } from '@/composables/useSeo'
 import type { ArticleCategoryGroup, ArticleSummary } from '@/types/article'
 import { unwrapResponseData } from '@/utils/response'
 
@@ -14,7 +15,7 @@ const visibleCategories = reactive<Record<string, boolean>>({})
 let scrollFrame = 0
 let categoryObserver: IntersectionObserver | null = null
 
-useSeoMeta({
+usePageSeo({
   title: () => `分类 - ${runtimeConfig.public.siteName}`,
   description: '按分类查看文章列表'
 })

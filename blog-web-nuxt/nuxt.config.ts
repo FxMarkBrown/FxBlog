@@ -62,6 +62,10 @@ function readEnvValue(key: string, fallback: string) {
 }
 
 const apiServer = readEnvValue('NUXT_API_BASE_SERVER', 'http://127.0.0.1:8800')
+const siteUrl = readEnvValue('NUXT_PUBLIC_SITE_URL', 'http://localhost:3000')
+const siteName = readEnvValue('NUXT_PUBLIC_SITE_NAME', 'Open Source Blog')
+const siteDescription = readEnvValue('NUXT_PUBLIC_SITE_DESCRIPTION', '个人知识库与生活博客')
+const seoImage = readEnvValue('NUXT_PUBLIC_SEO_IMAGE', '/favicon.ico')
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
@@ -133,8 +137,10 @@ export default defineNuxtConfig({
     apiBaseServer: apiServer,
     public: {
       apiBase: readEnvValue('NUXT_PUBLIC_API_BASE', '/'),
-      siteUrl: readEnvValue('NUXT_PUBLIC_SITE_URL', 'http://localhost:3000'),
-      siteName: readEnvValue('NUXT_PUBLIC_SITE_NAME', 'Open Source Blog'),
+      siteUrl,
+      siteName,
+      siteDescription,
+      seoImage,
       recordNum: readEnvValue('NUXT_PUBLIC_RECORD_NUM', ''),
       adminUrl: readEnvValue('NUXT_PUBLIC_ADMIN_URL', 'http://localhost:3001')
     }
@@ -149,10 +155,43 @@ export default defineNuxtConfig({
       : {},
   app: {
     head: {
+      title: siteName,
       htmlAttrs: {
         lang: 'zh-CN'
       },
-      viewport: 'width=device-width, initial-scale=1'
+      viewport: 'width=device-width, initial-scale=1',
+      link: [
+        {
+          rel: 'icon',
+          href: '/favicon.ico'
+        }
+      ],
+      meta: [
+        {
+          name: 'description',
+          content: siteDescription
+        },
+        {
+          property: 'og:site_name',
+          content: siteName
+        },
+        {
+          property: 'og:type',
+          content: 'website'
+        },
+        {
+          property: 'og:image',
+          content: seoImage
+        },
+        {
+          name: 'twitter:card',
+          content: 'summary_large_image'
+        },
+        {
+          name: 'twitter:image',
+          content: seoImage
+        }
+      ]
     }
   }
 })

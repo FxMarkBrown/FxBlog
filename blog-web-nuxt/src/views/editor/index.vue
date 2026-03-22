@@ -6,6 +6,7 @@ import { createArticleApi, getArticleInfoApi, updateArticleApi } from '@/api/art
 import { getDictDataApi } from '@/api/dict'
 import { uploadFileApi } from '@/api/file'
 import { getCategoriesApi, getTagsApi } from '@/api/tags'
+import { useNoIndexSeo } from '@/composables/useSeo'
 import type { ArticleDetail, TagSummary } from '@/types/article'
 import { unwrapResponseData } from '@/utils/response'
 
@@ -88,7 +89,7 @@ const rules = reactive<FormRules>({
   ]
 })
 
-useSeoMeta({
+useNoIndexSeo({
   title: () => (articleForm.id ? '编辑文章' : '写文章'),
   description: '博客文章编辑页'
 })

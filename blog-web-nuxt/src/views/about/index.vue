@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import ImagePreview from '@/components/Common/ImagePreview.vue'
+import { usePageSeo } from '@/composables/useSeo'
 
 interface PreviewHandlerItem {
   image: HTMLImageElement
@@ -13,7 +14,7 @@ const previewHandlers = ref<PreviewHandlerItem[]>([])
 
 const aboutContent = computed(() => String(siteStore.websiteInfo.aboutMe || ''))
 
-useSeoMeta({
+usePageSeo({
   title: '关于',
   description: '关于页面'
 })

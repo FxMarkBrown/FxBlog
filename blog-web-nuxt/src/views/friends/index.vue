@@ -2,6 +2,7 @@
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { applyFriendApi, getFriendsApi } from '@/api/friends'
+import { usePageSeo } from '@/composables/useSeo'
 import type { FriendApplyPayload, FriendItem } from '@/types/article'
 import { IMAGE_ERROR_PLACEHOLDER } from '@/utils/placeholders'
 import { unwrapResponseData } from '@/utils/response'
@@ -42,7 +43,7 @@ const siteName = computed(() => String(siteStore.websiteInfo.name || siteStore.w
 const siteSummary = computed(() => String(siteStore.websiteInfo.summary || siteStore.websiteInfo.description || '与优秀的人同行，分享技术与生活'))
 const siteUrl = computed(() => String(siteStore.websiteInfo.webUrl || ''))
 
-useSeoMeta({
+usePageSeo({
   title: () => `友链 - ${runtimeConfig.public.siteName}`,
   description: '与优秀的人同行，分享技术与生活'
 })

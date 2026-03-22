@@ -12,6 +12,7 @@ import {
   registerApi,
   sendEmailCodeApi
 } from '@/api/auth'
+import { useNoIndexSeo } from '@/composables/useSeo'
 import LoginParticles from '@/views/login/components/LoginParticles.vue'
 import SliderVerify from '@/views/login/components/SliderVerify.vue'
 import { WECHAT_QR_PLACEHOLDER } from '@/utils/placeholders'
@@ -137,7 +138,7 @@ const switchFormTooltip = computed(() => {
   return hasWechatLogin.value ? '扫码登录' : '第三方登录'
 })
 
-useSeoMeta({
+useNoIndexSeo({
   title: '登录',
   description: '登录页面'
 })

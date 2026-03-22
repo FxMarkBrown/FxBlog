@@ -22,6 +22,7 @@ import {
   updatePasswordApi,
   updateProfileApi
 } from '@/api/user'
+import { useNoIndexSeo } from '@/composables/useSeo'
 import { unwrapResponseData } from '@/utils/response'
 
 type AnyRecord = Record<string, any>
@@ -153,7 +154,7 @@ const feedbackRules = reactive<FormRules>({
   email: [{ type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }]
 })
 
-useSeoMeta({
+useNoIndexSeo({
   title: '个人中心',
   description: '个人中心'
 })

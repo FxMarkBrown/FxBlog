@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
 import { getAlbumListApi } from '@/api/album'
+import { usePageSeo } from '@/composables/useSeo'
 import type { AlbumSummary } from '@/types/article'
 import { IMAGE_ERROR_PLACEHOLDER } from '@/utils/placeholders'
 import { unwrapResponseData } from '@/utils/response'
@@ -9,7 +10,7 @@ const router = useRouter()
 const runtimeConfig = useRuntimeConfig()
 const albums = ref<Array<AlbumSummary & { id: number | string; name: string; description: string; cover: string; photoNum: number; isLock: number }>>([])
 
-useSeoMeta({
+usePageSeo({
   title: () => `相册 - ${runtimeConfig.public.siteName}`,
   description: '每一张照片都是生活中美好的一次记忆'
 })

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { getArchivesApi } from '@/api/article'
 import Sidebar from '@/components/Sidebar/index.vue'
+import { usePageSeo } from '@/composables/useSeo'
 import type { ArchiveGroup, ArticleSummary } from '@/types/article'
 import { unwrapResponseData } from '@/utils/response'
 
@@ -13,7 +14,7 @@ const visibleYears = reactive<Record<string, boolean>>({})
 const yearGroupElements = new Map<string, HTMLElement>()
 let yearObserver: IntersectionObserver | null = null
 
-useSeoMeta({
+usePageSeo({
   title: () => `归档 - ${runtimeConfig.public.siteName}`,
   description: '文章归档列表'
 })

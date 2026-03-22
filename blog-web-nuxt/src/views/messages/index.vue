@@ -3,6 +3,7 @@ import { ElMessage } from 'element-plus'
 import VueDanmaku from 'vue-danmaku'
 import 'vue-danmaku/style.css'
 import { addMessageApi, getMessagesApi } from '@/api/message'
+import { usePageSeo } from '@/composables/useSeo'
 import type { MessageItem } from '@/types/article'
 import { unwrapResponseData } from '@/utils/response'
 
@@ -20,7 +21,7 @@ const barrageList = ref<MessageItem[]>([])
 const currentUser = computed(() => authStore.userInfo)
 const touristAvatar = computed(() => String(siteStore.websiteInfo.touristAvatar || siteStore.websiteInfo.authorAvatar || siteStore.websiteInfo.profileAvatar || ''))
 
-useSeoMeta({
+usePageSeo({
   title: () => `留言 - ${runtimeConfig.public.siteName}`,
   description: '留言板'
 })

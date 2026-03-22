@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { getMomentsApi } from '@/api/moments'
 import ImagePreview from '@/components/Common/ImagePreview.vue'
+import { usePageSeo } from '@/composables/useSeo'
 import type { MomentSummary } from '@/types/article'
 import type { PageResult } from '@/types/common'
 import { IMAGE_ERROR_PLACEHOLDER } from '@/utils/placeholders'
@@ -26,7 +27,7 @@ const params = reactive({
   pageSize: 10
 })
 
-useSeoMeta({
+usePageSeo({
   title: () => `说说 - ${runtimeConfig.public.siteName}`,
   description: '查看最新说说动态'
 })

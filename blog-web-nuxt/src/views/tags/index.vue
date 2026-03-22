@@ -3,6 +3,7 @@ import { getArticlesApi } from '@/api/article'
 import { getTagsApi } from '@/api/tags'
 import ArticleList from '@/components/ArticleList/index.vue'
 import Sidebar from '@/components/Sidebar/index.vue'
+import { usePageSeo } from '@/composables/useSeo'
 import type { ArticleSummary, TagSummary } from '@/types/article'
 import type { PageResult } from '@/types/common'
 import { unwrapResponseData } from '@/utils/response'
@@ -22,7 +23,7 @@ const params = reactive({
   tagId: null as string | number | null
 })
 
-useSeoMeta({
+usePageSeo({
   title: () => `标签 - ${runtimeConfig.public.siteName}`,
   description: '按标签查看文章列表'
 })

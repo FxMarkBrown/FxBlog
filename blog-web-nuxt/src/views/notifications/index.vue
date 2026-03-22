@@ -7,6 +7,7 @@ import {
   markAllNotificationsAsReadApi,
   markNotificationAsReadApi
 } from '@/api/message'
+import { useNoIndexSeo } from '@/composables/useSeo'
 import type { NotificationItem } from '@/types/article'
 import { formatTime } from '@/utils/time'
 import { unwrapResponseData } from '@/utils/response'
@@ -42,7 +43,7 @@ const categories = ref<NotificationCategory[]>(createDefaultCategories())
 const currentCategoryName = computed(() => categories.value.find((item) => item.type === currentCategory.value)?.name || '全部消息')
 const hasUnread = computed(() => notifications.value.some((item) => !item.isRead))
 
-useSeoMeta({
+useNoIndexSeo({
   title: '通知',
   description: '通知中心'
 })

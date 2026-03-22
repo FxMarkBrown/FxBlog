@@ -2,6 +2,7 @@
 import { getAllCategoriesApi, getArticlesApi, getCarouselArticlesApi } from '@/api/article'
 import ArticleList from '@/components/ArticleList/index.vue'
 import Sidebar from '@/components/Sidebar/index.vue'
+import { usePageSeo } from '@/composables/useSeo'
 import type { ArticleSummary } from '@/types/article'
 import type { PageResult } from '@/types/common'
 import { unwrapResponseData } from '@/utils/response'
@@ -29,11 +30,10 @@ const defaultCategory = {
 }
 const categories = ref<Array<{ id: string | number; name: string; icon: string }>>([{ ...defaultCategory }])
 
-useSeoMeta({
+usePageSeo({
   title: () => `${siteStore.websiteInfo.name || siteStore.websiteInfo.title || runtimeConfig.public.siteName}`,
   description: () => siteStore.websiteInfo.summary || siteStore.websiteInfo.description || '个人知识库',
-  ogTitle: () => `${siteStore.websiteInfo.name || siteStore.websiteInfo.title || runtimeConfig.public.siteName}`,
-  ogDescription: () => siteStore.websiteInfo.summary || siteStore.websiteInfo.description || '个人知识库'
+  image: () => String(siteStore.websiteInfo.logo || runtimeConfig.public.seoImage || '')
 })
 
 await Promise.all([getArticleList(), getCarouselArticles(), getAllCategories()])

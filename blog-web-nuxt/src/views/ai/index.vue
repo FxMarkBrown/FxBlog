@@ -14,6 +14,7 @@ import {
   renameConversationApi,
   streamConversationMessageApi
 } from '@/api/ai'
+import { useNoIndexSeo } from '@/composables/useSeo'
 import { removeToken } from '@/utils/cookie'
 import { getThemeMode, initTheme, setThemeMode } from '@/utils/theme'
 import { unwrapResponseData } from '@/utils/response'
@@ -106,7 +107,7 @@ const selectedModelOption = computed(() => chatModels.value.find((item) => item.
 const composerHint = computed(() => (isArticleMode.value ? '支持文章上下文、工具查询与流式回复' : '支持全站问答、工具调用与流式回复'))
 const canSend = computed(() => Boolean(conversationId.value && messageDraft.value.trim() && !sending.value && !bootstrapping.value))
 
-useSeoMeta({
+useNoIndexSeo({
   title: () => `AI对话 - ${runtimeConfig.public.siteName}`,
   description: '站内 AI 对话中心'
 })
@@ -493,7 +494,7 @@ function repairCollapsedMarkdownBlocks(content: string) {
     .replace(new RegExp(`([：:。！？!?])\\s*(?=${blockStartPattern})`, 'g'), '$1\n')
     .replace(/([A-Za-z\u4e00-\u9fa5）】》])(?=\d+\.\s+)/g, '$1\n')
     .replace(/([A-Za-z0-9\u4e00-\u9fa5）】》])(?=#{1,6}\s+)/g, '$1\n')
-    .replace(new RegExp(`([^\\n])\\s+(?=(?:>\\s+|#{1,6}\\s+))`, 'g'), '$1\n')
+    .replace(new RegExp(`([^\n])\s+(?=>\s+|#{1,6}\s+)`, 'g'), '$1\n')
 
   const normalizedLines = repaired.split('\n').flatMap((line) => {
     if (!line || !line.trim()) {
