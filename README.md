@@ -14,6 +14,7 @@
 ![Vite](https://img.shields.io/badge/Vite-8.0.0-646CFF?logo=vite&logoColor=white)
 
 ![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)
+![Codacy Badge](https://api.codacy.com/project/badge/Grade/5452bac245a94ba6899786194e064830)
 
 
 `FxBlog` 是我的新[个人博客](https://blog.fxmarkbrown.top)网站项目，它是我面向新一轮架构升级整理的博客工程，包含博客后端、后台管理端以及新的 Nuxt 前台门户。
