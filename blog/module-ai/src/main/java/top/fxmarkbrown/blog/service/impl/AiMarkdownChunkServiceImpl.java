@@ -19,6 +19,8 @@ public class AiMarkdownChunkServiceImpl implements AiMarkdownChunkService {
     private static final Pattern LIST_PATTERN = Pattern.compile("^\\s*([-*+]|\\d+\\.)\\s+.+$");
     private static final Pattern IMAGE_PATTERN = Pattern.compile("^!\\[[^]]*]\\(([^)]+)\\)\\s*$");
     private static final Pattern TABLE_ROW_PATTERN = Pattern.compile("^\\s*\\|.*\\|\\s*$");
+    private static final Pattern ALIGN_BLOCK_OPEN_PATTERN = Pattern.compile("^\\s*:::\\s*align-(left|right|center)\\s*$");
+    private static final Pattern ALIGN_BLOCK_CLOSE_PATTERN = Pattern.compile("^\\s*:::\\s*$");
     private static final Pattern BOLD_ITALIC_PATTERN = Pattern.compile("\\*\\*\\*([^*]+?)\\*\\*\\*|___([^_]+?)___");
     private static final Pattern BOLD_PATTERN = Pattern.compile("\\*\\*([^*]+?)\\*\\*|__([^_]+?)__");
     private static final Pattern STRIKE_PATTERN = Pattern.compile("~~(.+?)~~");
@@ -53,6 +55,7 @@ public class AiMarkdownChunkServiceImpl implements AiMarkdownChunkService {
         boolean inMathBlock = false;
         boolean inTableBlock = false;
         boolean inHtmlBlock = false;
+        boolean inAlignBlock = false;
 
         String[] lines = content.replace("\r\n", "\n").replace('\r', '\n').split("\n", -1);
         for (String line : lines) {
@@ -68,6 +71,24 @@ public class AiMarkdownChunkServiceImpl implements AiMarkdownChunkService {
                 flushSpecialBlock(chunks, blockBuffer, headingStack, currentHeadingLevel[0], currentBlockType[0], chunkOrder);
                 currentHeadingLevel[0] = headingMatcher.group(1).length();
                 updateHeadingStack(headingStack, currentHeadingLevel[0], headingMatcher.group(2).trim());
+                continue;
+            }
+
+            Matcher alignMatcher = ALIGN_BLOCK_OPEN_PATTERN.matcher(line);
+            if (!inFencedCode && !inMathBlock && !inTableBlock && !inHtmlBlock && !inAlignBlock && alignMatcher.matches()) {
+                flushParagraphBlock(chunks, paragraphBuffer, headingStack, currentHeadingLevel[0], chunkOrder);
+                currentBlockType[0] = "align-" + alignMatcher.group(1);
+                inAlignBlock = true;
+                continue;
+            }
+            if (inAlignBlock) {
+                if (ALIGN_BLOCK_CLOSE_PATTERN.matcher(line).matches()) {
+                    inAlignBlock = false;
+                    flushSpecialBlock(chunks, blockBuffer, headingStack, currentHeadingLevel[0], currentBlockType[0], chunkOrder);
+                    currentBlockType[0] = "paragraph";
+                } else {
+                    blockBuffer.add(line);
+                }
                 continue;
             }
 
@@ -202,6 +223,12 @@ public class AiMarkdownChunkServiceImpl implements AiMarkdownChunkService {
         if (!StringUtils.hasText(text)) {
             return;
         }
+        if (blockType.startsWith("align-")) {
+            text = normalizeAlignBlockContent(text);
+            if (!StringUtils.hasText(text)) {
+                return;
+            }
+        }
         addChunk(chunks, chunkOrder, headingStack, headingLevel, blockType, text);
     }
 
@@ -277,6 +304,10 @@ public class AiMarkdownChunkServiceImpl implements AiMarkdownChunkService {
         normalized = STRIKE_PATTERN.matcher(normalized).replaceAll(matchResult ->
                 "删除内容：" + matchResult.group(1));
         return normalized;
+    }
+
+    private String normalizeAlignBlockContent(String text) {
+        return text == null ? "" : text.trim();
     }
 
     private String firstNotBlank(String first, String second) {

@@ -37,7 +37,15 @@ interface DictItem {
 }
 
 interface MarkdownEditorExpose {
+  focus: () => void
   getHtml: () => string
+  getSelectedText: () => string | undefined
+  insert: (generator: (selectedText: string) => {
+    targetValue: string
+    select?: boolean
+    deviationStart?: number
+    deviationEnd?: number
+  }) => void
 }
 
 const MarkdownEditor = defineAsyncComponent(() => import('@/components/Common/MarkdownEditor.vue'))
@@ -418,6 +426,7 @@ async function handleCoverUpload(event: Event) {
 function removeCover() {
   articleForm.cover = ''
 }
+
 </script>
 
 <template>
@@ -465,7 +474,7 @@ function removeCover() {
           </div>
 
           <div class="content-card flex-card">
-            <ElFormItem label="文章内容" prop="contentMd" class="mb-20">
+            <ElFormItem prop="contentMd" class="mb-20">
               <MarkdownEditor
                 ref="mdRef"
                 v-model="articleForm.contentMd"
@@ -685,6 +694,7 @@ function removeCover() {
   .cover-preview:hover .cover-actions {
     opacity: 1;
   }
+
 }
 
 .editor-sidebar {
@@ -785,7 +795,6 @@ function removeCover() {
       width: 100% !important;
       height: 120px;
     }
-
     :deep(.el-form-item),
     :deep(.el-form-item__content),
     :deep(.el-input),

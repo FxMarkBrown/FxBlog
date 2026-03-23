@@ -22,23 +22,51 @@
       @onUploadImg="handleUploadImg"
       @onHtmlChanged="handleHtmlChanged"
     >
-      <template v-if="enableVideoInsert" #defToolbars>
-        <el-dropdown
-          trigger="hover"
-          placement="bottom-start"
-          :popper-class="videoDropdownPopperClass"
-          @command="handleVideoMenuSelect"
-        >
-          <button type="button" class="md-editor-toolbar-item video-toolbar-button" title="插入视频" aria-label="插入视频">
-            <VideoPlay class="video-toolbar-button__icon" />
-          </button>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="upload">上传视频</el-dropdown-item>
-              <el-dropdown-item command="link">添加视频地址</el-dropdown-item>
-            </el-dropdown-menu>
+      <template #defToolbars>
+        <DropdownToolbar title="插入对齐块" :visible="alignDropdownVisible" @on-change="handleAlignDropdownChange">
+          <template #default>
+            <i class="fas fa-align-center custom-toolbar-icon"></i>
           </template>
-        </el-dropdown>
+
+          <template #overlay>
+            <ul class="md-editor-menu" @click="alignDropdownVisible = false">
+              <li class="md-editor-menu-item" @click="insertAlignBlock('left')">
+                <i class="fas fa-align-left"></i>
+                <span>左对齐</span>
+              </li>
+              <li class="md-editor-menu-item" @click="insertAlignBlock('center')">
+                <i class="fas fa-align-center"></i>
+                <span>居中</span>
+              </li>
+              <li class="md-editor-menu-item" @click="insertAlignBlock('right')">
+                <i class="fas fa-align-right"></i>
+                <span>右对齐</span>
+              </li>
+            </ul>
+          </template>
+        </DropdownToolbar>
+
+        <DropdownToolbar
+          v-if="props.enableVideoInsert"
+          title="插入视频"
+          :visible="videoDropdownVisible"
+          @on-change="handleVideoDropdownChange"
+        >
+          <template #default>
+            <VideoPlay class="custom-toolbar-icon custom-toolbar-icon--svg" />
+          </template>
+
+          <template #overlay>
+            <ul class="md-editor-menu" @click="videoDropdownVisible = false">
+              <li class="md-editor-menu-item" @click="handleVideoMenuSelect('upload')">
+                <span>上传视频</span>
+              </li>
+              <li class="md-editor-menu-item" @click="handleVideoMenuSelect('link')">
+                <span>添加视频地址</span>
+              </li>
+            </ul>
+          </template>
+        </DropdownToolbar>
       </template>
     </MdEditor>
 
@@ -64,11 +92,42 @@ import { VideoPlay } from '@element-plus/icons-vue'
 import { ElLoading, ElMessage } from 'element-plus'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { marked } from 'marked'
-import { allToolbar, MdEditor } from 'md-editor-v3'
+import { allToolbar, config, DropdownToolbar, MdEditor } from 'md-editor-v3'
 import type { ExposeParam, InsertParam } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 
 import { uploadApi } from '@/api/file'
+import { installMarkdownAlignPlugin } from '@/utils/markdownAlign'
+
+let markdownAlignConfigured = false
+
+if (!markdownAlignConfigured) {
+  config({
+    markdownItConfig(md) {
+      installMarkdownAlignPlugin(md)
+    },
+    markdownItPlugins(plugins) {
+      return plugins.map((plugin) => {
+        if (plugin.type !== 'xss') {
+          return plugin
+        }
+
+        return {
+          ...plugin,
+          options: {
+            ...(plugin.options || {}),
+            extendedWhiteList: {
+              div: ['class'],
+              p: ['class'],
+              span: ['class']
+            }
+          }
+        }
+      })
+    }
+  })
+  markdownAlignConfigured = true
+}
 
 const props = withDefaults(defineProps<{
   modelValue?: string
@@ -92,6 +151,8 @@ const editorRef = ref<ExposeParam | null>(null)
 const innerValue = ref(props.modelValue)
 const htmlValue = ref('')
 const editorTheme = ref<'light' | 'dark'>('light')
+const alignDropdownVisible = ref(false)
+const videoDropdownVisible = ref(false)
 const videoDialogVisible = ref(false)
 const videoUrlInput = ref('')
 const videoFileInputRef = ref<HTMLInputElement | null>(null)
@@ -102,19 +163,19 @@ const editorStyle = computed(() => ({
   width: '100%'
 }))
 
-const videoDropdownPopperClass = computed(() =>
-  `video-toolbar-dropdown video-toolbar-dropdown--${editorTheme.value}`
-)
-
 const editorToolbars = computed(() => {
+  const toolbars = [...allToolbar] as (string | number)[]
+  const titleIndex = toolbars.indexOf('title')
+  const alignInsertIndex = titleIndex === -1 ? toolbars.length : titleIndex + 1
+  toolbars.splice(alignInsertIndex, 0, 0)
+
   if (!props.enableVideoInsert) {
-    return allToolbar
+    return toolbars
   }
 
-  const toolbars = [...allToolbar] as string[]
   const imageIndex = toolbars.indexOf('image')
-  const insertIndex = imageIndex === -1 ? toolbars.length : imageIndex + 1
-  toolbars.splice(insertIndex, 0, '0')
+  const videoInsertIndex = imageIndex === -1 ? toolbars.length : imageIndex + 1
+  toolbars.splice(videoInsertIndex, 0, 1)
   return toolbars
 })
 
@@ -131,10 +192,30 @@ watch(innerValue, (value) => {
   emit('update:modelValue', value)
 })
 
+/**
+ * 同步编辑器当前主题。
+ */
 const syncTheme = () => {
   editorTheme.value = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'
 }
 
+/**
+ * 处理对齐下拉可见状态变化。
+ */
+const handleAlignDropdownChange = (visible: boolean) => {
+  alignDropdownVisible.value = visible
+}
+
+/**
+ * 处理视频下拉可见状态变化。
+ */
+const handleVideoDropdownChange = (visible: boolean) => {
+  videoDropdownVisible.value = visible
+}
+
+/**
+ * 上传 Markdown 内插入的图片并回填地址。
+ */
 const handleUploadImg = async (files: File[], callback: (urls: string[]) => void) => {
   const urls = await Promise.all(
     files.map(async (file) => {
@@ -148,15 +229,27 @@ const handleUploadImg = async (files: File[], callback: (urls: string[]) => void
   callback(urls)
 }
 
+/**
+ * 缓存当前 Markdown 渲染后的 HTML。
+ */
 const handleHtmlChanged = (html: string) => {
   htmlValue.value = html
 }
 
+/**
+ * 读取编辑器当前 HTML 内容。
+ */
 const getHtml = () => htmlValue.value || marked.parse(innerValue.value || '')
 
+/**
+ * 生成视频标签模板。
+ */
 const buildVideoTag = (src: string) =>
   `\n<video height="100%" width="100%" controls src="${src}"></video>\n`
 
+/**
+ * 规范化 Markdown 资源地址。
+ */
 const normalizeMarkdownUrl = (url: string) => {
   if (!url) {
     return url
@@ -164,6 +257,9 @@ const normalizeMarkdownUrl = (url: string) => {
   return encodeURI(url).replace(/#/g, '%23')
 }
 
+/**
+ * 上传单个资源文件并返回地址。
+ */
 const uploadSingleFile = async (file: File) => {
   const formData = new FormData()
   formData.append('file', file)
@@ -171,7 +267,12 @@ const uploadSingleFile = async (file: File) => {
   return normalizeMarkdownUrl(res.data)
 }
 
+/**
+ * 处理视频菜单选择。
+ */
 const handleVideoMenuSelect = (command: 'upload' | 'link') => {
+  videoDropdownVisible.value = false
+
   if (command === 'upload') {
     videoFileInputRef.value?.click()
     return
@@ -182,6 +283,9 @@ const handleVideoMenuSelect = (command: 'upload' | 'link') => {
   }
 }
 
+/**
+ * 处理视频文件上传并插入编辑器。
+ */
 const handleVideoFileChange = async (event: Event) => {
   const input = event.target as HTMLInputElement | null
   const files = Array.from(input?.files || [])
@@ -209,6 +313,9 @@ const handleVideoFileChange = async (event: Event) => {
   }
 }
 
+/**
+ * 插入外链视频地址。
+ */
 const handleInsertVideoUrl = () => {
   const url = videoUrlInput.value.trim()
   if (!url) {
@@ -220,6 +327,9 @@ const handleInsertVideoUrl = () => {
   videoUrlInput.value = ''
 }
 
+/**
+ * 在编辑器中插入文本或根据选区生成内容。
+ */
 const insert = (content: string | ((selectedText: string) => InsertParam)) => {
   if (!editorRef.value) {
     return
@@ -235,6 +345,30 @@ const insert = (content: string | ((selectedText: string) => InsertParam)) => {
   }))
 }
 
+/**
+ * 在编辑器中插入对齐容器模板。
+ */
+const insertAlignBlock = (direction: 'left' | 'center' | 'right') => {
+  const defaultText = '在此输入内容'
+  const prefix = `::: align-${direction}\n`
+  const suffix = '\n:::'
+
+  insert((selectedText) => {
+    const content = selectedText || defaultText
+    return {
+      targetValue: `${prefix}${content}${suffix}`,
+      select: !selectedText,
+      deviationStart: prefix.length,
+      deviationEnd: prefix.length + content.length
+    }
+  })
+  alignDropdownVisible.value = false
+  focus()
+}
+
+/**
+ * 使编辑器重新获得焦点。
+ */
 const focus = () => {
   editorRef.value?.focus()
 }
@@ -266,91 +400,34 @@ onBeforeUnmount(() => {
     display: none;
   }
 
-  .video-toolbar-button {
-    display: inline-flex;
-    align-items: center;
-    padding-inline: 8px;
-  }
-
-  .video-toolbar-button__icon {
-    width: 16px;
-    height: 16px;
-  }
-
   .video-dialog-footer {
     text-align: right;
   }
 }
 
-:deep(.video-toolbar-dropdown) {
-  min-width: 148px;
-  padding: 0;
-  border: 1px solid #e6e6e6;
-  border-radius: 3px;
-  background: #fff;
-  box-shadow: 0 6px 24px 2px rgb(0 0 0 / 10%);
-}
-
-:deep(.video-toolbar-dropdown .el-popper__arrow::before) {
-  background: #fff;
-  border-color: #e6e6e6;
-}
-
-:deep(.video-toolbar-dropdown .el-dropdown-menu) {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-:deep(.video-toolbar-dropdown .el-dropdown-menu__item) {
-  padding: 4px 10px;
-  font-size: 12px;
-  line-height: 16px;
-  color: #3f4a54;
-  background: transparent;
-}
-
-:deep(.video-toolbar-dropdown .el-dropdown-menu__item:first-of-type) {
-  padding-top: 8px;
-}
-
-:deep(.video-toolbar-dropdown .el-dropdown-menu__item:last-of-type) {
-  padding-bottom: 8px;
-}
-
-:deep(.video-toolbar-dropdown .el-dropdown-menu__item:focus),
-:deep(.video-toolbar-dropdown .el-dropdown-menu__item.is-focus),
-:deep(.video-toolbar-dropdown .el-dropdown-menu__item:not(.is-disabled):hover),
-:deep(.video-toolbar-dropdown .el-dropdown-menu__item:not(.is-disabled):active) {
-  background: #f5f7fa;
-  color: #3f4a54;
-}
-
-:deep(.video-toolbar-dropdown--dark) {
-  border-color: #2d2d2d;
-  background: #000;
-  box-shadow: 0 6px 24px 2px rgb(0 0 0 / 40%);
-}
-
-:deep(.video-toolbar-dropdown--dark .el-popper__arrow::before) {
-  background: #000;
-  border-color: #2d2d2d;
-}
-
-:deep(.video-toolbar-dropdown--dark .el-dropdown-menu__item) {
-  color: #999;
-}
-
-:deep(.video-toolbar-dropdown--dark .el-dropdown-menu__item:focus),
-:deep(.video-toolbar-dropdown--dark .el-dropdown-menu__item.is-focus),
-:deep(.video-toolbar-dropdown--dark .el-dropdown-menu__item:not(.is-disabled):hover),
-:deep(.video-toolbar-dropdown--dark .el-dropdown-menu__item:not(.is-disabled):active) {
-  background: #1b1a1a;
-  color: #999;
-}
-
 .markdown-editor {
+  :deep(.md-editor-menu-item) {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  :deep(.md-editor-menu-item i) {
+    width: 14px;
+    color: var(--el-color-primary);
+    text-align: center;
+  }
+
+  :deep(.custom-toolbar-icon) {
+    color: inherit;
+    font-size: 16px;
+  }
+
+  :deep(.custom-toolbar-icon--svg) {
+    width: 16px;
+    height: 16px;
+  }
+
   :deep(.md-editor) {
     background: var(--el-bg-color);
     color: var(--el-text-color-primary);
