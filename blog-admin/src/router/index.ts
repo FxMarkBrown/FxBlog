@@ -87,6 +87,16 @@ export const constantRoutes: RouteRecordRaw[] = [
           keepAlive: true,
         },
       },
+      {
+        path: "rag",
+        component: () => import("@/views/ai/rag/index.vue"),
+        name: "AiRag",
+        meta: {
+          title: "RAG 控制",
+          icon: "Connection",
+          keepAlive: true,
+        },
+      },
     ],
   }
 ];

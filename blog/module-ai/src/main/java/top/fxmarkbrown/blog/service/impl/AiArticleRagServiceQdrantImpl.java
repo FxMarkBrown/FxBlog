@@ -1,7 +1,6 @@
 package top.fxmarkbrown.blog.service.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
@@ -9,6 +8,7 @@ import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import top.fxmarkbrown.blog.common.Constants;
@@ -26,6 +26,8 @@ import top.fxmarkbrown.blog.vo.ai.AiRetrievedChunkVo;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -36,7 +38,6 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class AiArticleRagServiceQdrantImpl implements AiArticleRagService {
 
     private static final String META_ARTICLE_ID = "articleId";
@@ -58,6 +59,19 @@ public class AiArticleRagServiceQdrantImpl implements AiArticleRagService {
     private final AiRagProperties aiRagProperties;
     private final AiMarkdownChunkService aiMarkdownChunkService;
     private final AiRerankService aiRerankService;
+    private final Executor ragTaskExecutor;
+
+    public AiArticleRagServiceQdrantImpl(ObjectProvider<VectorStore> vectorStoreProvider,
+                                         AiRagProperties aiRagProperties,
+                                         AiMarkdownChunkService aiMarkdownChunkService,
+                                         AiRerankService aiRerankService,
+                                         @Qualifier("ragTaskExecutor") Executor ragTaskExecutor) {
+        this.vectorStoreProvider = vectorStoreProvider;
+        this.aiRagProperties = aiRagProperties;
+        this.aiMarkdownChunkService = aiMarkdownChunkService;
+        this.aiRerankService = aiRerankService;
+        this.ragTaskExecutor = ragTaskExecutor;
+    }
 
     @Override
     public boolean isReady() {
@@ -126,32 +140,34 @@ public class AiArticleRagServiceQdrantImpl implements AiArticleRagService {
             return List.of();
         }
         int totalTopK = Math.max(aiRagProperties.getTopK(), 1);
-        List<AiRetrievedChunkVo> articleChunks = search(
+        int articleReserve = Math.min(
+                Math.max(aiRagProperties.getArticleOwnMinTopK(), 0),
+                Math.max(totalTopK - Math.max(aiRagProperties.getArticleSupplementTopK(), 0), 0)
+        );
+        CompletableFuture<List<AiRetrievedChunkVo>> articleChunksFuture = searchAsync(
                 query,
                 buildArticleFilter(articleId),
                 totalTopK,
                 aiRagProperties.getArticleRecallTopK(),
                 resolveArticleSimilarityThreshold()
-        ).stream().map(chunk -> withSourceScope(chunk, "article")).toList();
+        ).thenApply(chunks -> chunks.stream().map(chunk -> withSourceScope(chunk, "article")).toList());
         if (!aiRagProperties.isArticleSupplementEnabled()) {
-            return articleChunks.stream().limit(totalTopK).toList();
+            return awaitChunks(articleChunksFuture).stream().limit(totalTopK).toList();
         }
-        int articleReserve = Math.min(
-                Math.max(aiRagProperties.getArticleOwnMinTopK(), 0),
-                Math.max(totalTopK - Math.max(aiRagProperties.getArticleSupplementTopK(), 0), 0)
-        );
+        CompletableFuture<List<AiRetrievedChunkVo>> supplementChunksFuture = searchAsync(
+                query,
+                buildGlobalSupplementFilter(articleId),
+                totalTopK,
+                aiRagProperties.getGlobalRecallTopK(),
+                resolveGlobalSimilarityThreshold()
+        ).thenApply(chunks -> chunks.stream().map(chunk -> withSourceScope(chunk, "global")).toList());
+        List<AiRetrievedChunkVo> articleChunks = awaitChunks(articleChunksFuture);
         int articleKeepCount = Math.min(articleChunks.size(), articleReserve);
         int supplementSlots = totalTopK - articleKeepCount;
         if (supplementSlots <= 0) {
             return articleChunks.stream().limit(totalTopK).toList();
         }
-        List<AiRetrievedChunkVo> supplementChunks = search(
-                query,
-                buildGlobalSupplementFilter(articleId),
-                supplementSlots,
-                aiRagProperties.getGlobalRecallTopK(),
-                resolveGlobalSimilarityThreshold()
-        ).stream().map(chunk -> withSourceScope(chunk, "global")).toList();
+        List<AiRetrievedChunkVo> supplementChunks = awaitChunks(supplementChunksFuture);
         List<AiRetrievedChunkVo> merged = new ArrayList<>();
         merged.addAll(articleChunks.stream().limit(articleKeepCount).toList());
         merged.addAll(supplementChunks.stream().limit(supplementSlots).toList());
@@ -211,6 +227,26 @@ public class AiArticleRagServiceQdrantImpl implements AiArticleRagService {
                 return List.of();
             }
             log.warn("文章 RAG 检索失败, query={}", query, ex);
+            return List.of();
+        }
+    }
+
+    private CompletableFuture<List<AiRetrievedChunkVo>> searchAsync(String query,
+                                                                    Filter.Expression filterExpression,
+                                                                    int targetTopK,
+                                                                    int configuredRecallTopK,
+                                                                    double similarityThreshold) {
+        return CompletableFuture.supplyAsync(
+                () -> search(query, filterExpression, targetTopK, configuredRecallTopK, similarityThreshold),
+                ragTaskExecutor
+        );
+    }
+
+    private List<AiRetrievedChunkVo> awaitChunks(CompletableFuture<List<AiRetrievedChunkVo>> future) {
+        try {
+            return future.join();
+        } catch (Exception ex) {
+            log.warn("文章 RAG 并发检索任务失败", ex);
             return List.of();
         }
     }

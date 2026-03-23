@@ -1,20 +1,14 @@
 package top.fxmarkbrown.blog.runner.ai;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
-import top.fxmarkbrown.blog.common.Constants;
 import top.fxmarkbrown.blog.config.ai.AiRagProperties;
-import top.fxmarkbrown.blog.entity.SysArticle;
-import top.fxmarkbrown.blog.mapper.SysArticleMapper;
+import top.fxmarkbrown.blog.service.AiArticleRagRebuildService;
 import top.fxmarkbrown.blog.service.AiArticleRagService;
-
-import java.util.List;
-import java.util.concurrent.Executor;
+import top.fxmarkbrown.blog.vo.ai.AiRagRebuildSubmitVo;
 
 @Slf4j
 @Component
@@ -22,17 +16,14 @@ public class AiRagBootstrapRunner implements ApplicationRunner {
 
     private final AiRagProperties aiRagProperties;
     private final AiArticleRagService aiArticleRagService;
-    private final SysArticleMapper articleMapper;
-    private final Executor ragTaskExecutor;
+    private final AiArticleRagRebuildService aiArticleRagRebuildService;
 
     public AiRagBootstrapRunner(AiRagProperties aiRagProperties,
                                 AiArticleRagService aiArticleRagService,
-                                SysArticleMapper articleMapper,
-                                @Qualifier("ragTaskExecutor") Executor ragTaskExecutor) {
+                                AiArticleRagRebuildService aiArticleRagRebuildService) {
         this.aiRagProperties = aiRagProperties;
         this.aiArticleRagService = aiArticleRagService;
-        this.articleMapper = articleMapper;
-        this.ragTaskExecutor = ragTaskExecutor;
+        this.aiArticleRagRebuildService = aiArticleRagRebuildService;
     }
 
     @Override
@@ -40,25 +31,13 @@ public class AiRagBootstrapRunner implements ApplicationRunner {
         if (!aiRagProperties.isEnabled() || !aiRagProperties.isSyncOnStartup() || !aiArticleRagService.isReady()) {
             return;
         }
-        LambdaQueryWrapper<SysArticle> wrapper = new LambdaQueryWrapper<SysArticle>()
-                .orderByAsc(SysArticle::getId);
-        if (aiRagProperties.isIndexPublishedOnly()) {
-            wrapper.eq(SysArticle::getStatus, Constants.YES);
-        }
-        List<SysArticle> articles = articleMapper.selectList(wrapper);
-        if (articles.isEmpty()) {
+        AiRagRebuildSubmitVo submitVo = aiArticleRagRebuildService.submitAsync(aiRagProperties.isIndexPublishedOnly(), "startup");
+        if (submitVo.isSubmitted()) {
+            log.info("RAG 启动重建已提交后台执行，articleCount={}", submitVo.getArticleCount());
+        } else if (submitVo.isRunning()) {
+            log.info("RAG 启动重建跳过：已有重建任务在运行");
+        } else {
             log.info("RAG 启动重建跳过：没有可索引文章");
-            return;
         }
-        log.info("RAG 启动重建已提交后台执行，articleCount={}", articles.size());
-        ragTaskExecutor.execute(() -> rebuildArticles(articles));
-    }
-
-    private void rebuildArticles(List<SysArticle> articles) {
-        log.info("RAG 启动重建开始，articleCount={}", articles.size());
-        for (SysArticle article : articles) {
-            aiArticleRagService.syncArticleIndex(article);
-        }
-        log.info("RAG 启动重建完成，articleCount={}", articles.size());
     }
 }

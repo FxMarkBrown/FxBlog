@@ -25,7 +25,7 @@ public class AiRagProperties {
 
     private int maxContextChars = 5000;
 
-    private boolean syncOnStartup = true;
+    private boolean syncOnStartup = false;
 
     private int rerankFetchTopK = 12;
 
@@ -50,4 +50,6 @@ public class AiRagProperties {
     private int shortQueryRecallBoost = 6;
 
     private int globalMaxChunksPerArticle = 2;
+
+    private int rebuildConcurrency = 16;
 }

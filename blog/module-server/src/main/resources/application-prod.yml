@@ -58,7 +58,7 @@ blog:
     rag:
       enabled: true
       index-published-only: true
-      sync-on-startup: true
+      sync-on-startup: false
       top-k: 6
       similarity-threshold: 0.45
       article-similarity-threshold: 0.42
@@ -77,6 +77,7 @@ blog:
       short-query-threshold: 18
       short-query-recall-boost: 6
       global-max-chunks-per-article: 2
+      rebuild-concurrency: 16
 
 
 #==============================knife4j配置==============================

@@ -29,8 +29,7 @@ watch(
 )
 
 onMounted(async () => {
-  await siteStore.reportVisit().catch(() => null)
-  await siteStore.fetchWebsiteInfo(true).catch(() => null)
+  void siteStore.reportVisit().catch(() => null)
 })
 </script>
 

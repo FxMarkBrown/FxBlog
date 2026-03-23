@@ -392,18 +392,18 @@ public class AiMarkdownChunkServiceImpl implements AiMarkdownChunkService {
     private String normalizeInlineMarkdownForRetrieval(String text, List<AiChunkInternalLink> internalLinks) {
         String normalized = text;
         normalized = INLINE_IMAGE_PATTERN.matcher(normalized).replaceAll(matchResult ->
-                "图片：" + safeInlineText(matchResult.group(1)));
+                literalReplacement("图片：" + safeInlineText(matchResult.group(1))));
         normalized = replaceInternalLinksForRetrieval(normalized, internalLinks);
         normalized = LINK_PATTERN.matcher(normalized).replaceAll(matchResult ->
-                "链接文本：" + safeInlineText(matchResult.group(1)) + "；链接地址：" + safeInlineText(matchResult.group(2)));
+                literalReplacement("链接文本：" + safeInlineText(matchResult.group(1)) + "；链接地址：" + safeInlineText(matchResult.group(2))));
         normalized = BOLD_ITALIC_PATTERN.matcher(normalized).replaceAll(matchResult ->
-                "强强调：" + firstNotBlank(matchResult.group(1), matchResult.group(2)));
+                literalReplacement("强强调：" + firstNotBlank(matchResult.group(1), matchResult.group(2))));
         normalized = BOLD_PATTERN.matcher(normalized).replaceAll(matchResult ->
-                "强调：" + firstNotBlank(matchResult.group(1), matchResult.group(2)));
+                literalReplacement("强调：" + firstNotBlank(matchResult.group(1), matchResult.group(2))));
         normalized = INLINE_CODE_PATTERN.matcher(normalized).replaceAll(matchResult ->
-                "代码：" + matchResult.group(1));
+                literalReplacement("代码：" + matchResult.group(1)));
         normalized = STRIKE_PATTERN.matcher(normalized).replaceAll(matchResult ->
-                "删除内容：" + matchResult.group(1));
+                literalReplacement("删除内容：" + matchResult.group(1)));
         return normalized;
     }
 
@@ -487,11 +487,17 @@ public class AiMarkdownChunkServiceImpl implements AiMarkdownChunkService {
             String target = matchResult.group(2) == null ? "" : matchResult.group(2).trim();
             AiChunkInternalLink link = linksByPath.get(target);
             if (link == null) {
-                return matchResult.group(0);
+                return literalReplacement(matchResult.group(0));
             }
-            return "站内跳转：[" + safeInlineText(link.targetArticleTitle()) + "](" + safeInlineText(link.targetPath()) + ")"
-                    + "；引用文本：" + safeInlineText(matchResult.group(1));
+            return literalReplacement(
+                    "站内跳转：[" + safeInlineText(link.targetArticleTitle()) + "](" + safeInlineText(link.targetPath()) + ")"
+                            + "；引用文本：" + safeInlineText(matchResult.group(1))
+            );
         });
+    }
+
+    private String literalReplacement(String value) {
+        return Matcher.quoteReplacement(value == null ? "" : value);
     }
 
     private List<AiChunkMediaRef> extractMediaRefs(String text) {
