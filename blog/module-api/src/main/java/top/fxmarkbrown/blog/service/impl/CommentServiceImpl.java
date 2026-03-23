@@ -17,7 +17,11 @@ import org.jsoup.Jsoup;
 import org.jsoup.safety.Safelist;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,12 +39,36 @@ public class CommentServiceImpl implements CommentService {
                 articleId,
                 sortType
         );
-        //获取所有子评论
-        page.getRecords().forEach(commentListVo -> {
-            List<CommentListVo> children = sysCommentMapper.getChildrenComment(commentListVo.getId());
-            commentListVo.setChildren(children);
-        });
+        attachChildren(page.getRecords());
         return PageResponse.from(page);
+    }
+
+    private void attachChildren(List<CommentListVo> parentComments) {
+        if (parentComments == null || parentComments.isEmpty()) {
+            return;
+        }
+
+        List<Integer> parentIds = parentComments.stream()
+                .map(CommentListVo::getId)
+                .filter(id -> id != null && id > 0)
+                .toList();
+        if (parentIds.isEmpty()) {
+            return;
+        }
+
+        List<CommentListVo> allChildren = sysCommentMapper.getChildrenCommentsByParentIds(parentIds);
+        if (allChildren == null || allChildren.isEmpty()) {
+            parentComments.forEach(comment -> comment.setChildren(Collections.emptyList()));
+            return;
+        }
+
+        Map<Integer, List<CommentListVo>> childrenByParentId = allChildren.stream()
+                .filter(comment -> comment.getParentId() != null)
+                .collect(Collectors.groupingBy(CommentListVo::getParentId, LinkedHashMap::new, Collectors.toList()));
+
+        parentComments.forEach(comment ->
+                comment.setChildren(childrenByParentId.getOrDefault(comment.getId(), Collections.emptyList()))
+        );
     }
 
     @Override

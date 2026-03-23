@@ -43,6 +43,17 @@
         where username = #{username}
     </select>
 
+    <select id="selectPublicProfileByUsername" resultType="top.fxmarkbrown.blog.entity.SysUser">
+        select
+            id,
+            username,
+            nickname,
+            avatar,
+            signature
+        from sys_user
+        where username = #{username}
+    </select>
+
     <select id="selectUserPage" resultMap="SysUserPageResultVoMap">
         select
             u.id,

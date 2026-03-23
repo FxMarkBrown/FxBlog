@@ -57,7 +57,7 @@ public class HomeServiceImpl implements HomeService {
     public Result<SysWebConfig> getWebConfig() {
         SysWebConfig sysWebConfig = getCurrentWebConfig();
 
-        SysUser adminUser = sysUserMapper.selectByUsername(Constants.ADMIN);
+        SysUser adminUser = sysUserMapper.selectPublicProfileByUsername(Constants.ADMIN);
         long articleCount = sysArticleMapper.selectCount(new LambdaQueryWrapper<SysArticle>()
                 .eq(SysArticle::getStatus, Constants.YES));
         long likeCount = adminUser != null ? sysArticleMapper.selectReceivedLikeCount(adminUser.getId()) : 0L;

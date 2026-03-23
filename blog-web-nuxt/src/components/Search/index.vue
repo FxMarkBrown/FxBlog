@@ -72,7 +72,7 @@ async function handleSearch() {
     searchResults.value = (page?.records || []).map((item) => ({
       ...item,
       title: truncateText(item.title, 50),
-      summary: truncateText(item.summary || item.contentMd, 150)
+      summary: truncateText(item.summary || item.introduction || item.title, 150)
     }))
     total.value = Number(page?.total || 0)
   } catch (error) {

@@ -15,12 +15,13 @@
     <select id="getTagsApi" resultType="top.fxmarkbrown.blog.vo.tag.TagListVo">
         SELECT
             tag.id,
-            tag.NAME,
-            count(sat.article_id) AS articleNum
+            tag.name,
+            COUNT(a.id) AS articleNum
         FROM
             sys_tag tag
-                LEFT JOIN sys_article_tag sat ON tag.id = sat.tag_id
-        GROUP BY tag.id
+            LEFT JOIN sys_article_tag sat ON tag.id = sat.tag_id
+            LEFT JOIN sys_article a ON a.id = sat.article_id AND a.status = 1
+        GROUP BY tag.id, tag.name
     </select>
 
     <select id="getTagNameByArticleId" resultType="java.lang.String">

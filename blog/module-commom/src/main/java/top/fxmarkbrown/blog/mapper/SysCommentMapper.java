@@ -22,6 +22,8 @@ public interface SysCommentMapper extends BaseMapper<SysComment> {
 
     List<CommentListVo> getChildrenComment(Integer id);
 
+    List<CommentListVo> getChildrenCommentsByParentIds(@Param("parentIds") List<Integer> parentIds);
+
     Page<SysCommentVO> selectPage(Page<SysCommentVO> page);
 
     IPage<CommentListVo> selectMyComment(@Param("page") Page<Object> page,@Param("userId")  long userId);

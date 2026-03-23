@@ -70,7 +70,7 @@ const seoImage = readEnvValue('NUXT_PUBLIC_SEO_IMAGE', '/favicon.ico')
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
-  devtools: { enabled: true },
+  devtools: { enabled: false },
   srcDir: 'src/',
   modules: ['@pinia/nuxt'],
   css: ['@/styles/global.scss'],

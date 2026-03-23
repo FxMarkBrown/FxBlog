@@ -36,8 +36,9 @@ function handleImageError(event: Event) {
  * @returns 阅读时长
  */
 function getReadTime(article: ArticleSummary) {
-  const content = String(article.contentMd || '')
-  return Math.max(1, Math.ceil(content.split(/\s+/).filter(Boolean).length / 300))
+  const content = String(article.summary || article.introduction || article.title || '')
+  const readableLength = content.replace(/\s+/g, '').length
+  return Math.max(1, Math.ceil(readableLength / 180))
 }
 </script>
 

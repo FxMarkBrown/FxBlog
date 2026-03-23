@@ -11,7 +11,6 @@
         <result property="categoryId" column="category_id"/>
         <result property="summary" column="summary"/>
         <result property="cover" column="cover"/>
-        <result property="contentMd" column="content_md"/>
         <result property="quantity" column="quantity"/>
         <result property="isStick" column="is_stick"/>
         <result property="isRecommend" column="is_recommend"/>
@@ -20,7 +19,6 @@
         <result property="likeNum" column="likeNum"/>
         <result property="commentNum" column="commentNum"/>
         <result property="categoryName" column="categoryName"/>
-        <collection property="tags" ofType="top.fxmarkbrown.blog.vo.tag.TagListVo" column="id" select="top.fxmarkbrown.blog.mapper.SysTagMapper.getTagByArticleId" />
     </resultMap>
 
     <resultMap id="articleDetailResultMap" type="top.fxmarkbrown.blog.vo.article.ArticleDetailVo">
@@ -89,7 +87,6 @@
             a.title,
             a.summary,
             a.cover,
-            a.content_md,
             a.quantity,
             a.is_stick,
             a.create_time,
@@ -101,7 +98,12 @@
         LEFT JOIN sys_user u ON a.user_id = u.id
         WHERE a.status = 1
         <if test="tagId != null">
-            AND a.id in (SELECT article_id FROM sys_article_tag WHERE tag_id = #{tagId})
+            AND EXISTS (
+                SELECT 1
+                FROM sys_article_tag sat
+                WHERE sat.article_id = a.id
+                  AND sat.tag_id = #{tagId}
+            )
         </if>
         <if test="categoryId != null">
             AND a.category_id = #{categoryId}
@@ -186,7 +188,12 @@
                 and a.category_id = #{query.categoryId}
             </if>
             <if test="query.tagId != null">
-                AND a.id in (SELECT article_id FROM sys_article_tag WHERE tag_id = #{query.tagId})
+                AND EXISTS (
+                    SELECT 1
+                    FROM sys_article_tag sat
+                    WHERE sat.article_id = a.id
+                      AND sat.tag_id = #{query.tagId}
+                )
             </if>
         </where>
         order by a.is_stick desc, a.create_time desc
@@ -247,7 +254,6 @@
             a.title,
             a.summary,
             a.cover,
-            a.content_md,
             a.quantity,
             a.is_stick,
             a.create_time
@@ -261,7 +267,6 @@
             a.title,
             a.summary,
             a.cover,
-            a.content_md,
             a.quantity,
             a.is_stick,
             a.create_time
@@ -273,7 +278,6 @@
             a.title,
             a.summary,
             a.cover,
-            a.content_md,
             a.quantity,
             a.is_stick,
             saf.create_time
@@ -290,17 +294,26 @@
             a.title,
             a.summary,
             a.cover,
-            a.content_md,
             a.quantity,
             a.is_stick,
             a.status,
             a.create_time,
             c.name AS categoryName,
-            (SELECT COUNT(sc.id) FROM sys_comment sc WHERE sc.article_id = a.id) AS commentNum,
-            (SELECT COUNT(sal.id) FROM sys_article_like sal WHERE sal.article_id = a.id) AS likeNum
+            COALESCE(sc.comment_num, 0) AS commentNum,
+            COALESCE(sal.like_num, 0) AS likeNum
         FROM
             sys_article a
             LEFT JOIN sys_category c ON a.category_id = c.id
+            LEFT JOIN (
+                SELECT article_id, COUNT(id) AS comment_num
+                FROM sys_comment
+                GROUP BY article_id
+            ) sc ON sc.article_id = a.id
+            LEFT JOIN (
+                SELECT article_id, COUNT(id) AS like_num
+                FROM sys_article_like
+                GROUP BY article_id
+            ) sal ON sal.article_id = a.id
         WHERE
             a.user_id = #{article.userId}
         <if test="article.status != null">
