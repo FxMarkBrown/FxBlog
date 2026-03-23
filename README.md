@@ -1,5 +1,7 @@
 # FxBlog
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/5452bac245a94ba6899786194e064830)](https://app.codacy.com/gh/FxMarkBrown/FxBlog?utm_source=github.com&utm_medium=referral&utm_content=FxMarkBrown/FxBlog&utm_campaign=Badge_Grade)
+
 ![Java](https://img.shields.io/badge/Java-25-437291?logo=openjdk&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
 ![SCSS](https://img.shields.io/badge/SCSS-Sass-CC6699?logo=sass&logoColor=white)
