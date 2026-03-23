@@ -72,20 +72,11 @@ public class HomeServiceImpl implements HomeService {
             visitorCount = Long.parseLong(redisUtil.get(RedisConstants.UNIQUE_VISITOR_COUNT).toString());
         }
 
-        String adminAvatar = adminUser != null ? adminUser.getAvatar() : sysWebConfig.getAuthorAvatar();
-        String adminNickname = adminUser != null && adminUser.getNickname() != null && !adminUser.getNickname().isBlank()
-                ? adminUser.getNickname() : sysWebConfig.getAuthor();
-        String adminSignature = adminUser != null && adminUser.getSignature() != null && !adminUser.getSignature().isBlank()
-                ? adminUser.getSignature() : sysWebConfig.getAuthorInfo();
-
         return Result.success(sysWebConfig)
                 .putExtra("blogViewsCount", blogViewsCount)
                 .putExtra("visitorCount", visitorCount)
                 .putExtra("articleCount", articleCount)
-                .putExtra("likeCount", likeCount)
-                .putExtra("adminAvatar", adminAvatar)
-                .putExtra("adminNickname", adminNickname)
-                .putExtra("adminSignature", adminSignature);
+                .putExtra("likeCount", likeCount);
     }
 
     @Override

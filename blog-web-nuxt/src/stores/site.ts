@@ -42,9 +42,9 @@ export const useSiteStore = defineStore('site', () => {
       recordNum: String(info.recordNum || defaultRecordNum),
       articleCount: Number(extra.articleCount ?? info.articleCount ?? 0),
       likeCount: Number(extra.likeCount ?? info.likeCount ?? 0),
-      profileAvatar: String(extra.adminAvatar || info.profileAvatar || info.authorAvatar || info.logo || ''),
-      profileName: String(extra.adminNickname || info.profileName || info.author || '管理员'),
-      profileSignature: String(extra.adminSignature || info.profileSignature || info.authorInfo || '')
+      profileAvatar: String(info.authorAvatar || info.profileAvatar || info.logo || ''),
+      profileName: String(info.author || info.profileName || '管理员'),
+      profileSignature: String(info.authorInfo || info.profileSignature || '')
     }
     visitorAccess.value = Number(extra.visitorCount || visitorAccess.value || 0)
     siteAccess.value = Number(extra.blogViewsCount || siteAccess.value || 0)

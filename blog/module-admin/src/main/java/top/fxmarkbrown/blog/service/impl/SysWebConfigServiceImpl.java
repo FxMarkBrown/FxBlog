@@ -19,7 +19,8 @@ public class SysWebConfigServiceImpl extends ServiceImpl<SysWebConfigMapper, Sys
     @Transactional(rollbackFor = Exception.class)
     @Caching(evict = {
             @CacheEvict(cacheNames = CacheNames.WEB_CONFIG, allEntries = true),
-            @CacheEvict(cacheNames = CacheNames.WEATHER_EFFECT, allEntries = true)
+            @CacheEvict(cacheNames = CacheNames.WEATHER_EFFECT, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_HOME_CONFIG, allEntries = true)
     })
     public void update(SysWebConfig sysWebConfig) {
         baseMapper.updateById(sysWebConfig);
