@@ -121,12 +121,25 @@ watch(
   }
 )
 
+watch(
+  () => authStore.userInfo,
+  (value) => {
+    if (!value && !authStore.isLoggedIn) {
+      router.push('/login')
+    }
+  }
+)
+
 onMounted(() => {
   isDarkMode.value = initTheme()
   themeChangeHandler = () => {
     syncThemeState()
   }
   window.addEventListener('theme-change', themeChangeHandler)
+  if (!authStore.isLoggedIn) {
+    void router.push('/login')
+    return
+  }
   bootstrap()
 })
 
@@ -173,6 +186,10 @@ function buildConversationQuery(conversation: AnyRecord) {
  * 在首屏和路由切换时重建 AI 页状态。
  */
 async function bootstrap() {
+  if (!authStore.isLoggedIn) {
+    await router.push('/login')
+    return
+  }
   abortActiveStream()
   bootstrapping.value = true
   try {
