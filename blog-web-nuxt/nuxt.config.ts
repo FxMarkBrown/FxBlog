@@ -135,14 +135,7 @@ export default defineNuxtConfig({
       adminUrl: readEnvValue('NUXT_PUBLIC_ADMIN_URL', 'http://localhost:3001')
     }
   },
-  routeRules:
-    process.env.NODE_ENV === 'production'
-      ? {
-          '/': { swr: 300 },
-          '/post/**': { swr: 60 },
-          '/archive': { swr: 300 }
-        }
-      : {},
+  routeRules: {},
   app: {
     head: {
       title: siteName,

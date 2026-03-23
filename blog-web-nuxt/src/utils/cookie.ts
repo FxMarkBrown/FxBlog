@@ -7,11 +7,11 @@ export function getToken() {
 }
 
 export function setToken(token: string) {
-  return Cookies.set(TOKEN_KEY, token, { expires: 7 })
+  return Cookies.set(TOKEN_KEY, token, { expires: 7, path: '/', sameSite: 'Lax' })
 }
 
 export function removeToken() {
-  return Cookies.remove(TOKEN_KEY)
+  return Cookies.remove(TOKEN_KEY, { path: '/' })
 }
 
 export function setCookieExpires(key: string, value: string | number, expires: number) {

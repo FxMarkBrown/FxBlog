@@ -99,7 +99,6 @@
                 </el-form-item>
                 <el-form-item>
                   <el-button 
-                    v-permission="['sys:user:update']"
                     type="primary" 
                     @click="submitUserForm"
                     :loading="submitLoading"
@@ -146,7 +145,6 @@
                 </el-form-item>
                 <el-form-item>
                   <el-button 
-                    v-permission="['sys:user:update']"
                     type="primary" 
                     @click="submitPwdForm"
                     :loading="pwdLoading"

@@ -1,11 +1,24 @@
 import { getUserInfoApi, logoutApi } from '@/api/auth'
 import type { LoginUserInfo } from '@/types/auth'
 
+function shouldClearAuthForError(error: unknown) {
+  const statusCode = Number(
+    (error as { status?: number; statusCode?: number; response?: { status?: number } })?.status
+    || (error as { status?: number; statusCode?: number; response?: { status?: number } })?.statusCode
+    || (error as { status?: number; statusCode?: number; response?: { status?: number } })?.response?.status
+    || 0
+  )
+
+  return statusCode === 401
+}
+
 export const useAuthStore = defineStore('auth', () => {
   const tokenCookie = useCookie<string | null>('blog_token', {
-    default: () => ''
+    path: '/',
+    maxAge: 60 * 60 * 24 * 7,
+    sameSite: 'lax'
   })
-  const token = ref(tokenCookie.value || '')
+  const token = ref(tokenCookie.value ?? '')
   const userInfo = ref<LoginUserInfo | null>(null)
   const loaded = ref(false)
 
@@ -93,8 +106,10 @@ export const useAuthStore = defineStore('auth', () => {
       loaded.value = true
       return userInfo.value
     } catch (error) {
-      clearAuth()
       loaded.value = true
+      if (shouldClearAuthForError(error)) {
+        clearAuth()
+      }
       throw error
     }
   }
