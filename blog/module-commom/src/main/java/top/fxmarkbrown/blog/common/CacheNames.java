@@ -33,6 +33,12 @@ public final class CacheNames {
 
     public static final String PUBLIC_ARTICLE_RECOMMEND = "public_article_recommend";
 
+    public static final String PUBLIC_HOME_CONFIG = "public_home_config";
+
+    public static final String PUBLIC_ARTICLE_LIST = "public_article_list";
+
+    public static final String PUBLIC_CATEGORY_ALL = "public_category_all";
+
     public static final List<String> ALL = List.of(
             SYS_CONFIG,
             SYS_DICT,
@@ -45,7 +51,10 @@ public final class CacheNames {
             PUBLIC_ARTICLE_ARCHIVE,
             PUBLIC_ARTICLE_CATEGORIES,
             PUBLIC_ARTICLE_CAROUSEL,
-            PUBLIC_ARTICLE_RECOMMEND
+            PUBLIC_ARTICLE_RECOMMEND,
+            PUBLIC_HOME_CONFIG,
+            PUBLIC_ARTICLE_LIST,
+            PUBLIC_CATEGORY_ALL
     );
 
     private CacheNames() {

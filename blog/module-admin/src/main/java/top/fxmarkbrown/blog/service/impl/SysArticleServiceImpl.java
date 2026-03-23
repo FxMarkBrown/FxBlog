@@ -74,7 +74,10 @@ public class SysArticleServiceImpl extends ServiceImpl<SysArticleMapper, SysArti
             @CacheEvict(cacheNames = CacheNames.PUBLIC_ARTICLE_CATEGORIES, allEntries = true),
             @CacheEvict(cacheNames = CacheNames.PUBLIC_ARTICLE_CAROUSEL, allEntries = true),
             @CacheEvict(cacheNames = CacheNames.PUBLIC_ARTICLE_RECOMMEND, allEntries = true),
-            @CacheEvict(cacheNames = CacheNames.PUBLIC_TAG, allEntries = true)
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_TAG, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_HOME_CONFIG, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_ARTICLE_LIST, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_CATEGORY_ALL, allEntries = true)
     })
     public Boolean add(SysArticleDetailVo sysArticle) {
 
@@ -105,7 +108,10 @@ public class SysArticleServiceImpl extends ServiceImpl<SysArticleMapper, SysArti
             @CacheEvict(cacheNames = CacheNames.PUBLIC_ARTICLE_CATEGORIES, allEntries = true),
             @CacheEvict(cacheNames = CacheNames.PUBLIC_ARTICLE_CAROUSEL, allEntries = true),
             @CacheEvict(cacheNames = CacheNames.PUBLIC_ARTICLE_RECOMMEND, allEntries = true),
-            @CacheEvict(cacheNames = CacheNames.PUBLIC_TAG, allEntries = true)
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_TAG, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_HOME_CONFIG, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_ARTICLE_LIST, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_CATEGORY_ALL, allEntries = true)
     })
     public Boolean update(SysArticleDetailVo sysArticle) {
         SysArticle previousArticle = baseMapper.selectById(sysArticle.getId());
@@ -148,7 +154,10 @@ public class SysArticleServiceImpl extends ServiceImpl<SysArticleMapper, SysArti
             @CacheEvict(cacheNames = CacheNames.PUBLIC_ARTICLE_CATEGORIES, allEntries = true),
             @CacheEvict(cacheNames = CacheNames.PUBLIC_ARTICLE_CAROUSEL, allEntries = true),
             @CacheEvict(cacheNames = CacheNames.PUBLIC_ARTICLE_RECOMMEND, allEntries = true),
-            @CacheEvict(cacheNames = CacheNames.PUBLIC_TAG, allEntries = true)
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_TAG, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_HOME_CONFIG, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_ARTICLE_LIST, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_CATEGORY_ALL, allEntries = true)
     })
     public Boolean delete(List<Long> ids) {
 
@@ -187,7 +196,10 @@ public class SysArticleServiceImpl extends ServiceImpl<SysArticleMapper, SysArti
             @CacheEvict(cacheNames = CacheNames.PUBLIC_ARTICLE_CATEGORIES, allEntries = true),
             @CacheEvict(cacheNames = CacheNames.PUBLIC_ARTICLE_CAROUSEL, allEntries = true),
             @CacheEvict(cacheNames = CacheNames.PUBLIC_ARTICLE_RECOMMEND, allEntries = true),
-            @CacheEvict(cacheNames = CacheNames.PUBLIC_TAG, allEntries = true)
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_TAG, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_HOME_CONFIG, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_ARTICLE_LIST, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_CATEGORY_ALL, allEntries = true)
     })
     public boolean updateById(SysArticle entity) {
         return super.updateById(entity);

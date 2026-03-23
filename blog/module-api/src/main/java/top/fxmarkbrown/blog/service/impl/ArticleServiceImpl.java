@@ -43,6 +43,9 @@ public class ArticleServiceImpl implements ArticleService {
     private final AiQuotaCoreService aiQuotaCoreService;
 
     @Override
+    @Cacheable(cacheNames = CacheNames.PUBLIC_ARTICLE_LIST,
+               key = "'p:' + #pageQuery.pageNum + ':s:' + #pageQuery.pageSize + ':t:' + #tagId + ':c:' + #categoryId + ':k:' + #keyword",
+               sync = true)
     public PageResponse<ArticleListVo> getArticleList(PageQuery pageQuery, Integer tagId, Integer categoryId, String keyword) {
         PageQuery query = pageQuery == null ? new PageQuery() : pageQuery;
         IPage<ArticleListVo> page = sysArticleMapper.getArticleListApi(
@@ -176,6 +179,7 @@ public class ArticleServiceImpl implements ArticleService {
     }
 
     @Override
+    @Cacheable(cacheNames = CacheNames.PUBLIC_CATEGORY_ALL, key = "'all'", sync = true)
     public List<SysCategory> getCategoryAll() {
         return sysCategoryMapper.selectList(new LambdaQueryWrapper<SysCategory>()
                 .orderByAsc(SysCategory::getSort));

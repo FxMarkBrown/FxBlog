@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import top.fxmarkbrown.blog.common.CacheNames;
 import top.fxmarkbrown.blog.common.ResultCode;
 import top.fxmarkbrown.blog.entity.SysCategory;
@@ -47,7 +48,10 @@ public class SysCategoryServiceImpl extends ServiceImpl<SysCategoryMapper, SysCa
      * 新增分类表
      */
     @Override
-    @CacheEvict(cacheNames = CacheNames.PUBLIC_ARTICLE_CATEGORIES, allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_ARTICLE_CATEGORIES, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_CATEGORY_ALL, allEntries = true)
+    })
     public boolean insert(SysCategory sysCategory) {
         Long count = baseMapper.selectCount(new LambdaQueryWrapper<SysCategory>()
                 .eq(SysCategory::getName, sysCategory.getName()));
@@ -61,7 +65,10 @@ public class SysCategoryServiceImpl extends ServiceImpl<SysCategoryMapper, SysCa
      * 修改分类表
      */
     @Override
-    @CacheEvict(cacheNames = CacheNames.PUBLIC_ARTICLE_CATEGORIES, allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_ARTICLE_CATEGORIES, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_CATEGORY_ALL, allEntries = true)
+    })
     public boolean update(SysCategory sysCategory) {
         SysCategory sysCategory1 = baseMapper.selectOne(new LambdaQueryWrapper<SysCategory>().eq(SysCategory::getName, sysCategory.getName()));
         if (sysCategory1 != null && !sysCategory1.getId().equals(sysCategory.getId())) {
@@ -75,7 +82,10 @@ public class SysCategoryServiceImpl extends ServiceImpl<SysCategoryMapper, SysCa
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    @CacheEvict(cacheNames = CacheNames.PUBLIC_ARTICLE_CATEGORIES, allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_ARTICLE_CATEGORIES, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_CATEGORY_ALL, allEntries = true)
+    })
     public boolean deleteByIds(List<Integer> ids) {
         return removeByIds(ids);
     }

@@ -54,6 +54,7 @@ public class HomeServiceImpl implements HomeService {
     private final SysArticleMapper sysArticleMapper;
 
     @Override
+    @Cacheable(cacheNames = CacheNames.PUBLIC_HOME_CONFIG, key = "'full'", sync = true)
     public Result<SysWebConfig> getWebConfig() {
         SysWebConfig sysWebConfig = getCurrentWebConfig();
 

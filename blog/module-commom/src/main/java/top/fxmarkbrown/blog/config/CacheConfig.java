@@ -41,6 +41,9 @@ public class CacheConfig {
         cacheConfigurations.put(CacheNames.PUBLIC_ARTICLE_CATEGORIES, createConfiguration(Duration.ofMinutes(30), redisValueSerializer));
         cacheConfigurations.put(CacheNames.PUBLIC_ARTICLE_CAROUSEL, createConfiguration(Duration.ofMinutes(30), redisValueSerializer));
         cacheConfigurations.put(CacheNames.PUBLIC_ARTICLE_RECOMMEND, createConfiguration(Duration.ofMinutes(30), redisValueSerializer));
+        cacheConfigurations.put(CacheNames.PUBLIC_HOME_CONFIG, createConfiguration(Duration.ofMinutes(5), redisValueSerializer));
+        cacheConfigurations.put(CacheNames.PUBLIC_ARTICLE_LIST, createConfiguration(Duration.ofSeconds(30), redisValueSerializer));
+        cacheConfigurations.put(CacheNames.PUBLIC_CATEGORY_ALL, createConfiguration(Duration.ofMinutes(30), redisValueSerializer));
 
         return RedisCacheManager.builder(redisTemplate.getConnectionFactory())
                 .cacheDefaults(defaultConfig)
