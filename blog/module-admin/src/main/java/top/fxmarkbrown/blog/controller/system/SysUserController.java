@@ -62,7 +62,7 @@ public class SysUserController {
 
     @PutMapping("/updatePwd")
     @Operation(summary = "修改密码")
-    @SaCheckPermission("sys:user:updatePwd")
+    @SaCheckLogin
     public Result<Void> updatePwd(@RequestBody UpdatePwdDTO updatePwdDTO) {
         sysUserService.updatePwd(updatePwdDTO);
         return Result.success();
@@ -77,7 +77,7 @@ public class SysUserController {
     @PutMapping("/updProfile")
     @OperationLogger("修改个人信息")
     @Operation(summary = "修改个人信息")
-    @SaCheckPermission("sys:user:update")
+    @SaCheckLogin
     public Result<SysUserProfileVo> updateProfile(@RequestBody SysUser user) {
         sysUserService.updateProfile(user);
         return Result.success();

@@ -133,7 +133,17 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
     @Override
     public void updateProfile(SysUser user) {
-        baseMapper.updateById(user);
+        Long currentUserId = StpUtil.getLoginIdAsLong();
+        SysUser currentUser = baseMapper.selectById(currentUserId);
+        if (currentUser == null) {
+            throw new ServiceException("用户不存在");
+        }
+
+        currentUser.setNickname(user.getNickname());
+        currentUser.setMobile(user.getMobile());
+        currentUser.setEmail(user.getEmail());
+        currentUser.setSex(user.getSex());
+        baseMapper.updateById(currentUser);
     }
 
     @Override
