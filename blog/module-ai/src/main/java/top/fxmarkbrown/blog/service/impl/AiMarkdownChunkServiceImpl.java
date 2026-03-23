@@ -56,19 +56,40 @@ public class AiMarkdownChunkServiceImpl implements AiMarkdownChunkService {
         boolean inTableBlock = false;
         boolean inHtmlBlock = false;
         boolean inAlignBlock = false;
+        boolean inImageBlock = false;
+        boolean inQuoteBlock = false;
+        boolean inListBlock = false;
 
         String[] lines = content.replace("\r\n", "\n").replace('\r', '\n').split("\n", -1);
         for (String line : lines) {
             if (inTableBlock && !isTableRow(line)) {
                 inTableBlock = false;
-                flushSpecialBlock(chunks, blockBuffer, headingStack, currentHeadingLevel[0], currentBlockType[0], chunkOrder);
+                flushSpecialBlock(article, chunks, blockBuffer, headingStack, currentHeadingLevel[0], currentBlockType[0], chunkOrder);
+                currentBlockType[0] = "paragraph";
+            }
+
+            if (inImageBlock && !isStandaloneImage(line)) {
+                inImageBlock = false;
+                flushSpecialBlock(article, chunks, blockBuffer, headingStack, currentHeadingLevel[0], currentBlockType[0], chunkOrder);
+                currentBlockType[0] = "paragraph";
+            }
+
+            if (inQuoteBlock && !isQuoteLine(line)) {
+                inQuoteBlock = false;
+                flushSpecialBlock(article, chunks, blockBuffer, headingStack, currentHeadingLevel[0], currentBlockType[0], chunkOrder);
+                currentBlockType[0] = "paragraph";
+            }
+
+            if (inListBlock && !isListLine(line)) {
+                inListBlock = false;
+                flushSpecialBlock(article, chunks, blockBuffer, headingStack, currentHeadingLevel[0], currentBlockType[0], chunkOrder);
                 currentBlockType[0] = "paragraph";
             }
 
             Matcher headingMatcher = HEADING_PATTERN.matcher(line);
             if (!inFencedCode && !inMathBlock && !inTableBlock && !inHtmlBlock && headingMatcher.matches()) {
-                flushParagraphBlock(chunks, paragraphBuffer, headingStack, currentHeadingLevel[0], chunkOrder);
-                flushSpecialBlock(chunks, blockBuffer, headingStack, currentHeadingLevel[0], currentBlockType[0], chunkOrder);
+                flushParagraphBlock(article, chunks, paragraphBuffer, headingStack, currentHeadingLevel[0], chunkOrder);
+                flushSpecialBlock(article, chunks, blockBuffer, headingStack, currentHeadingLevel[0], currentBlockType[0], chunkOrder);
                 currentHeadingLevel[0] = headingMatcher.group(1).length();
                 updateHeadingStack(headingStack, currentHeadingLevel[0], headingMatcher.group(2).trim());
                 continue;
@@ -76,7 +97,7 @@ public class AiMarkdownChunkServiceImpl implements AiMarkdownChunkService {
 
             Matcher alignMatcher = ALIGN_BLOCK_OPEN_PATTERN.matcher(line);
             if (!inFencedCode && !inMathBlock && !inTableBlock && !inHtmlBlock && !inAlignBlock && alignMatcher.matches()) {
-                flushParagraphBlock(chunks, paragraphBuffer, headingStack, currentHeadingLevel[0], chunkOrder);
+                flushParagraphBlock(article, chunks, paragraphBuffer, headingStack, currentHeadingLevel[0], chunkOrder);
                 currentBlockType[0] = "align-" + alignMatcher.group(1);
                 inAlignBlock = true;
                 continue;
@@ -84,7 +105,7 @@ public class AiMarkdownChunkServiceImpl implements AiMarkdownChunkService {
             if (inAlignBlock) {
                 if (ALIGN_BLOCK_CLOSE_PATTERN.matcher(line).matches()) {
                     inAlignBlock = false;
-                    flushSpecialBlock(chunks, blockBuffer, headingStack, currentHeadingLevel[0], currentBlockType[0], chunkOrder);
+                    flushSpecialBlock(article, chunks, blockBuffer, headingStack, currentHeadingLevel[0], currentBlockType[0], chunkOrder);
                     currentBlockType[0] = "paragraph";
                 } else {
                     blockBuffer.add(line);
@@ -93,12 +114,12 @@ public class AiMarkdownChunkServiceImpl implements AiMarkdownChunkService {
             }
 
             if (!inMathBlock && !inTableBlock && !inHtmlBlock && isFenceLine(line)) {
-                flushParagraphBlock(chunks, paragraphBuffer, headingStack, currentHeadingLevel[0], chunkOrder);
+                flushParagraphBlock(article, chunks, paragraphBuffer, headingStack, currentHeadingLevel[0], chunkOrder);
                 currentBlockType[0] = "code";
                 blockBuffer.add(line);
                 inFencedCode = !inFencedCode;
                 if (!inFencedCode) {
-                    flushSpecialBlock(chunks, blockBuffer, headingStack, currentHeadingLevel[0], currentBlockType[0], chunkOrder);
+                    flushSpecialBlock(article, chunks, blockBuffer, headingStack, currentHeadingLevel[0], currentBlockType[0], chunkOrder);
                 }
                 continue;
             }
@@ -108,14 +129,14 @@ public class AiMarkdownChunkServiceImpl implements AiMarkdownChunkService {
             }
 
             if (!inTableBlock && !inHtmlBlock && isSingleLineMath(line)) {
-                flushParagraphBlock(chunks, paragraphBuffer, headingStack, currentHeadingLevel[0], chunkOrder);
+                flushParagraphBlock(article, chunks, paragraphBuffer, headingStack, currentHeadingLevel[0], chunkOrder);
                 currentBlockType[0] = "math";
                 blockBuffer.add(line);
-                flushSpecialBlock(chunks, blockBuffer, headingStack, currentHeadingLevel[0], currentBlockType[0], chunkOrder);
+                flushSpecialBlock(article, chunks, blockBuffer, headingStack, currentHeadingLevel[0], currentBlockType[0], chunkOrder);
                 continue;
             }
             if (!inMathBlock && !inTableBlock && !inHtmlBlock && isMathDelimiter(line)) {
-                flushParagraphBlock(chunks, paragraphBuffer, headingStack, currentHeadingLevel[0], chunkOrder);
+                flushParagraphBlock(article, chunks, paragraphBuffer, headingStack, currentHeadingLevel[0], chunkOrder);
                 currentBlockType[0] = "math";
                 blockBuffer.add(line);
                 inMathBlock = true;
@@ -125,17 +146,17 @@ public class AiMarkdownChunkServiceImpl implements AiMarkdownChunkService {
                 blockBuffer.add(line);
                 if (isMathDelimiter(line)) {
                     inMathBlock = false;
-                    flushSpecialBlock(chunks, blockBuffer, headingStack, currentHeadingLevel[0], currentBlockType[0], chunkOrder);
+                    flushSpecialBlock(article, chunks, blockBuffer, headingStack, currentHeadingLevel[0], currentBlockType[0], chunkOrder);
                 }
                 continue;
             }
 
             if (!inHtmlBlock && isHtmlBlockStart(line)) {
-                flushParagraphBlock(chunks, paragraphBuffer, headingStack, currentHeadingLevel[0], chunkOrder);
+                flushParagraphBlock(article, chunks, paragraphBuffer, headingStack, currentHeadingLevel[0], chunkOrder);
                 currentBlockType[0] = isVideoHtmlBlock(line) ? "video-ref" : "html";
                 blockBuffer.add(line);
                 if (isHtmlBlockClosed(line)) {
-                    flushSpecialBlock(chunks, blockBuffer, headingStack, currentHeadingLevel[0], currentBlockType[0], chunkOrder);
+                    flushSpecialBlock(article, chunks, blockBuffer, headingStack, currentHeadingLevel[0], currentBlockType[0], chunkOrder);
                     currentBlockType[0] = "paragraph";
                 } else {
                     inHtmlBlock = true;
@@ -146,14 +167,14 @@ public class AiMarkdownChunkServiceImpl implements AiMarkdownChunkService {
                 blockBuffer.add(line);
                 if (isHtmlBlockClosed(line)) {
                     inHtmlBlock = false;
-                    flushSpecialBlock(chunks, blockBuffer, headingStack, currentHeadingLevel[0], currentBlockType[0], chunkOrder);
+                    flushSpecialBlock(article, chunks, blockBuffer, headingStack, currentHeadingLevel[0], currentBlockType[0], chunkOrder);
                     currentBlockType[0] = "paragraph";
                 }
                 continue;
             }
 
             if (isTableRow(line)) {
-                flushParagraphBlock(chunks, paragraphBuffer, headingStack, currentHeadingLevel[0], chunkOrder);
+                flushParagraphBlock(article, chunks, paragraphBuffer, headingStack, currentHeadingLevel[0], chunkOrder);
                 currentBlockType[0] = "table";
                 blockBuffer.add(line);
                 inTableBlock = true;
@@ -161,37 +182,44 @@ public class AiMarkdownChunkServiceImpl implements AiMarkdownChunkService {
             }
 
             if (!StringUtils.hasText(line)) {
-                flushParagraphBlock(chunks, paragraphBuffer, headingStack, currentHeadingLevel[0], chunkOrder);
+                flushParagraphBlock(article, chunks, paragraphBuffer, headingStack, currentHeadingLevel[0], chunkOrder);
                 continue;
             }
 
-            if (IMAGE_PATTERN.matcher(line.strip()).matches()) {
-                flushParagraphBlock(chunks, paragraphBuffer, headingStack, currentHeadingLevel[0], chunkOrder);
-                addChunk(chunks, chunkOrder, headingStack, currentHeadingLevel[0], "image", line.strip());
+            if (isStandaloneImage(line)) {
+                flushParagraphBlock(article, chunks, paragraphBuffer, headingStack, currentHeadingLevel[0], chunkOrder);
+                currentBlockType[0] = "image-gallery";
+                blockBuffer.add(line.strip());
+                inImageBlock = true;
                 continue;
             }
 
-            if (line.strip().startsWith(">")) {
-                flushParagraphBlock(chunks, paragraphBuffer, headingStack, currentHeadingLevel[0], chunkOrder);
-                addChunk(chunks, chunkOrder, headingStack, currentHeadingLevel[0], "quote", line.strip());
+            if (isQuoteLine(line)) {
+                flushParagraphBlock(article, chunks, paragraphBuffer, headingStack, currentHeadingLevel[0], chunkOrder);
+                currentBlockType[0] = "quote";
+                blockBuffer.add(line.strip());
+                inQuoteBlock = true;
                 continue;
             }
 
-            if (LIST_PATTERN.matcher(line).matches()) {
-                flushParagraphBlock(chunks, paragraphBuffer, headingStack, currentHeadingLevel[0], chunkOrder);
-                addChunk(chunks, chunkOrder, headingStack, currentHeadingLevel[0], "list", line.strip());
+            if (isListLine(line)) {
+                flushParagraphBlock(article, chunks, paragraphBuffer, headingStack, currentHeadingLevel[0], chunkOrder);
+                currentBlockType[0] = "list";
+                blockBuffer.add(line.strip());
+                inListBlock = true;
                 continue;
             }
 
             paragraphBuffer.add(line);
         }
 
-        flushParagraphBlock(chunks, paragraphBuffer, headingStack, currentHeadingLevel[0], chunkOrder);
-        flushSpecialBlock(chunks, blockBuffer, headingStack, currentHeadingLevel[0], currentBlockType[0], chunkOrder);
+        flushParagraphBlock(article, chunks, paragraphBuffer, headingStack, currentHeadingLevel[0], chunkOrder);
+        flushSpecialBlock(article, chunks, blockBuffer, headingStack, currentHeadingLevel[0], currentBlockType[0], chunkOrder);
         return chunks;
     }
 
-    private void flushParagraphBlock(List<AiMarkdownChunk> chunks,
+    private void flushParagraphBlock(SysArticle article,
+                                     List<AiMarkdownChunk> chunks,
                                      List<String> paragraphBuffer,
                                      List<String> headingStack,
                                      int headingLevel,
@@ -205,11 +233,12 @@ public class AiMarkdownChunkServiceImpl implements AiMarkdownChunkService {
             return;
         }
         for (String part : splitLongText(text, aiRagProperties.getMaxChunkChars())) {
-            addChunk(chunks, chunkOrder, headingStack, headingLevel, "paragraph", part);
+            addChunk(article, chunks, chunkOrder, headingStack, headingLevel, "paragraph", part);
         }
     }
 
-    private void flushSpecialBlock(List<AiMarkdownChunk> chunks,
+    private void flushSpecialBlock(SysArticle article,
+                                   List<AiMarkdownChunk> chunks,
                                    List<String> blockBuffer,
                                    List<String> headingStack,
                                    int headingLevel,
@@ -229,10 +258,11 @@ public class AiMarkdownChunkServiceImpl implements AiMarkdownChunkService {
                 return;
             }
         }
-        addChunk(chunks, chunkOrder, headingStack, headingLevel, blockType, text);
+        addChunk(article, chunks, chunkOrder, headingStack, headingLevel, blockType, text);
     }
 
-    private void addChunk(List<AiMarkdownChunk> chunks,
+    private void addChunk(SysArticle article,
+                          List<AiMarkdownChunk> chunks,
                           int[] chunkOrder,
                           List<String> headingStack,
                           int headingLevel,
@@ -243,8 +273,7 @@ public class AiMarkdownChunkServiceImpl implements AiMarkdownChunkService {
             return;
         }
         String sectionPath = headingStack.isEmpty() ? "未分节" : String.join(" > ", headingStack);
-        String retrievalText = "标题路径：" + sectionPath + "\n块类型：" + blockType + "\n内容：\n"
-                + normalizeInlineMarkdownForRetrieval(cleaned);
+        String retrievalText = buildRetrievalText(article, sectionPath, blockType, cleaned);
         String preview = cleaned.replace('\n', ' ');
         if (preview.length() > 120) {
             preview = preview.substring(0, 120) + "...";
@@ -258,7 +287,7 @@ public class AiMarkdownChunkServiceImpl implements AiMarkdownChunkService {
                 retrievalText,
                 preview,
                 cleaned.contains("$$") || cleaned.contains("\\begin"),
-                IMAGE_PATTERN.matcher(cleaned).find(),
+                INLINE_IMAGE_PATTERN.matcher(cleaned).find(),
                 cleaned.contains("<iframe") || cleaned.contains(".mp4")
         ));
     }
@@ -287,6 +316,23 @@ public class AiMarkdownChunkServiceImpl implements AiMarkdownChunkService {
             result.add(text.substring(0, maxChunkChars));
         }
         return result;
+    }
+
+    private String buildRetrievalText(SysArticle article, String sectionPath, String blockType, String rawText) {
+        StringBuilder builder = new StringBuilder();
+        if (article != null) {
+            appendIfPresent(builder, "文章标题", article.getTitle());
+            appendIfPresent(builder, "文章摘要", article.getSummary());
+            appendIfPresent(builder, "文章关键词", normalizeKeywords(article.getKeywords()));
+            appendIfPresent(builder, "文章属性", buildArticleFlags(article));
+            appendIfPresent(builder, "原文地址", article.getOriginalUrl());
+            appendIfPresent(builder, "发布时间", article.getCreateTime() == null ? "" : article.getCreateTime().toString());
+            appendIfPresent(builder, "更新时间", article.getUpdateTime() == null ? "" : article.getUpdateTime().toString());
+        }
+        appendIfPresent(builder, "标题路径", sectionPath);
+        appendIfPresent(builder, "块类型", blockType);
+        builder.append("内容：\n").append(normalizeInlineMarkdownForRetrieval(rawText));
+        return builder.toString();
     }
 
     private String normalizeInlineMarkdownForRetrieval(String text) {
@@ -321,6 +367,42 @@ public class AiMarkdownChunkServiceImpl implements AiMarkdownChunkService {
         return StringUtils.hasText(value) ? value.trim() : "未命名";
     }
 
+    private void appendIfPresent(StringBuilder builder, String label, String value) {
+        if (!StringUtils.hasText(value)) {
+            return;
+        }
+        builder.append(label).append("：").append(value.trim()).append("\n");
+    }
+
+    private String normalizeKeywords(String keywords) {
+        if (!StringUtils.hasText(keywords)) {
+            return "";
+        }
+        return keywords.replace(',', '、')
+                .replace('，', '、')
+                .replaceAll("\\s+", "")
+                .replaceAll("、{2,}", "、")
+                .replaceAll("^、|、$", "");
+    }
+
+    private String buildArticleFlags(SysArticle article) {
+        if (article == null) {
+            return "";
+        }
+        List<String> flags = new ArrayList<>();
+        flags.add(Integer.valueOf(1).equals(article.getIsOriginal()) ? "原创" : "转载");
+        if (Integer.valueOf(1).equals(article.getIsStick())) {
+            flags.add("置顶");
+        }
+        if (Integer.valueOf(1).equals(article.getIsRecommend())) {
+            flags.add("推荐");
+        }
+        if (Integer.valueOf(1).equals(article.getIsCarousel())) {
+            flags.add("轮播");
+        }
+        return String.join("、", flags);
+    }
+
     private void updateHeadingStack(List<String> headingStack, int level, String heading) {
         while (headingStack.size() >= level) {
             headingStack.removeLast();
@@ -343,6 +425,18 @@ public class AiMarkdownChunkServiceImpl implements AiMarkdownChunkService {
 
     private boolean isTableRow(String line) {
         return TABLE_ROW_PATTERN.matcher(line).matches();
+    }
+
+    private boolean isStandaloneImage(String line) {
+        return IMAGE_PATTERN.matcher(line.strip()).matches();
+    }
+
+    private boolean isQuoteLine(String line) {
+        return line.strip().startsWith(">");
+    }
+
+    private boolean isListLine(String line) {
+        return LIST_PATTERN.matcher(line).matches();
     }
 
     private boolean isHtmlBlockStart(String line) {
