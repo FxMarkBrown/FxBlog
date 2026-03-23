@@ -10,6 +10,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.config.annotation.*;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 @Configuration
 @EnableWebMvc
 @RequiredArgsConstructor
@@ -37,11 +40,20 @@ public class WebMvcConfig implements WebMvcConfigurer {
         if (!StringUtils.hasText(path)) {
             return "";
         }
-        String normalized = path.trim().replace("\\", "/");
+        String normalized = toAbsoluteFileSystemPath(path).replace("\\", "/");
         if (!normalized.endsWith("/")) {
             normalized = normalized + "/";
         }
         return normalized;
+    }
+
+    private String toAbsoluteFileSystemPath(String path) {
+        String trimmed = path.trim();
+        Path resolvedPath = Paths.get(trimmed);
+        if (!resolvedPath.isAbsolute()) {
+            resolvedPath = Paths.get(System.getProperty("user.dir"), trimmed);
+        }
+        return resolvedPath.normalize().toAbsolutePath().toString();
     }
 
     @Override

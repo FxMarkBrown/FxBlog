@@ -11,6 +11,8 @@ import org.dromara.x.file.storage.core.FileStorageServiceBuilder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 
@@ -84,11 +86,20 @@ public class FileStorageInit {
         if (!StringUtils.hasText(path)) {
             return path;
         }
-        String normalized = path.trim().replace("\\", "/");
+        String normalized = toAbsoluteFileSystemPath(path).replace("\\", "/");
         if (!normalized.endsWith("/")) {
             normalized = normalized + "/";
         }
         return normalized;
+    }
+
+    private String toAbsoluteFileSystemPath(String path) {
+        String trimmed = path.trim();
+        Path resolvedPath = Paths.get(trimmed);
+        if (!resolvedPath.isAbsolute()) {
+            resolvedPath = Paths.get(System.getProperty("user.dir"), trimmed);
+        }
+        return resolvedPath.normalize().toAbsolutePath().toString();
     }
 
 }
