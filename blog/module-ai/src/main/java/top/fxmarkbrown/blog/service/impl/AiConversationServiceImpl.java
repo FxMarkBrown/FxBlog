@@ -248,27 +248,22 @@ public class AiConversationServiceImpl implements AiConversationService {
         AtomicInteger totalTokens = new AtomicInteger(0);
         AtomicReference<Disposable> disposableRef = new AtomicReference<>();
 
-        emitter.onCompletion(() -> emitterClosed.set(true));
-        emitter.onTimeout(() -> {
-            emitterClosed.set(true);
-            Disposable disposable = disposableRef.get();
-            if (disposable != null && !disposable.isDisposed()) {
-                disposable.dispose();
-            }
-        });
+        emitter.onCompletion(() -> closeStream(emitterClosed, disposableRef));
+        emitter.onTimeout(() -> closeStream(emitterClosed, disposableRef));
+        emitter.onError(error -> closeStream(emitterClosed, disposableRef));
 
-        sendStreamEvent(emitter, emitterClosed, "user", eventWithMessage("user", toMessageVo(userMessage)));
+        sendStreamEvent(emitter, emitterClosed, disposableRef, "user", eventWithMessage("user", toMessageVo(userMessage)));
 
         Disposable disposable = aiChatService.streamReply(conversation, historyMessages, citationsRef.get()).subscribe(
                 chatResponse -> handleStreamChunk(emitter, emitterClosed, chatResponse, answerBuilder, reasoningBuilder,
-                        toolCallsRef, tokensIn, tokensOut, totalTokens),
+                        toolCallsRef, tokensIn, tokensOut, totalTokens, disposableRef),
                 error -> {
                     log.error("AI 流式回复失败, conversationId={}", conversationId, error);
-                    sendStreamEvent(emitter, emitterClosed, "error", eventWithError(error.getMessage()));
+                    sendStreamEvent(emitter, emitterClosed, disposableRef, "error", eventWithError(error.getMessage()));
                     emitter.complete();
                 },
                 () -> completeStreamConversation(emitter, emitterClosed, conversation, content, answerBuilder, reasoningBuilder,
-                        citationsRef, toolCallsRef, tokensIn, tokensOut, totalTokens)
+                        citationsRef, toolCallsRef, tokensIn, tokensOut, totalTokens, disposableRef)
         );
         disposableRef.set(disposable);
         return emitter;
@@ -313,7 +308,8 @@ public class AiConversationServiceImpl implements AiConversationService {
     private void handleStreamChunk(SseEmitter emitter, AtomicBoolean emitterClosed, ChatResponse chatResponse,
                                    AtomicReference<StringBuilder> answerBuilder, AtomicReference<StringBuilder> reasoningBuilder,
                                    AtomicReference<List<AiToolCallVo>> toolCallsRef,
-                                   AtomicInteger tokensIn, AtomicInteger tokensOut, AtomicInteger totalTokens) {
+                                   AtomicInteger tokensIn, AtomicInteger tokensOut, AtomicInteger totalTokens,
+                                   AtomicReference<Disposable> disposableRef) {
         String answerDelta = aiChatService.extractText(chatResponse);
         String reasoningDelta = aiChatService.extractReasoning(chatResponse);
         List<AiToolCallVo> toolCalls = aiChatService.extractToolCalls(chatResponse);
@@ -340,7 +336,7 @@ public class AiConversationServiceImpl implements AiConversationService {
         event.setContent(answerDelta);
         event.setReasoningContent(reasoningDelta);
         event.setToolCalls(toolCalls);
-        sendStreamEvent(emitter, emitterClosed, "delta", event);
+        sendStreamEvent(emitter, emitterClosed, disposableRef, "delta", event);
     }
 
     private void completeStreamConversation(SseEmitter emitter, AtomicBoolean emitterClosed, SysAiConversation conversation,
@@ -348,7 +344,8 @@ public class AiConversationServiceImpl implements AiConversationService {
                                             AtomicReference<StringBuilder> reasoningBuilder,
                                             AtomicReference<List<AiRetrievedChunkVo>> citationsRef,
                                             AtomicReference<List<AiToolCallVo>> toolCallsRef,
-                                            AtomicInteger tokensIn, AtomicInteger tokensOut, AtomicInteger totalTokens) {
+                                            AtomicInteger tokensIn, AtomicInteger tokensOut, AtomicInteger totalTokens,
+                                            AtomicReference<Disposable> disposableRef) {
         String answer = answerBuilder.get().toString().trim();
         if (!StringUtils.hasText(answer)) {
             answer = "模型未返回有效内容";
@@ -386,11 +383,13 @@ public class AiConversationServiceImpl implements AiConversationService {
         event.setTokensIn(zeroToNull(tokensIn.get()));
         event.setTokensOut(zeroToNull(tokensOut.get()));
         event.setTotalTokens(zeroToNull(totalTokens.get()));
-        sendStreamEvent(emitter, emitterClosed, "done", event);
+        sendStreamEvent(emitter, emitterClosed, disposableRef, "done", event);
         emitter.complete();
     }
 
-    private void sendStreamEvent(SseEmitter emitter, AtomicBoolean emitterClosed, String eventName, AiStreamEventVo event) {
+    private void sendStreamEvent(SseEmitter emitter, AtomicBoolean emitterClosed,
+                                 AtomicReference<Disposable> disposableRef,
+                                 String eventName, AiStreamEventVo event) {
         if (emitterClosed.get()) {
             return;
         }
@@ -399,8 +398,16 @@ public class AiConversationServiceImpl implements AiConversationService {
                     .name(eventName)
                     .data(event, MediaType.APPLICATION_JSON));
         } catch (IOException | IllegalStateException ex) {
-            emitterClosed.set(true);
+            closeStream(emitterClosed, disposableRef);
             log.warn("AI 流事件发送失败, event={}", eventName, ex);
+        }
+    }
+
+    private void closeStream(AtomicBoolean emitterClosed, AtomicReference<Disposable> disposableRef) {
+        emitterClosed.set(true);
+        Disposable disposable = disposableRef.get();
+        if (disposable != null && !disposable.isDisposed()) {
+            disposable.dispose();
         }
     }
 

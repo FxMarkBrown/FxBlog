@@ -5,6 +5,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -91,7 +92,11 @@ public class AiConversationController {
 
     @PostMapping(value = "/stream/{conversationId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(summary = "流式发送 AI 会话消息")
-    public SseEmitter streamMessage(@PathVariable Long conversationId, @RequestBody AiSendMessageDto sendMessageDto) {
+    public SseEmitter streamMessage(@PathVariable Long conversationId,
+                                    @RequestBody AiSendMessageDto sendMessageDto,
+                                    HttpServletResponse response) {
+        response.setHeader("Cache-Control", "no-cache");
+        response.setHeader("X-Accel-Buffering", "no");
         return aiConversationService.streamMessage(conversationId, sendMessageDto);
     }
 
