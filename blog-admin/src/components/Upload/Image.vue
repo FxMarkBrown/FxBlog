@@ -60,7 +60,8 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue'])
 
 // 上传地址
-const uploadUrl =  `${import.meta.env.VITE_APP_BASE_API}/file/upload?source=${props.source}`
+const uploadBase = String(import.meta.env.VITE_APP_BASE_API || '/').replace(/\/+$/, '')
+const uploadUrl = `${uploadBase || ''}/file/upload?source=${props.source}`
 
 // 请求头
 const headers = {
