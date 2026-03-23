@@ -11,25 +11,17 @@ import { unwrapResponseData } from '@/utils/response'
 const route = useRoute()
 const router = useRouter()
 const runtimeConfig = useRuntimeConfig()
-const tags = ref<Array<TagSummary & { id: string | number; name: string; articleNum: number }>>([])
-const activeTag = ref<string | null>(null)
-const selectedTagPosts = ref<ArticleSummary[]>([])
-const total = ref(0)
-const loading = ref(false)
 const postsSection = ref<HTMLElement | null>(null)
+const sidebarReady = ref(false)
 const params = reactive({
   pageNum: 1,
-  pageSize: 10,
-  tagId: null as string | number | null
+  pageSize: 10
 })
 
 usePageSeo({
   title: () => `标签 - ${runtimeConfig.public.siteName}`,
   description: '按标签查看文章列表'
 })
-
-await getTagList()
-await resolveInitialTag()
 
 function normalizeTags(payload: TagSummary[]) {
   return payload
@@ -50,35 +42,86 @@ function getTagAnimationDelay(index: number) {
   return `${(index % 6) * 0.08}s`
 }
 
+const { data: tagsData } = await useAsyncData('tags-list', async () => {
+  const response = await getTagsApi().catch(() => null)
+  return normalizeTags(unwrapResponseData<TagSummary[] | null>(response) || [])
+})
+
+const tags = computed(() => tagsData.value || [])
+const selectedTag = computed(() => {
+  const routeTagId = route.query.tagId ? String(route.query.tagId) : ''
+  const routeTagName = route.query.tagName ? String(route.query.tagName) : ''
+
+  if (routeTagId) {
+    const matchedById = tags.value.find((tag) => String(tag.id) === routeTagId)
+    if (matchedById) {
+      return matchedById
+    }
+  }
+
+  if (routeTagName) {
+    const matchedByName = tags.value.find((tag) => tag.name === routeTagName)
+    if (matchedByName) {
+      return matchedByName
+    }
+  }
+
+  return tags.value[0] || null
+})
+const activeTag = computed(() => selectedTag.value?.name || null)
+const selectedTagId = computed(() => selectedTag.value ? String(selectedTag.value.id) : '')
+
+const { data: articlePageData, pending: articlePending } = await useAsyncData(
+  () => `tag-articles:${selectedTagId.value}:${params.pageNum}:${params.pageSize}`,
+  async () => {
+    if (!selectedTagId.value) {
+      return {
+        records: [] as ArticleSummary[],
+        total: 0
+      }
+    }
+
+    const response = await getArticlesApi({
+      pageNum: params.pageNum,
+      pageSize: params.pageSize,
+      tagId: selectedTagId.value
+    })
+    const page = unwrapResponseData<PageResult<ArticleSummary> | null>(response)
+    return {
+      records: page?.records || [],
+      total: Number(page?.total || 0)
+    }
+  },
+  {
+    watch: [selectedTagId, () => params.pageNum, () => params.pageSize]
+  }
+)
+
+const selectedTagPosts = computed(() => articlePageData.value?.records || [])
+const total = computed(() => articlePageData.value?.total || 0)
+const loading = computed(() => articlePending.value)
+
 function goToPost(id: number | string) {
   router.push(`/post/${id}`)
 }
 
-async function selectTag(tagName: string, tagId: string | number, syncRoute = true) {
-  if (activeTag.value === tagName && String(params.tagId || '') === String(tagId)) {
+async function selectTag(tagName: string, tagId: string | number) {
+  if (activeTag.value === tagName && selectedTagId.value === String(tagId)) {
     return
   }
 
-  activeTag.value = tagName
-  params.tagId = tagId
   params.pageNum = 1
-
-  if (syncRoute) {
-    await router.replace({
-      path: '/tags',
-      query: {
-        tagId: String(tagId),
-        tagName
-      }
-    })
-  }
-
-  await getArticleList()
+  await router.replace({
+    path: '/tags',
+    query: {
+      tagId: String(tagId),
+      tagName
+    }
+  })
 }
 
 async function changePage(pageNum: number) {
   params.pageNum = pageNum
-  await getArticleList()
 
   if (!import.meta.client) {
     return
@@ -91,75 +134,11 @@ async function changePage(pageNum: number) {
   })
 }
 
-async function getArticleList() {
-  if (!params.tagId) {
-    selectedTagPosts.value = []
-    total.value = 0
-    return
-  }
-
-  loading.value = true
-  try {
-    const response = await getArticlesApi({ ...params })
-    const page = unwrapResponseData<PageResult<ArticleSummary> | null>(response)
-    selectedTagPosts.value = page?.records || []
-    total.value = Number(page?.total || 0)
-  } finally {
-    loading.value = false
-  }
-}
-
-async function getTagList() {
-  const response = await getTagsApi().catch(() => null)
-  tags.value = normalizeTags(unwrapResponseData<TagSummary[] | null>(response) || [])
-}
-
-async function resolveInitialTag() {
-  const routeTagId = route.query.tagId ? String(route.query.tagId) : ''
-  const routeTagName = route.query.tagName ? String(route.query.tagName) : ''
-
-  if (routeTagId) {
-    const matchedTag = tags.value.find((tag) => String(tag.id) === routeTagId)
-    const fallbackName = matchedTag?.name || routeTagName
-    if (fallbackName) {
-      await selectTag(fallbackName, matchedTag?.id || routeTagId, false)
-      return
-    }
-  }
-
-  if (routeTagName) {
-    const matchedTag = tags.value.find((tag) => tag.name === routeTagName)
-    if (matchedTag) {
-      await selectTag(matchedTag.name, matchedTag.id, false)
-      return
-    }
-  }
-
-  if (tags.value.length > 0) {
-    const defaultTag = tags.value[0]
-    await selectTag(defaultTag.name, defaultTag.id, false)
-  }
-}
-
-watch(
-  () => [route.query.tagId, route.query.tagName],
-  async ([nextTagId, nextTagName], [prevTagId, prevTagName]) => {
-    if (nextTagId === prevTagId && nextTagName === prevTagName) {
-      return
-    }
-
-    if (!tags.value.length) {
-      return
-    }
-
-    const matchedTag = tags.value.find((tag) => String(tag.id) === String(nextTagId || ''))
-      || tags.value.find((tag) => tag.name === String(nextTagName || ''))
-
-    if (matchedTag) {
-      await selectTag(matchedTag.name, matchedTag.id, false)
-    }
-  }
-)
+onMounted(() => {
+  setTimeout(() => {
+    sidebarReady.value = true
+  }, 120)
+})
 </script>
 
 <template>
@@ -216,7 +195,7 @@ watch(
           </div>
         </div>
       </main>
-      <Sidebar class="sidebar-container" />
+      <Sidebar v-if="sidebarReady" class="sidebar-container" />
     </div>
   </div>
 </template>

@@ -116,8 +116,9 @@
                 ref="ossConfigFormRef">
                 <el-form-item label="平台" prop="platform">
                     <el-radio-group v-model="ossConfigForm.platform" @change="handleChangePlatform">
-                        <el-radio v-for="item in ossOptions" :key="item.value" :value="item.label"
-                            :value="item.value" />
+                        <el-radio v-for="item in ossOptions" :key="item.value" :value="item.value">
+                            {{ item.label }}
+                        </el-radio>
                     </el-radio-group>
                 </el-form-item>
                 <div v-if="ossConfigForm.platform !== 'local'">

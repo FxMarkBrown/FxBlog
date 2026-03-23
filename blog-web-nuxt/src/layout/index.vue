@@ -6,29 +6,47 @@ import BlogHeader from '@/layout/Header/index.vue'
 const route = useRoute()
 const authStore = useAuthStore()
 const siteStore = useSiteStore()
+const shouldPrefetchOnServer = import.meta.server && !import.meta.dev
 
-await Promise.all([
-  siteStore.fetchWebsiteInfo().catch(() => null),
-  siteStore.fetchNotice().catch(() => null),
-  authStore.token ? authStore.fetchUserInfo().catch(() => null) : Promise.resolve(null),
-  authStore.token ? siteStore.fetchUnreadStatus().catch(() => null) : Promise.resolve(null)
-])
+if (shouldPrefetchOnServer) {
+  await siteStore.fetchWebsiteInfo().catch(() => null)
+}
 
 const routeViewKey = computed(() => (route.path === '/ai' ? route.path : route.fullPath))
 
+let unreadDebounce: ReturnType<typeof setTimeout> | undefined
+
 watch(
   () => route.fullPath,
-  async () => {
+  () => {
     if (!authStore.token) {
       siteStore.isUnread = false
       return
     }
 
-    await siteStore.fetchUnreadStatus().catch(() => null)
+    clearTimeout(unreadDebounce)
+    unreadDebounce = setTimeout(() => {
+      siteStore.fetchUnreadStatus().catch(() => null)
+    }, 500)
   }
 )
 
-onMounted(async () => {
+onMounted(() => {
+  if (!shouldPrefetchOnServer) {
+    void siteStore.fetchWebsiteInfo().catch(() => null)
+  }
+
+  setTimeout(() => {
+    void siteStore.fetchNotice().catch(() => null)
+  }, 120)
+
+  if (authStore.token) {
+    setTimeout(() => {
+      void authStore.fetchUserInfo().catch(() => null)
+      void siteStore.fetchUnreadStatus().catch(() => null)
+    }, 200)
+  }
+
   void siteStore.reportVisit().catch(() => null)
 })
 </script>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ElMessage } from 'element-plus'
 import { getAllCategoriesApi, getArticlesApi, getCarouselArticlesApi } from '@/api/article'
 import ArticleList from '@/components/ArticleList/index.vue'
 import Sidebar from '@/components/Sidebar/index.vue'
@@ -15,6 +16,8 @@ const siteStore = useSiteStore()
 const loading = ref(false)
 const total = ref(0)
 const postsSection = ref<HTMLElement | null>(null)
+const sidebarReady = ref(false)
+const momentsReady = ref(false)
 const params = reactive({
   pageNum: 1,
   pageSize: 10,
@@ -36,7 +39,15 @@ usePageSeo({
   image: () => String(siteStore.websiteInfo.logo || runtimeConfig.public.seoImage || '')
 })
 
-await Promise.all([getArticleList(), getCarouselArticles(), getAllCategories()])
+async function bootstrapHome() {
+  await getArticleList()
+  setTimeout(() => {
+    void getCarouselArticles()
+    void getAllCategories()
+    momentsReady.value = true
+    sidebarReady.value = true
+  }, 160)
+}
 
 /**
  * 规范化分类 ID
@@ -105,6 +116,10 @@ async function getArticleList() {
     const page = unwrapResponseData<PageResult<ArticleSummary> | null>(response)
     articleList.value = page?.records || []
     total.value = Number(page?.total || 0)
+  } catch (error) {
+    if (import.meta.client) {
+      ElMessage.error((error as Error)?.message || '获取文章列表失败')
+    }
   } finally {
     loading.value = false
   }
@@ -134,6 +149,10 @@ async function getAllCategories() {
     }))
   ]
 }
+
+onMounted(() => {
+  void bootstrapHome()
+})
 </script>
 
 <template>
@@ -141,7 +160,7 @@ async function getAllCategories() {
     <div class="content-layout">
       <main class="home-main-content">
         <Carousel v-if="carouselSlides.length > 0" :slides="carouselSlides" @article-click="goToPost" />
-        <MomentsList />
+        <MomentsList v-if="momentsReady" />
 
         <div ref="postsSection">
           <ElTabs v-model="activeName" @tab-change="handleClick">
@@ -164,7 +183,7 @@ async function getAllCategories() {
           </ElTabs>
         </div>
       </main>
-      <Sidebar />
+      <Sidebar v-if="sidebarReady" />
     </div>
   </div>
 </template>

@@ -8,14 +8,11 @@ import { unwrapResponseData } from '@/utils/response'
 
 const router = useRouter()
 const runtimeConfig = useRuntimeConfig()
-const albums = ref<Array<AlbumSummary & { id: number | string; name: string; description: string; cover: string; photoNum: number; isLock: number }>>([])
 
 usePageSeo({
   title: () => `相册 - ${runtimeConfig.public.siteName}`,
   description: '每一张照片都是生活中美好的一次记忆'
 })
-
-await getAlbumList()
 
 function normalizeAlbums(records: AlbumSummary[]) {
   return records.map((album, index) => ({
@@ -29,17 +26,17 @@ function normalizeAlbums(records: AlbumSummary[]) {
   }))
 }
 
-async function getAlbumList() {
+const { data: albumsData } = await useAsyncData('albums-list', async () => {
   const response = await getAlbumListApi().catch(() => null)
-
   if (!response) {
-    albums.value = []
     showError('获取相册列表失败')
-    return
+    return [] as Array<AlbumSummary & { id: number | string; name: string; description: string; cover: string; photoNum: number; isLock: number }>
   }
 
-  albums.value = normalizeAlbums(unwrapResponseData<AlbumSummary[] | null>(response) || [])
-}
+  return normalizeAlbums(unwrapResponseData<AlbumSummary[] | null>(response) || [])
+})
+
+const albums = computed(() => albumsData.value || [])
 
 function handleCoverError(event: Event) {
   const target = event.target as HTMLImageElement

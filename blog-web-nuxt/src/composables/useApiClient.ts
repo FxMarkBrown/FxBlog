@@ -3,7 +3,6 @@ export function useApiClient() {
   const requestHeaders = import.meta.server ? useRequestHeaders(['cookie']) : {}
   const token = useCookie<string | null>('blog_token')
   const baseURL = import.meta.server ? config.apiBaseServer : '/'
-  const timeout = import.meta.server ? 15000 : 10000
   const headers: Record<string, string> = {}
 
   if (requestHeaders.cookie) {
@@ -19,6 +18,6 @@ export function useApiClient() {
     headers,
     credentials: 'include',
     retry: 0,
-    timeout
+    timeout: import.meta.server ? 15000 : 10000
   })
 }

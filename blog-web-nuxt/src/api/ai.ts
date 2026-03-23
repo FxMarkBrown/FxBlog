@@ -67,7 +67,7 @@ export async function streamConversationMessageApi(
   signal?: AbortSignal
 ) {
   const config = useRuntimeConfig()
-  const target = resolveStreamRequestUrl(conversationId, config.public.apiBase || '/')
+  const target = resolveStreamRequestUrl(conversationId, config.apiBaseServer)
   const response = await fetch(target.toString(), {
     method: 'POST',
     credentials: 'include',
@@ -139,21 +139,16 @@ export async function streamConversationMessageApi(
   }
 }
 
-// 根据 Nuxt 运行时配置拼接流式请求地址，兼容相对代理和绝对后端地址。
-function resolveStreamRequestUrl(conversationId: number | string, apiBase: string) {
+// 根据当前运行环境拼接流式请求地址。
+function resolveStreamRequestUrl(conversationId: number | string, apiBaseServer: string) {
   const normalizedPath = `/api/ai/conversation/stream/${conversationId}`
-  const normalizedBase = String(apiBase || '/').trim() || '/'
-
-  if (/^https?:\/\//i.test(normalizedBase)) {
-    const baseUrl = normalizedBase.endsWith('/') ? normalizedBase : `${normalizedBase}/`
-    return new URL(normalizedPath.slice(1), baseUrl).toString()
+  if (import.meta.client) {
+    return normalizedPath
   }
 
-  const relativeBase = normalizedBase === '/'
-    ? ''
-    : `/${normalizedBase.replace(/^\/+|\/+$/g, '')}`
-
-  return `${relativeBase}${normalizedPath}`
+  const normalizedBase = String(apiBaseServer || 'http://127.0.0.1:8800').trim()
+  const baseUrl = normalizedBase.endsWith('/') ? normalizedBase : `${normalizedBase}/`
+  return new URL(normalizedPath.slice(1), baseUrl).toString()
 }
 
 // 解析单个 SSE 数据块。

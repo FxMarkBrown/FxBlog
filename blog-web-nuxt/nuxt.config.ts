@@ -1,5 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import AutoImport from 'unplugin-auto-import/vite'
+import Components from 'unplugin-vue-components/vite'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 
 type LocalEnvMap = Record<string, string>
 
@@ -66,6 +69,16 @@ const siteUrl = readEnvValue('NUXT_PUBLIC_SITE_URL', 'http://localhost:3000')
 const siteName = readEnvValue('NUXT_PUBLIC_SITE_NAME', 'Open Source Blog')
 const siteDescription = readEnvValue('NUXT_PUBLIC_SITE_DESCRIPTION', '个人知识库与生活博客')
 const seoImage = readEnvValue('NUXT_PUBLIC_SEO_IMAGE', '/favicon.ico')
+const proxiedPrefixes = ['/api', '/auth', '/sys', '/portal', '/file', '/static', '/notifications', '/sign']
+const devProxyEntries = Object.fromEntries(
+  proxiedPrefixes.map((prefix) => [
+    prefix,
+    {
+      target: apiServer,
+      changeOrigin: true
+    }
+  ])
+)
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
@@ -75,9 +88,19 @@ export default defineNuxtConfig({
   modules: ['@pinia/nuxt'],
   css: ['@/styles/global.scss'],
   vite: {
+    server: {
+      proxy: devProxyEntries
+    },
+    plugins: [
+      AutoImport({
+        resolvers: [ElementPlusResolver({ importStyle: false })]
+      }),
+      Components({
+        resolvers: [ElementPlusResolver({ importStyle: false })]
+      })
+    ],
     optimizeDeps: {
       include: [
-        'element-plus',
         'highlight.js',
         'js-cookie',
         'marked',
@@ -97,38 +120,6 @@ export default defineNuxtConfig({
       }
     }
   },
-  nitro: {
-    devProxy: {
-      '/api': {
-        target: `${apiServer}/api`,
-        changeOrigin: true
-      },
-      '/auth': {
-        target: `${apiServer}/auth`,
-        changeOrigin: true
-      },
-      '/sys': {
-        target: `${apiServer}/sys`,
-        changeOrigin: true
-      },
-      '/protal': {
-        target: `${apiServer}/protal`,
-        changeOrigin: true
-      },
-      '/file': {
-        target: `${apiServer}/file`,
-        changeOrigin: true
-      },
-      '/notifications': {
-        target: `${apiServer}/notifications`,
-        changeOrigin: true
-      },
-      '/sign': {
-        target: `${apiServer}/sign`,
-        changeOrigin: true
-      }
-    }
-  },
   alias: {
     '@util': fileURLToPath(new URL('./src/utils', import.meta.url)),
     '@assets': fileURLToPath(new URL('./src/assets', import.meta.url))
@@ -136,7 +127,6 @@ export default defineNuxtConfig({
   runtimeConfig: {
     apiBaseServer: apiServer,
     public: {
-      apiBase: readEnvValue('NUXT_PUBLIC_API_BASE', '/'),
       siteUrl,
       siteName,
       siteDescription,

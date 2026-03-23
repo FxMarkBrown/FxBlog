@@ -65,7 +65,6 @@ pnpm install
 
 当前主要变量：
 
-- `NUXT_PUBLIC_API_BASE`
 - `NUXT_API_BASE_SERVER`
 - `NUXT_PUBLIC_SITE_URL`
 - `NUXT_PUBLIC_SITE_NAME`
@@ -75,7 +74,6 @@ pnpm install
 示例：
 
 ```bash
-NUXT_PUBLIC_API_BASE=http://127.0.0.1:8800
 NUXT_API_BASE_SERVER=http://127.0.0.1:8800
 NUXT_PUBLIC_SITE_URL=http://localhost:3000
 NUXT_PUBLIC_SITE_NAME=Blog

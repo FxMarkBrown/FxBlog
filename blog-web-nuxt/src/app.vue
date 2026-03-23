@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import FloatingButtons from '@/components/Common/FloatingButtons.vue'
-import ContextMenu from '@/components/ContextMenu/index.vue'
-import Lantern from '@/components/Lanterns/index.vue'
-import SearchDialog from '@/components/Search/index.vue'
-import WeatherDecor from '@/components/WeatherDecor/index.vue'
-import MobileMenu from '@/layout/MobileMenu/index.vue'
 import { getCookie, removeCookie } from '@/utils/cookie'
+
+const WeatherDecor = defineAsyncComponent(() => import('@/components/WeatherDecor/index.vue'))
+const MobileMenu = defineAsyncComponent(() => import('@/layout/MobileMenu/index.vue'))
+const SearchDialog = defineAsyncComponent(() => import('@/components/Search/index.vue'))
+const FloatingButtons = defineAsyncComponent(() => import('@/components/Common/FloatingButtons.vue'))
+const Lantern = defineAsyncComponent(() => import('@/components/Lanterns/index.vue'))
+const ContextMenu = defineAsyncComponent(() => import('@/components/ContextMenu/index.vue'))
 import { initTheme } from '@/utils/theme'
 
 const route = useRoute()
@@ -117,16 +118,20 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="app-root">
-    <WeatherDecor v-if="!disableGlobalOverlays" />
+    <ClientOnly>
+      <WeatherDecor v-if="!disableGlobalOverlays" />
+    </ClientOnly>
     <div class="app-shell">
       <NuxtLayout>
         <NuxtPage :page-key="getPageKey" />
       </NuxtLayout>
-      <MobileMenu v-if="!disableGlobalOverlays" />
-      <SearchDialog v-if="!disableGlobalOverlays" />
-      <FloatingButtons v-if="!disableGlobalOverlays && showFloatingButtons" />
-      <Lantern v-if="!disableGlobalOverlays" />
-      <ContextMenu v-if="!disableGlobalOverlays" />
+      <ClientOnly>
+        <MobileMenu v-if="!disableGlobalOverlays" />
+        <SearchDialog v-if="!disableGlobalOverlays" />
+        <FloatingButtons v-if="!disableGlobalOverlays && showFloatingButtons" />
+        <Lantern v-if="!disableGlobalOverlays" />
+        <ContextMenu v-if="!disableGlobalOverlays" />
+      </ClientOnly>
       <div class="cursor-container"></div>
     </div>
   </div>

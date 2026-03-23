@@ -33,7 +33,7 @@ const menuItems: MenuEntry[] = [
   { name: '首页', path: '/', icon: 'fas fa-home', colorClass: 'home-link' },
   {
     name: '归档',
-    path: '/archives',
+    path: '/archive',
     icon: 'fas fa-archive',
     colorClass: 'archive-link',
     children: [

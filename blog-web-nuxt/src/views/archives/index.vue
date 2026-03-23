@@ -10,16 +10,11 @@ const runtimeConfig = useRuntimeConfig()
 const loading = ref(false)
 const archives = ref<Array<{ year: string; posts: ArticleSummary[] }>>([])
 const collapsedYears = reactive<Record<string, boolean>>({})
-const visibleYears = reactive<Record<string, boolean>>({})
-const yearGroupElements = new Map<string, HTMLElement>()
-let yearObserver: IntersectionObserver | null = null
 
 usePageSeo({
   title: () => `归档 - ${runtimeConfig.public.siteName}`,
   description: '文章归档列表'
 })
-
-await getArchives()
 
 /**
  * 获取归档列表
@@ -32,7 +27,6 @@ async function getArchives() {
     archives.value = normalizeArchives(result)
     for (const item of archives.value) {
       collapsedYears[item.year] = false
-      visibleYears[item.year] = false
     }
   } finally {
     loading.value = false
@@ -71,22 +65,6 @@ function goToPost(id: number | string) {
  */
 function toggleYear(year: string) {
   collapsedYears[year] = !collapsedYears[year]
-}
-
-/**
- * 记录年份块元素
- * @param year 年份
- * @param element 元素
- */
-function setYearGroupRef(year: string, element: Element | null) {
-  if (!element || !(element instanceof HTMLElement)) {
-    yearGroupElements.delete(year)
-    return
-  }
-
-  element.dataset.year = year
-  yearGroupElements.set(year, element)
-  yearObserver?.observe(element)
 }
 
 /**
@@ -140,34 +118,7 @@ function normalizeArchives(payload: Array<{ year: string; posts: ArticleSummary[
 }
 
 onMounted(() => {
-  yearObserver = new IntersectionObserver(
-    (entries) => {
-      for (const entry of entries) {
-        if (!entry.isIntersecting) {
-          continue
-        }
-
-        const year = (entry.target as HTMLElement).dataset.year
-        if (year) {
-          visibleYears[year] = true
-        }
-        yearObserver?.unobserve(entry.target)
-      }
-    },
-    {
-      threshold: 0.15,
-      rootMargin: '0px 0px -10% 0px'
-    }
-  )
-
-  for (const [year, element] of yearGroupElements.entries()) {
-    yearObserver.observe(element)
-  }
-})
-
-onBeforeUnmount(() => {
-  yearObserver?.disconnect()
-  yearObserver = null
+  void getArchives()
 })
 </script>
 
@@ -180,9 +131,7 @@ onBeforeUnmount(() => {
             <div
               v-for="item in archives"
               :key="item.year"
-              :ref="(element) => setYearGroupRef(item.year, element)"
               class="year-group"
-              :class="{ 'is-visible': visibleYears[item.year] }"
             >
               <div class="year-header" @click="toggleYear(item.year)">
                 <span class="year">{{ item.year }}</span>
@@ -261,15 +210,6 @@ onBeforeUnmount(() => {
 .year-group {
   margin-bottom: $spacing-xl * 2;
 
-  opacity: 0;
-  transform: translateY(24px);
-  transition: opacity 0.5s ease, transform 0.5s ease;
-
-  &.is-visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
   &:last-child {
     margin-bottom: 0;
   }
@@ -337,7 +277,6 @@ onBeforeUnmount(() => {
     .post-date {
       border-color: $primary;
       background: rgba($primary, 0.1);
-      animation: pulse 1.5s infinite;
     }
   }
 
@@ -418,18 +357,6 @@ onBeforeUnmount(() => {
     .post-date {
       min-width: 50px;
     }
-  }
-}
-
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba($primary, 0.4);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba($primary, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba($primary, 0);
   }
 }
 

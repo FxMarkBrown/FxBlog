@@ -19,9 +19,7 @@ type MomentItem = MomentSummary & {
 
 const runtimeConfig = useRuntimeConfig()
 const loading = ref(false)
-const total = ref(0)
 const imagePreview = ref<InstanceType<typeof ImagePreview> | null>(null)
-const moments = ref<MomentItem[]>([])
 const params = reactive({
   pageNum: 1,
   pageSize: 10
@@ -31,8 +29,6 @@ usePageSeo({
   title: () => `说说 - ${runtimeConfig.public.siteName}`,
   description: '查看最新说说动态'
 })
-
-await fetchMoments()
 
 /**
  * 解析说说图片列表字段。
@@ -75,27 +71,33 @@ function handleAvatarError(event: Event) {
   target.src = IMAGE_ERROR_PLACEHOLDER
 }
 
-/**
- * 拉取说说列表。
- */
-async function fetchMoments() {
-  loading.value = true
-  try {
+const { data: momentsPageData, pending: momentsPending } = await useAsyncData(
+  () => `moments:${params.pageNum}:${params.pageSize}`,
+  async () => {
     const response = await getMomentsApi({ ...params })
     const page = unwrapResponseData<PageResult<MomentSummary> | null>(response)
-    moments.value = normalizeMoments(page?.records || [])
-    total.value = Number(page?.total || 0)
-  } finally {
-    loading.value = false
+    return {
+      records: normalizeMoments(page?.records || []),
+      total: Number(page?.total || 0)
+    }
+  },
+  {
+    watch: [() => params.pageNum, () => params.pageSize]
   }
-}
+)
+
+const moments = computed(() => momentsPageData.value?.records || [])
+const total = computed(() => momentsPageData.value?.total || 0)
+
+watch(momentsPending, (value) => {
+  loading.value = value
+}, { immediate: true })
 
 /**
  * 切换说说分页并回到顶部。
  */
 async function handlePageChange(page: number) {
   params.pageNum = page
-  await fetchMoments()
 
   if (!import.meta.client) {
     return

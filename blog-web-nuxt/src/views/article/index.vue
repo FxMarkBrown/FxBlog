@@ -84,26 +84,16 @@ useHead(() => ({
     : []
 }))
 
-/**
- * 拉取文章详情。
- */
-async function fetchArticle() {
-  loading.value = true
-  cleanupArticleEffects()
-  tocItems.value = []
-  images.value = []
-  activeHeading.value = ''
-  readProgress.value = 0
-  try {
+const { data: articleData, pending: articlePending } = await useAsyncData(
+  () => `article-${articleId.value}`,
+  async () => {
     const response = await getArticleDetailApi(articleId.value)
-    article.value = unwrapResponseData<ArticleDetail | null>(response)
-    readTime.value = resolveReadTime(articleContent.value)
-  } catch {
-    article.value = null
-  } finally {
-    loading.value = false
+    return unwrapResponseData<ArticleDetail | null>(response)
+  },
+  {
+    watch: [articleId]
   }
-}
+)
 
 /**
  * 估算文章阅读时长。
@@ -627,10 +617,27 @@ function handleCommentDeleted() {
   article.value.commentNum = Math.max(Number(article.value.commentNum || 0) - 1, 0)
 }
 
-await Promise.all([
-  fetchArticle(),
-  siteStore.loaded ? Promise.resolve() : siteStore.fetchWebsiteInfo().catch(() => null)
-])
+watch(
+  articleData,
+  (value) => {
+    cleanupArticleEffects()
+    tocItems.value = []
+    images.value = []
+    activeHeading.value = ''
+    readProgress.value = 0
+    article.value = value || null
+    readTime.value = resolveReadTime(String(value?.contentMd || value?.content || ''))
+  },
+  { immediate: true }
+)
+
+watch(
+  articlePending,
+  (value) => {
+    loading.value = value
+  },
+  { immediate: true }
+)
 
 watch(articleContent, () => {
   readTime.value = resolveReadTime(articleContent.value)
@@ -644,7 +651,6 @@ watch(articleId, async (value, oldValue) => {
     return
   }
 
-  await fetchArticle()
   if (import.meta.client) {
     window.scrollTo({ top: 0, behavior: 'auto' })
   }
@@ -669,6 +675,9 @@ watch(
 )
 
 onMounted(() => {
+  if (!siteStore.loaded) {
+    void siteStore.fetchWebsiteInfo().catch(() => null)
+  }
   syncTheme()
   void refreshArticleEnhancements()
   window.addEventListener('theme-change', syncTheme)

@@ -52,21 +52,14 @@ usePageSeo({
   image: () => String(album.cover || '')
 })
 
-await checkAlbumAuth()
-
-onMounted(() => {
-  if (shouldPromptPassword.value) {
-    openPasswordDialog()
-  }
-})
-
 function normalizeAlbum(record: AlbumSummary | null) {
   return {
     id: record?.id || albumId.value,
     name: String(record?.name || ''),
     description: String(record?.description || ''),
     createTime: String(record?.createTime || ''),
-    isLock: Number(record?.isLock || 0)
+    isLock: Number(record?.isLock || 0),
+    cover: String(record?.cover || '')
   }
 }
 
@@ -79,6 +72,40 @@ function normalizePhotos(records: AlbumPhoto[]) {
     location: String(photo.location || '')
   }))
 }
+
+const { data: albumInitData } = await useAsyncData(
+  () => `album-detail:${albumId.value}`,
+  async () => {
+    try {
+      const response = await getAlbumDetailApi(albumId.value)
+      const detail = normalizeAlbum(unwrapResponseData<AlbumSummary | null>(response))
+      if (detail.isLock === 1) {
+        return {
+          album: detail,
+          photos: [] as AlbumPhotoItem[],
+          missing: false
+        }
+      }
+
+      const photosResponse = await getAlbumPhotosApi(albumId.value)
+      const list = normalizePhotos(unwrapResponseData<AlbumPhoto[] | null>(photosResponse) || [])
+      return {
+        album: detail,
+        photos: list,
+        missing: false
+      }
+    } catch {
+      return {
+        album: null,
+        photos: [] as AlbumPhotoItem[],
+        missing: true
+      }
+    }
+  },
+  {
+    watch: [albumId]
+  }
+)
 
 function formatDate(date?: string) {
   if (!date) {
@@ -118,25 +145,34 @@ function showError(message: string) {
 }
 
 async function checkAlbumAuth() {
-  try {
-    const response = await getAlbumDetailApi(albumId.value)
-    Object.assign(album, normalizeAlbum(unwrapResponseData<AlbumSummary | null>(response)))
-
-    if (album.isLock === 1) {
-      isAuthenticated.value = false
-      photos.value = []
-      images.value = []
-      shouldPromptPassword.value = true
-      openPasswordDialog()
-      return
-    }
-
-    shouldPromptPassword.value = false
-    await getAlbumPhotos()
-  } catch {
-    showError('获取相册信息失败')
-    await router.push('/photos')
+  const payload = albumInitData.value
+  if (!payload) {
+    return
   }
+
+  if (payload.missing || !payload.album) {
+    if (import.meta.client) {
+      showError('获取相册信息失败')
+      await router.push('/photos')
+    }
+    return
+  }
+
+  Object.assign(album, payload.album)
+
+  if (payload.album.isLock === 1) {
+    isAuthenticated.value = false
+    photos.value = []
+    images.value = []
+    shouldPromptPassword.value = true
+    openPasswordDialog()
+    return
+  }
+
+  photos.value = payload.photos
+  images.value = payload.photos.map((item) => item.url)
+  isAuthenticated.value = true
+  shouldPromptPassword.value = false
 }
 
 async function getAlbumPhotos() {
@@ -152,10 +188,26 @@ async function getAlbumPhotos() {
     images.value = []
     isAuthenticated.value = false
     shouldPromptPassword.value = false
-    showError('获取相册照片失败')
-    await router.push('/photos')
+    if (import.meta.client) {
+      showError('获取相册照片失败')
+      await router.push('/photos')
+    }
   }
 }
+
+watch(
+  albumInitData,
+  async () => {
+    await checkAlbumAuth()
+  },
+  { immediate: true }
+)
+
+onMounted(() => {
+  if (shouldPromptPassword.value) {
+    openPasswordDialog()
+  }
+})
 
 async function handlePasswordSubmit(password: string, done: () => void) {
   try {
@@ -191,7 +243,6 @@ watch(
     images.value = []
     isAuthenticated.value = false
     shouldPromptPassword.value = false
-    await checkAlbumAuth()
   }
 )
 </script>

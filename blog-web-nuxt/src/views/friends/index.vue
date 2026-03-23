@@ -11,7 +11,6 @@ const runtimeConfig = useRuntimeConfig()
 const siteStore = useSiteStore()
 const formRef = ref<FormInstance>()
 const showApplyForm = ref(false)
-const friends = ref<FriendItem[]>([])
 
 const form = reactive<FriendApplyPayload>({
   name: '',
@@ -47,11 +46,6 @@ usePageSeo({
   title: () => `友链 - ${runtimeConfig.public.siteName}`,
   description: '与优秀的人同行，分享技术与生活'
 })
-
-await Promise.all([
-  siteStore.fetchWebsiteInfo().catch(() => null),
-  fetchFriends()
-])
 
 /**
  * 重置友链申请表单。
@@ -97,18 +91,17 @@ function normalizeFriends(records: FriendItem[]) {
   }))
 }
 
-/**
- * 拉取友链列表。
- */
-async function fetchFriends() {
+const { data: friendsData } = await useAsyncData('friends-list', async () => {
   try {
     const response = await getFriendsApi()
-    friends.value = normalizeFriends(unwrapResponseData<FriendItem[] | null>(response) || [])
+    return normalizeFriends(unwrapResponseData<FriendItem[] | null>(response) || [])
   } catch {
-    friends.value = []
     showError('获取友链列表失败')
+    return [] as FriendItem[]
   }
-}
+})
+
+const friends = computed(() => friendsData.value || [])
 
 /**
  * 打开指定友链。
@@ -193,6 +186,12 @@ function handleImageError(event: Event) {
   const target = event.target as HTMLImageElement
   target.src = IMAGE_ERROR_PLACEHOLDER
 }
+
+onMounted(() => {
+  if (!siteStore.loaded) {
+    void siteStore.fetchWebsiteInfo().catch(() => null)
+  }
+})
 </script>
 
 <template>

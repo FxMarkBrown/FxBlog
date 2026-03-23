@@ -51,7 +51,7 @@ export function getAllCategoriesApi() {
 
 // 获取我的文章列表。
 export function getMyArticleApi(query: Record<string, unknown>) {
-  return useApiClient()<ApiResponse<PageResult<ArticleSummary>>>('/protal/user/myArticle', {
+  return useApiClient()<ApiResponse<PageResult<ArticleSummary>>>('/portal/user/myArticle', {
     query
   })
 }

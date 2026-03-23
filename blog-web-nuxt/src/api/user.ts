@@ -7,7 +7,7 @@ export function getUserProfileApi() {
 
 // 更新个人资料。
 export function updateProfileApi(data: Record<string, unknown>) {
-  return useApiClient()<ApiResponse<unknown>>('/protal/user/updateProfile', {
+  return useApiClient()<ApiResponse<unknown>>('/portal/user/updateProfile', {
     method: 'PUT',
     body: data
   })
@@ -23,42 +23,42 @@ export function updatePasswordApi(data: Record<string, unknown>) {
 
 // 获取我的评论。
 export function getMyCommentApi(query: Record<string, unknown>) {
-  return useApiClient()<ApiResponse<PageResult<Record<string, unknown>>>>('/protal/user/comment', {
+  return useApiClient()<ApiResponse<PageResult<Record<string, unknown>>>>('/portal/user/comment', {
     query
   })
 }
 
 // 删除我的评论或回复。
 export function delMyCommentApi(id: number | string) {
-  return useApiClient()<ApiResponse<unknown>>(`/protal/user/delMyComment/${id}`, {
+  return useApiClient()<ApiResponse<unknown>>(`/portal/user/delMyComment/${id}`, {
     method: 'DELETE'
   })
 }
 
 // 获取我的回复。
 export function getMyReplyApi(query: Record<string, unknown>) {
-  return useApiClient()<ApiResponse<PageResult<Record<string, unknown>>>>('/protal/user/myReply', {
+  return useApiClient()<ApiResponse<PageResult<Record<string, unknown>>>>('/portal/user/myReply', {
     query
   })
 }
 
 // 获取我的点赞。
 export function getMyLikeApi(query: Record<string, unknown>) {
-  return useApiClient()<ApiResponse<PageResult<Record<string, unknown>>>>('/protal/user/myLike', {
+  return useApiClient()<ApiResponse<PageResult<Record<string, unknown>>>>('/portal/user/myLike', {
     query
   })
 }
 
 // 获取我的收藏。
 export function getMyFavoriteApi(query: Record<string, unknown>) {
-  return useApiClient()<ApiResponse<PageResult<Record<string, unknown>>>>('/protal/user/myFavorite', {
+  return useApiClient()<ApiResponse<PageResult<Record<string, unknown>>>>('/portal/user/myFavorite', {
     query
   })
 }
 
 // 获取我的 AI 额度流水。
 export function getMyAiQuotaLogApi(query: Record<string, unknown>) {
-  return useApiClient()<ApiResponse<PageResult<Record<string, unknown>>>>('/protal/user/aiQuotaLog', {
+  return useApiClient()<ApiResponse<PageResult<Record<string, unknown>>>>('/portal/user/aiQuotaLog', {
     query
   })
 }

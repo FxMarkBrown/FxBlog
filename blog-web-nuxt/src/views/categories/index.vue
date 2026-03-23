@@ -8,20 +8,14 @@ import { unwrapResponseData } from '@/utils/response'
 const router = useRouter()
 const route = useRoute()
 const runtimeConfig = useRuntimeConfig()
-const loading = ref(false)
 const activeCategory = ref<string | null>(null)
-const categories = ref<Array<{ name: string; posts: ArticleSummary[] }>>([])
 const categoryElements = new Map<string, HTMLElement>()
-const visibleCategories = reactive<Record<string, boolean>>({})
 let scrollFrame = 0
-let categoryObserver: IntersectionObserver | null = null
 
 usePageSeo({
   title: () => `分类 - ${runtimeConfig.public.siteName}`,
   description: '按分类查看文章列表'
 })
-
-await getCategoryList()
 
 /**
  * 标准化分类与文章列表数据。
@@ -55,6 +49,15 @@ function formatMonth(date?: string) {
 function formatDay(date?: string) {
   return date ? new Date(date).getDate().toString().padStart(2, '0') : ''
 }
+
+const { data: categoriesData, pending: categoriesPending } = await useAsyncData('categories-list', async () => {
+  const response = await getCategoriesApi()
+  const result = unwrapResponseData<ArticleCategoryGroup[] | null>(response) || []
+  return normalizeCategories(result)
+})
+
+const categories = computed(() => categoriesData.value || [])
+const loading = computed(() => categoriesPending.value)
 
 /**
  * 跳转到文章详情页。
@@ -121,7 +124,7 @@ function queueScrollUpdate() {
 }
 
 /**
- * 记录分类节点引用并接入可见性观察。
+ * 记录分类节点引用。
  */
 function setCategoryRef(categoryName: string, element: Element | null) {
   if (!element || !(element instanceof HTMLElement)) {
@@ -129,57 +132,19 @@ function setCategoryRef(categoryName: string, element: Element | null) {
     return
   }
 
-  element.dataset.category = categoryName
   categoryElements.set(categoryName, element)
-  categoryObserver?.observe(element)
 }
 
-/**
- * 拉取分类文章列表。
- */
-async function getCategoryList() {
-  loading.value = true
-  try {
-    const response = await getCategoriesApi()
-    const result = unwrapResponseData<ArticleCategoryGroup[] | null>(response) || []
-    categories.value = normalizeCategories(result)
-    activeCategory.value = categories.value[0]?.name || null
-
-    for (const category of categories.value) {
-      visibleCategories[category.name] = false
-    }
+watch(
+  categories,
+  async (nextCategories) => {
+    activeCategory.value = nextCategories[0]?.name || null
     await syncCategoryFromRoute()
-  } finally {
-    loading.value = false
-  }
-}
+  },
+  { immediate: true }
+)
 
 onMounted(() => {
-  categoryObserver = new IntersectionObserver(
-    (entries) => {
-      for (const entry of entries) {
-        if (!entry.isIntersecting) {
-          continue
-        }
-
-        const categoryName = (entry.target as HTMLElement).dataset.category
-        if (categoryName) {
-          visibleCategories[categoryName] = true
-        }
-        categoryObserver?.unobserve(entry.target)
-      }
-    },
-    {
-      threshold: 0.12,
-      rootMargin: '0px 0px -12% 0px'
-    }
-  )
-
-  for (const [categoryName, element] of categoryElements.entries()) {
-    element.dataset.category = categoryName
-    categoryObserver.observe(element)
-  }
-
   window.addEventListener('scroll', queueScrollUpdate, { passive: true })
   handleScroll()
 })
@@ -190,8 +155,6 @@ onBeforeUnmount(() => {
     window.cancelAnimationFrame(scrollFrame)
     scrollFrame = 0
   }
-  categoryObserver?.disconnect()
-  categoryObserver = null
 })
 
 watch(
@@ -226,7 +189,6 @@ watch(
               :key="category.name"
               :ref="(element) => setCategoryRef(category.name, element)"
               class="category-group"
-              :class="{ 'is-visible': visibleCategories[category.name] }"
             >
               <div class="category-header">
                 <h2 class="category-name">
@@ -297,9 +259,6 @@ watch(
 }
 
 .categories-nav {
-  position: sticky;
-  top: 80px;
-  z-index: 10;
   background: var(--card-bg);
   margin: -$spacing-lg;
   margin-bottom: $spacing-lg;
@@ -348,14 +307,6 @@ watch(
 .category-group {
   margin-bottom: $spacing-xl * 2;
   scroll-margin-top: 100px;
-  opacity: 0;
-  transform: translateY(20px);
-  transition: opacity 0.45s ease, transform 0.45s ease;
-
-  &.is-visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
 
   &:last-child {
     margin-bottom: 0;
@@ -486,7 +437,6 @@ watch(
   }
 
   .categories-nav {
-    top: 64px;
     margin: -$spacing-lg;
     margin-bottom: $spacing-lg;
     padding: $spacing-sm $spacing-lg;
