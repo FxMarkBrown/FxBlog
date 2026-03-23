@@ -9,7 +9,6 @@ import top.fxmarkbrown.blog.entity.SysUser;
 import top.fxmarkbrown.blog.exception.ServiceException;
 import top.fxmarkbrown.blog.mapper.SysArticleMapper;
 import top.fxmarkbrown.blog.mapper.SysCommentMapper;
-import top.fxmarkbrown.blog.mapper.SysTagMapper;
 import top.fxmarkbrown.blog.mapper.SysUserMapper;
 import top.fxmarkbrown.blog.service.UserService;
 import top.fxmarkbrown.blog.service.AiQuotaCoreService;
@@ -21,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -33,8 +33,6 @@ public class UserServiceImpl implements UserService {
 
     private final SysArticleMapper articleMapper;
 
-    private final SysTagMapper tagMapper;
-
     private final AiQuotaCoreService aiQuotaCoreService;
 
     @Override
@@ -45,9 +43,22 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Void delMyComment(List<Long> ids) {
-        commentMapper.deleteByIds(ids);
+        Long currentUserId = StpUtil.getLoginIdAsLong();
+        List<SysComment> ownedComments = commentMapper.selectList(new LambdaQueryWrapper<SysComment>()
+                .eq(SysComment::getUserId, currentUserId)
+                .in(SysComment::getId, ids));
+        if (ownedComments == null || ownedComments.isEmpty()) {
+            return null;
+        }
+
+        List<Integer> ownedIds = new ArrayList<>(ownedComments.size());
+        for (SysComment ownedComment : ownedComments) {
+            ownedIds.add(ownedComment.getId());
+        }
+
+        commentMapper.deleteByIds(ownedIds);
         commentMapper.delete(new LambdaQueryWrapper<SysComment>()
-                .in(SysComment::getParentId, ids));
+                .in(SysComment::getParentId, ownedIds));
         return null;
     }
 

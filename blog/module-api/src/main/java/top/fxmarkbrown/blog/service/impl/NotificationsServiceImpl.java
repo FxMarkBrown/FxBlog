@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +33,9 @@ public class NotificationsServiceImpl implements NotificationsService {
         if (notifications == null) {
             throw new ServiceException("消息通知不存在");
         }
+        if (!Objects.equals(notifications.getUserId(), StpUtil.getLoginIdAsLong())) {
+            throw new ServiceException("无权操作该消息通知");
+        }
         notifications.setIsRead(Boolean.TRUE);
         baseMapper.updateById(notifications);
     }
@@ -44,6 +48,13 @@ public class NotificationsServiceImpl implements NotificationsService {
 
     @Override
     public void delete(Long id) {
+        SysNotifications notifications = baseMapper.selectById(id);
+        if (notifications == null) {
+            throw new ServiceException("消息通知不存在");
+        }
+        if (!Objects.equals(notifications.getUserId(), StpUtil.getLoginIdAsLong())) {
+            throw new ServiceException("无权操作该消息通知");
+        }
         baseMapper.deleteById(id);
     }
 
