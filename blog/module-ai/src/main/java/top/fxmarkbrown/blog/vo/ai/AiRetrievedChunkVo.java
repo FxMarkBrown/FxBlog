@@ -1,6 +1,11 @@
 package top.fxmarkbrown.blog.vo.ai;
 
 import lombok.Data;
+import top.fxmarkbrown.blog.model.ai.AiChunkInternalLink;
+import top.fxmarkbrown.blog.model.ai.AiChunkMediaRef;
+import top.fxmarkbrown.blog.model.ai.AiChunkTaxonomyLink;
+
+import java.util.List;
 
 @Data
 public class AiRetrievedChunkVo {
@@ -28,4 +33,10 @@ public class AiRetrievedChunkVo {
     private String content;
 
     private String contentPreview;
+
+    private List<AiChunkInternalLink> internalLinks;
+
+    private List<AiChunkMediaRef> mediaRefs;
+
+    private List<AiChunkTaxonomyLink> taxonomyLinks;
 }

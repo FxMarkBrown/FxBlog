@@ -29,6 +29,9 @@ import top.fxmarkbrown.blog.exception.ServiceException;
 import top.fxmarkbrown.blog.mapper.SysArticleMapper;
 import top.fxmarkbrown.blog.model.ai.AiCallDisplayNameResolver;
 import top.fxmarkbrown.blog.model.ai.AiChatInvocation;
+import top.fxmarkbrown.blog.model.ai.AiChunkInternalLink;
+import top.fxmarkbrown.blog.model.ai.AiChunkMediaRef;
+import top.fxmarkbrown.blog.model.ai.AiChunkTaxonomyLink;
 import top.fxmarkbrown.blog.model.ai.AiConversationRoute;
 import top.fxmarkbrown.blog.model.ai.AiConversationRouteDecision;
 import top.fxmarkbrown.blog.model.ai.AiResolvedChatModel;
@@ -64,6 +67,9 @@ public class AiChatServiceSpringImpl implements AiChatService {
             如果要写标题，必须显式使用 Markdown 标题标记（例如 ## 或 ###），不要输出没有标记的伪标题。
             如果要写列表，每个列表项必须单独换行，不要把多个 "-" 或 "1." 串在同一行。
             当问题涉及当前文章、相关文章、用户点赞/收藏/评论历史或 AI 使用情况时，应优先调用可用工具获取站内上下文，再组织回答。
+            当检索上下文中提供了“可用站内跳转”时，如需引用相关文章，必须优先使用这些已提供的 Markdown 链接，禁止自行编造文章标题、文章 ID 或站内路径。
+            当检索上下文中提供了“可用媒体资源”时，如需引用文中的图片或视频链接，必须优先使用这些已提供的 Markdown 链接，禁止自行编造资源地址。
+            当检索上下文中提供了“可用分类标签跳转”时，如需推荐分类页或标签页，必须优先使用这些已提供的 Markdown 链接，禁止自行编造聚合页路径。
             """;
 
     /**
@@ -77,6 +83,8 @@ public class AiChatServiceSpringImpl implements AiChatService {
             当你需要当前文章更完整的元信息或用户与文章的交互历史时，应优先调用工具。
             如果要写标题，必须显式使用 Markdown 标题标记（例如 ## 或 ###），不要输出没有标记的伪标题。
             如果要写列表，每个列表项必须单独换行，不要把多个 "-" 或 "1." 串在同一行。
+            如果检索片段提供了“可用站内跳转”，只有这些链接可以被当作相关文章引用输出，必须保持原始 Markdown 链接格式。
+            如果检索片段提供了“可用媒体资源”或“可用分类标签跳转”，只有这些链接可以被当作资源或聚合页引用输出，必须保持原始 Markdown 链接格式。
             """;
 
     private final AiProperties aiProperties;
@@ -358,6 +366,9 @@ public class AiChatServiceSpringImpl implements AiChatService {
                     .append("\n标题路径：").append(safe(chunk.getSectionPath()))
                     .append("\n片段范围：").append(formatChunkRange(chunk))
                     .append("\n块类型：").append(safe(chunk.getBlockType()))
+                    .append("\n可用站内跳转：").append(formatInternalLinks(chunk.getInternalLinks()))
+                    .append("\n可用媒体资源：").append(formatMediaRefs(chunk.getMediaRefs()))
+                    .append("\n可用分类标签跳转：").append(formatTaxonomyLinks(chunk.getTaxonomyLinks()))
                     .append("\n内容：\n").append(safe(chunk.getContent()))
                     .append("\n\n");
             if (builder.length() >= maxContextChars) {
@@ -442,6 +453,42 @@ public class AiChatServiceSpringImpl implements AiChatService {
             case "global" -> "全站补充";
             default -> sourceScope;
         };
+    }
+
+    private String formatInternalLinks(List<AiChunkInternalLink> internalLinks) {
+        if (internalLinks == null || internalLinks.isEmpty()) {
+            return "无";
+        }
+        return internalLinks.stream()
+                .filter(Objects::nonNull)
+                .map(link -> "[" + safe(link.targetArticleTitle()) + "](" + safe(link.targetPath()) + ")")
+                .distinct()
+                .reduce((left, right) -> left + "；" + right)
+                .orElse("无");
+    }
+
+    private String formatMediaRefs(List<AiChunkMediaRef> mediaRefs) {
+        if (mediaRefs == null || mediaRefs.isEmpty()) {
+            return "无";
+        }
+        return mediaRefs.stream()
+                .filter(Objects::nonNull)
+                .map(ref -> "[" + safe(ref.mediaType()) + "：" + safe(ref.displayText()) + "](" + safe(ref.sourceUrl()) + ")")
+                .distinct()
+                .reduce((left, right) -> left + "；" + right)
+                .orElse("无");
+    }
+
+    private String formatTaxonomyLinks(List<AiChunkTaxonomyLink> taxonomyLinks) {
+        if (taxonomyLinks == null || taxonomyLinks.isEmpty()) {
+            return "无";
+        }
+        return taxonomyLinks.stream()
+                .filter(Objects::nonNull)
+                .map(link -> "[" + safe(link.displayName()) + "](" + safe(link.targetPath()) + ")")
+                .distinct()
+                .reduce((left, right) -> left + "；" + right)
+                .orElse("无");
     }
 
     /**

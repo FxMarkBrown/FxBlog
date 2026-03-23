@@ -32,7 +32,10 @@ import top.fxmarkbrown.blog.service.AiChatModelService;
 import top.fxmarkbrown.blog.service.AiQuotaCoreService;
 import top.fxmarkbrown.blog.utils.JsonUtil;
 import top.fxmarkbrown.blog.utils.PageUtil;
+import top.fxmarkbrown.blog.model.ai.AiChunkInternalLink;
+import top.fxmarkbrown.blog.model.ai.AiChunkMediaRef;
 import top.fxmarkbrown.blog.model.ai.AiResolvedChatModel;
+import top.fxmarkbrown.blog.model.ai.AiChunkTaxonomyLink;
 import top.fxmarkbrown.blog.vo.ai.AiChatModelOptionVo;
 import top.fxmarkbrown.blog.vo.ai.AiConversationDetailVo;
 import top.fxmarkbrown.blog.vo.ai.AiConversationListVo;
@@ -639,6 +642,42 @@ public class AiConversationServiceImpl implements AiConversationService {
         payload.put("sourceScope", chunk.getSourceScope());
         payload.put("content", chunk.getContent());
         payload.put("contentPreview", chunk.getContentPreview());
+        payload.put("internalLinks", chunk.getInternalLinks() == null ? List.of() : chunk.getInternalLinks().stream()
+                .map(this::toInternalLinkPayload)
+                .toList());
+        payload.put("mediaRefs", chunk.getMediaRefs() == null ? List.of() : chunk.getMediaRefs().stream()
+                .map(this::toMediaRefPayload)
+                .toList());
+        payload.put("taxonomyLinks", chunk.getTaxonomyLinks() == null ? List.of() : chunk.getTaxonomyLinks().stream()
+                .map(this::toTaxonomyLinkPayload)
+                .toList());
+        return payload;
+    }
+
+    private Map<String, Object> toInternalLinkPayload(AiChunkInternalLink link) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("anchorText", link.anchorText());
+        payload.put("targetPath", link.targetPath());
+        payload.put("targetArticleId", link.targetArticleId());
+        payload.put("targetArticleTitle", link.targetArticleTitle());
+        return payload;
+    }
+
+    private Map<String, Object> toMediaRefPayload(AiChunkMediaRef mediaRef) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("mediaType", mediaRef.mediaType());
+        payload.put("sourceUrl", mediaRef.sourceUrl());
+        payload.put("displayText", mediaRef.displayText());
+        payload.put("localResource", mediaRef.localResource());
+        return payload;
+    }
+
+    private Map<String, Object> toTaxonomyLinkPayload(AiChunkTaxonomyLink link) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("taxonomyType", link.taxonomyType());
+        payload.put("targetPath", link.targetPath());
+        payload.put("targetId", link.targetId());
+        payload.put("displayName", link.displayName());
         return payload;
     }
 

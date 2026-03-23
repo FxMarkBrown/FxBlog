@@ -46,6 +46,23 @@
           </template>
         </DropdownToolbar>
 
+        <DropdownToolbar title="插入链接" :visible="linkDropdownVisible" @on-change="handleLinkDropdownChange">
+          <template #default>
+            <Link class="custom-toolbar-icon custom-toolbar-icon--svg" />
+          </template>
+
+          <template #overlay>
+            <ul class="md-editor-menu" @click="linkDropdownVisible = false">
+              <li class="md-editor-menu-item" @click="handleLinkMenuSelect('external')">
+                <span>站外链接</span>
+              </li>
+              <li class="md-editor-menu-item" @click="handleLinkMenuSelect('internal')">
+                <span>站内跳转</span>
+              </li>
+            </ul>
+          </template>
+        </DropdownToolbar>
+
         <DropdownToolbar
           v-if="props.enableVideoInsert"
           title="插入视频"
@@ -71,6 +88,48 @@
     </MdEditor>
 
     <el-dialog
+      v-model="externalLinkDialogVisible"
+      title="添加外链"
+      width="min(92vw, 480px)"
+      append-to-body
+    >
+      <div class="dialog-form-stack">
+        <el-input v-model="externalLinkUrlInput" placeholder="请输入完整外链地址" />
+        <el-input
+          v-model="externalLinkTextInput"
+          placeholder="请输入显示文字，可留空使用选中文本"
+        />
+      </div>
+      <template #footer>
+        <div class="video-dialog-footer">
+          <el-button @click="externalLinkDialogVisible = false">取 消</el-button>
+          <el-button type="primary" @click="handleInsertExternalLink">确 定</el-button>
+        </div>
+      </template>
+    </el-dialog>
+
+    <el-dialog
+      v-model="internalLinkDialogVisible"
+      title="添加站内跳转"
+      width="min(92vw, 480px)"
+      append-to-body
+    >
+      <div class="dialog-form-stack">
+        <el-input v-model="internalLinkTargetInput" placeholder="请输入文章 ID、/post/123 或其他站内路径" />
+        <el-input
+          v-model="internalLinkTextInput"
+          placeholder="请输入显示文字，可留空使用选中文本"
+        />
+      </div>
+      <template #footer>
+        <div class="video-dialog-footer">
+          <el-button @click="internalLinkDialogVisible = false">取 消</el-button>
+          <el-button type="primary" @click="handleInsertInternalLink">确 定</el-button>
+        </div>
+      </template>
+    </el-dialog>
+
+    <el-dialog
       v-model="videoDialogVisible"
       title="添加视频地址"
       width="min(92vw, 480px)"
@@ -88,7 +147,7 @@
 </template>
 
 <script setup lang="ts">
-import { VideoPlay } from '@element-plus/icons-vue'
+import { Link, VideoPlay } from '@element-plus/icons-vue'
 import { ElLoading, ElMessage } from 'element-plus'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { marked } from 'marked'
@@ -152,8 +211,15 @@ const innerValue = ref(props.modelValue)
 const htmlValue = ref('')
 const editorTheme = ref<'light' | 'dark'>('light')
 const alignDropdownVisible = ref(false)
+const linkDropdownVisible = ref(false)
+const externalLinkDialogVisible = ref(false)
+const internalLinkDialogVisible = ref(false)
 const videoDropdownVisible = ref(false)
 const videoDialogVisible = ref(false)
+const externalLinkUrlInput = ref('')
+const externalLinkTextInput = ref('')
+const internalLinkTargetInput = ref('')
+const internalLinkTextInput = ref('')
 const videoUrlInput = ref('')
 const videoFileInputRef = ref<HTMLInputElement | null>(null)
 let themeObserver: MutationObserver | null = null
@@ -168,6 +234,12 @@ const editorToolbars = computed(() => {
   const titleIndex = toolbars.indexOf('title')
   const alignInsertIndex = titleIndex === -1 ? toolbars.length : titleIndex + 1
   toolbars.splice(alignInsertIndex, 0, 0)
+  const linkIndex = toolbars.indexOf('link')
+  if (linkIndex === -1) {
+    toolbars.push(1)
+  } else {
+    toolbars.splice(linkIndex, 1, 1)
+  }
 
   if (!props.enableVideoInsert) {
     return toolbars
@@ -175,7 +247,7 @@ const editorToolbars = computed(() => {
 
   const imageIndex = toolbars.indexOf('image')
   const videoInsertIndex = imageIndex === -1 ? toolbars.length : imageIndex + 1
-  toolbars.splice(videoInsertIndex, 0, 1)
+  toolbars.splice(videoInsertIndex, 0, 2)
   return toolbars
 })
 
@@ -207,10 +279,103 @@ const handleAlignDropdownChange = (visible: boolean) => {
 }
 
 /**
+ * 处理链接下拉可见状态变化。
+ */
+const handleLinkDropdownChange = (visible: boolean) => {
+  linkDropdownVisible.value = visible
+}
+
+/**
+ * 处理链接菜单选择。
+ */
+const handleLinkMenuSelect = (command: 'external' | 'internal') => {
+  linkDropdownVisible.value = false
+
+  if (command === 'external') {
+    externalLinkDialogVisible.value = true
+    return
+  }
+
+  internalLinkDialogVisible.value = true
+}
+
+/**
  * 处理视频下拉可见状态变化。
  */
 const handleVideoDropdownChange = (visible: boolean) => {
   videoDropdownVisible.value = visible
+}
+
+/**
+ * 将站内目标规范化为新站相对路径。
+ */
+const normalizeInternalTarget = (target: string) => {
+  const rawTarget = target.trim()
+  if (!rawTarget) {
+    return ''
+  }
+
+  if (/^\d+$/.test(rawTarget)) {
+    return `/post/${rawTarget}`
+  }
+
+  const postMatch = rawTarget.match(/^\/?post\/(\d+)([?#].*)?$/i)
+  if (postMatch) {
+    return `/post/${postMatch[1]}${postMatch[2] || ''}`
+  }
+
+  if (rawTarget.startsWith('/') || rawTarget.startsWith('#')) {
+    return rawTarget
+  }
+
+  return `/${rawTarget}`
+}
+
+/**
+ * 生成 Markdown 链接插入片段。
+ */
+const buildMarkdownLink = (url: string, explicitText: string) => (selectedText: string): InsertParam => {
+  const label = explicitText.trim() || selectedText || '链接文字'
+  return {
+    targetValue: `[${label}](${url})`,
+    select: !explicitText.trim() && !selectedText,
+    deviationStart: 1,
+    deviationEnd: 1 + label.length
+  }
+}
+
+/**
+ * 插入站外链接。
+ */
+const handleInsertExternalLink = () => {
+  const url = normalizeMarkdownUrl(externalLinkUrlInput.value.trim())
+  if (!url) {
+    ElMessage.warning('请输入外链地址')
+    return
+  }
+
+  insert(buildMarkdownLink(url, externalLinkTextInput.value))
+  externalLinkDialogVisible.value = false
+  externalLinkUrlInput.value = ''
+  externalLinkTextInput.value = ''
+  focus()
+}
+
+/**
+ * 插入站内跳转链接。
+ */
+const handleInsertInternalLink = () => {
+  const normalizedTarget = normalizeInternalTarget(internalLinkTargetInput.value)
+  if (!normalizedTarget) {
+    ElMessage.warning('请输入站内路径或文章 ID')
+    return
+  }
+
+  insert(buildMarkdownLink(normalizedTarget, internalLinkTextInput.value))
+  internalLinkDialogVisible.value = false
+  internalLinkTargetInput.value = ''
+  internalLinkTextInput.value = ''
+  focus()
 }
 
 /**
@@ -399,10 +564,16 @@ onBeforeUnmount(() => {
   .video-file-input {
     display: none;
   }
+}
 
-  .video-dialog-footer {
-    text-align: right;
-  }
+.video-dialog-footer {
+  text-align: right;
+}
+
+.dialog-form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .markdown-editor {

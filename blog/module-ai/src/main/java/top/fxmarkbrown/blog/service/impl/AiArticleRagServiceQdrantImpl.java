@@ -1,5 +1,6 @@
 package top.fxmarkbrown.blog.service.impl;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
@@ -13,10 +14,14 @@ import org.springframework.util.StringUtils;
 import top.fxmarkbrown.blog.common.Constants;
 import top.fxmarkbrown.blog.config.ai.AiRagProperties;
 import top.fxmarkbrown.blog.entity.SysArticle;
+import top.fxmarkbrown.blog.model.ai.AiChunkInternalLink;
+import top.fxmarkbrown.blog.model.ai.AiChunkMediaRef;
 import top.fxmarkbrown.blog.model.ai.AiMarkdownChunk;
+import top.fxmarkbrown.blog.model.ai.AiChunkTaxonomyLink;
 import top.fxmarkbrown.blog.service.AiArticleRagService;
 import top.fxmarkbrown.blog.service.AiMarkdownChunkService;
 import top.fxmarkbrown.blog.service.AiRerankService;
+import top.fxmarkbrown.blog.utils.JsonUtil;
 import top.fxmarkbrown.blog.vo.ai.AiRetrievedChunkVo;
 
 import java.nio.charset.StandardCharsets;
@@ -42,6 +47,9 @@ public class AiArticleRagServiceQdrantImpl implements AiArticleRagService {
     private static final String META_BLOCK_TYPE = "blockType";
     private static final String META_CONTENT_PREVIEW = "contentPreview";
     private static final String META_RAW_MARKDOWN = "rawMarkdownFragment";
+    private static final String META_INTERNAL_LINKS = "internalLinks";
+    private static final String META_MEDIA_REFS = "mediaRefs";
+    private static final String META_TAXONOMY_LINKS = "taxonomyLinks";
     private static final String META_PUBLISHED = "published";
     private static final int PUBLISHED_FLAG = 1;
     private static final int UNPUBLISHED_FLAG = 0;
@@ -230,6 +238,9 @@ public class AiArticleRagServiceQdrantImpl implements AiArticleRagService {
         metadata.put(META_BLOCK_TYPE, chunk.blockType());
         metadata.put(META_CONTENT_PREVIEW, chunk.contentPreview());
         metadata.put(META_RAW_MARKDOWN, chunk.rawMarkdownFragment());
+        metadata.put(META_INTERNAL_LINKS, JsonUtil.toJsonString(chunk.internalLinks()));
+        metadata.put(META_MEDIA_REFS, JsonUtil.toJsonString(chunk.mediaRefs()));
+        metadata.put(META_TAXONOMY_LINKS, JsonUtil.toJsonString(chunk.taxonomyLinks()));
         metadata.put(META_PUBLISHED, resolvePublishedFlag(article));
         return new Document(buildDocumentId(article.getId(), chunk.chunkOrder()), chunk.retrievalText(), metadata);
     }
@@ -248,6 +259,9 @@ public class AiArticleRagServiceQdrantImpl implements AiArticleRagService {
         vo.setEndChunkOrder(vo.getChunkOrder());
         vo.setMergedChunkCount(1);
         vo.setHeadingLevel(intValue(document.getMetadata().get(META_HEADING_LEVEL)));
+        vo.setInternalLinks(parseInternalLinks(document.getMetadata().get(META_INTERNAL_LINKS)));
+        vo.setMediaRefs(parseMediaRefs(document.getMetadata().get(META_MEDIA_REFS)));
+        vo.setTaxonomyLinks(parseTaxonomyLinks(document.getMetadata().get(META_TAXONOMY_LINKS)));
         return vo;
     }
 
@@ -405,6 +419,9 @@ public class AiArticleRagServiceQdrantImpl implements AiArticleRagService {
                 .filter(StringUtils::hasText)
                 .distinct()
                 .collect(Collectors.joining(" / ")));
+        merged.setInternalLinks(mergeInternalLinks(orderedGroup));
+        merged.setMediaRefs(mergeMediaRefs(orderedGroup));
+        merged.setTaxonomyLinks(mergeTaxonomyLinks(orderedGroup));
         return merged;
     }
 
@@ -422,7 +439,103 @@ public class AiArticleRagServiceQdrantImpl implements AiArticleRagService {
         target.setSourceScope(source.getSourceScope());
         target.setContent(source.getContent());
         target.setContentPreview(source.getContentPreview());
+        target.setInternalLinks(source.getInternalLinks());
+        target.setMediaRefs(source.getMediaRefs());
+        target.setTaxonomyLinks(source.getTaxonomyLinks());
         return target;
+    }
+
+    private List<AiChunkInternalLink> parseInternalLinks(Object value) {
+        if (value == null) {
+            return List.of();
+        }
+        try {
+            List<AiChunkInternalLink> links = JsonUtil.convertValue(value, new TypeReference<>() {
+            });
+            return links == null ? List.of() : links;
+        } catch (Exception ex) {
+            log.debug("解析 chunk 站内跳转 metadata 失败", ex);
+            return List.of();
+        }
+    }
+
+    private List<AiChunkInternalLink> mergeInternalLinks(List<AiRetrievedChunkVo> chunks) {
+        Map<String, AiChunkInternalLink> links = new LinkedHashMap<>();
+        for (AiRetrievedChunkVo chunk : chunks) {
+            if (chunk.getInternalLinks() == null) {
+                continue;
+            }
+            for (AiChunkInternalLink link : chunk.getInternalLinks()) {
+                if (link == null) {
+                    continue;
+                }
+                String key = safeKey(link.targetPath(), link.targetArticleTitle(), link.anchorText());
+                links.putIfAbsent(key, link);
+            }
+        }
+        return links.isEmpty() ? List.of() : List.copyOf(links.values());
+    }
+
+    private List<AiChunkMediaRef> parseMediaRefs(Object value) {
+        if (value == null) {
+            return List.of();
+        }
+        try {
+            List<AiChunkMediaRef> refs = JsonUtil.convertValue(value, new TypeReference<>() {
+            });
+            return refs == null ? List.of() : refs;
+        } catch (Exception ex) {
+            log.debug("解析 chunk 媒体资源 metadata 失败", ex);
+            return List.of();
+        }
+    }
+
+    private List<AiChunkMediaRef> mergeMediaRefs(List<AiRetrievedChunkVo> chunks) {
+        Map<String, AiChunkMediaRef> refs = new LinkedHashMap<>();
+        for (AiRetrievedChunkVo chunk : chunks) {
+            if (chunk.getMediaRefs() == null) {
+                continue;
+            }
+            for (AiChunkMediaRef ref : chunk.getMediaRefs()) {
+                if (ref == null) {
+                    continue;
+                }
+                String key = safeKey(ref.mediaType(), ref.sourceUrl(), ref.displayText());
+                refs.putIfAbsent(key, ref);
+            }
+        }
+        return refs.isEmpty() ? List.of() : List.copyOf(refs.values());
+    }
+
+    private List<AiChunkTaxonomyLink> parseTaxonomyLinks(Object value) {
+        if (value == null) {
+            return List.of();
+        }
+        try {
+            List<AiChunkTaxonomyLink> links = JsonUtil.convertValue(value, new TypeReference<>() {
+            });
+            return links == null ? List.of() : links;
+        } catch (Exception ex) {
+            log.debug("解析 chunk 分类标签跳转 metadata 失败", ex);
+            return List.of();
+        }
+    }
+
+    private List<AiChunkTaxonomyLink> mergeTaxonomyLinks(List<AiRetrievedChunkVo> chunks) {
+        Map<String, AiChunkTaxonomyLink> links = new LinkedHashMap<>();
+        for (AiRetrievedChunkVo chunk : chunks) {
+            if (chunk.getTaxonomyLinks() == null) {
+                continue;
+            }
+            for (AiChunkTaxonomyLink link : chunk.getTaxonomyLinks()) {
+                if (link == null) {
+                    continue;
+                }
+                String key = safeKey(link.taxonomyType(), link.targetPath(), link.displayName());
+                links.putIfAbsent(key, link);
+            }
+        }
+        return links.isEmpty() ? List.of() : List.copyOf(links.values());
     }
 
     private AiRetrievedChunkVo withSourceScope(AiRetrievedChunkVo source, String sourceScope) {
@@ -482,6 +595,17 @@ public class AiArticleRagServiceQdrantImpl implements AiArticleRagService {
 
     private String stringValue(Object value) {
         return value == null ? "" : value.toString();
+    }
+
+    private String safeKey(Object... values) {
+        StringBuilder builder = new StringBuilder();
+        for (Object value : values) {
+            if (builder.length() > 0) {
+                builder.append('|');
+            }
+            builder.append(value == null ? "" : value);
+        }
+        return builder.toString();
     }
 
     private Long longValue(Object value) {

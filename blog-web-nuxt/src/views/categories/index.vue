@@ -6,6 +6,7 @@ import type { ArticleCategoryGroup, ArticleSummary } from '@/types/article'
 import { unwrapResponseData } from '@/utils/response'
 
 const router = useRouter()
+const route = useRoute()
 const runtimeConfig = useRuntimeConfig()
 const loading = ref(false)
 const activeCategory = ref<string | null>(null)
@@ -71,6 +72,22 @@ function scrollToCategory(categoryName: string) {
 }
 
 /**
+ * 根据路由参数定位到指定分类。
+ */
+async function syncCategoryFromRoute() {
+  const targetCategory = String(route.query.categoryName || '').trim()
+  if (!targetCategory || !categories.value.length) {
+    return
+  }
+  const matchedCategory = categories.value.find((item) => item.name === targetCategory)
+  if (!matchedCategory) {
+    return
+  }
+  await nextTick()
+  scrollToCategory(matchedCategory.name)
+}
+
+/**
  * 根据滚动位置同步当前高亮分类。
  */
 function handleScroll() {
@@ -131,6 +148,7 @@ async function getCategoryList() {
     for (const category of categories.value) {
       visibleCategories[category.name] = false
     }
+    await syncCategoryFromRoute()
   } finally {
     loading.value = false
   }
@@ -175,6 +193,13 @@ onBeforeUnmount(() => {
   categoryObserver?.disconnect()
   categoryObserver = null
 })
+
+watch(
+  () => route.query.categoryName,
+  async () => {
+    await syncCategoryFromRoute()
+  }
+)
 </script>
 
 <template>
