@@ -3,7 +3,7 @@ plugins {
 }
 
 tasks.bootJar {
-    archiveBaseName.set("module-blog")
+    archiveBaseName.set("fxblog")
     mainClass.set("top.fxmarkbrown.blog.BlogApplication")
 }
 

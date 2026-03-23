@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import top.fxmarkbrown.blog.entity.SysArticle;
 import top.fxmarkbrown.blog.entity.SysComment;
 import top.fxmarkbrown.blog.entity.SysUser;
+import top.fxmarkbrown.blog.exception.ServiceException;
 import top.fxmarkbrown.blog.mapper.SysArticleMapper;
 import top.fxmarkbrown.blog.mapper.SysCommentMapper;
 import top.fxmarkbrown.blog.mapper.SysTagMapper;
@@ -72,7 +73,18 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void updateProfile(SysUser user) {
-        sysUserMapper.updateById(user);
+        Long currentUserId = StpUtil.getLoginIdAsLong();
+        SysUser currentUser = sysUserMapper.selectById(currentUserId);
+        if (currentUser == null) {
+            throw new ServiceException("用户不存在");
+        }
+
+        currentUser.setNickname(user.getNickname());
+        currentUser.setEmail(user.getEmail());
+        currentUser.setSex(user.getSex());
+        currentUser.setSignature(user.getSignature());
+        currentUser.setAvatar(user.getAvatar());
+        sysUserMapper.updateById(currentUser);
     }
 
     @Override
