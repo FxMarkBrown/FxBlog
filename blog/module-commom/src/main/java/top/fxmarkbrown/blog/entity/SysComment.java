@@ -18,7 +18,7 @@ public class SysComment implements Serializable {
 
     @TableId(type = IdType.AUTO)
     @Schema(description = "评论主键ID，自增唯一标识")
-    private Integer id;
+    private Long id;
 
     @Schema(description = "关联的文章ID，表明该评论所属的文章")
     private Long articleId;
@@ -30,7 +30,7 @@ public class SysComment implements Serializable {
     private Long replyUserId;
 
     @Schema(description = "父评论ID，用于实现回复评论的层级结构，若为顶级评论则为NULL")
-    private Integer parentId;
+    private Long parentId;
 
     @Schema(description = "评论内容，使用utf8mb4字符集以支持更多字符类型")
     private String content;

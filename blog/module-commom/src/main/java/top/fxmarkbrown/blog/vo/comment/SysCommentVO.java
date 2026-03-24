@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 public class SysCommentVO {
 
     @Schema(description = "主键ID")
-    private Integer id;
+    private Long id;
 
     @Schema(description = "用户头像")
     private String avatar;

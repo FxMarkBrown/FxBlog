@@ -32,7 +32,7 @@ public class SysArticleController {
 
     @GetMapping("/detail/{id}")
     @Operation(summary = "文章详情")
-    public Result<SysArticleDetailVo> detail(@PathVariable Integer id) {
+    public Result<SysArticleDetailVo> detail(@PathVariable Long id) {
         return Result.success(sysArticleService.detail(id));
     }
 

@@ -19,7 +19,7 @@ public interface SysArticleService extends IService<SysArticle> {
     /**
      * 文章详情
      */
-    SysArticleDetailVo detail(Integer id);
+    SysArticleDetailVo detail(Long id);
 
     /**
      * 新增

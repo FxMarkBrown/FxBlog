@@ -29,7 +29,7 @@ public class SysCommentController {
     @DeleteMapping("/delete/{ids}")
     @Operation(summary = "删除评论")
     @SaCheckPermission("sys:comment:delete")
-    public Result<Void> delete(@PathVariable List<Integer> ids) {
+    public Result<Void> delete(@PathVariable List<Long> ids) {
         sysCommentService.removeBatchByIds(ids);
         return Result.success();
     }

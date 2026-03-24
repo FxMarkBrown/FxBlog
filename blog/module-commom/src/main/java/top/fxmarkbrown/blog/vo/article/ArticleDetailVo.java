@@ -15,7 +15,7 @@ import java.util.List;
 public class ArticleDetailVo {
 
     @Schema(description = "主键")
-    private Integer id;
+    private Long id;
 
     @Schema(description = "用户id")
     private Long userId;

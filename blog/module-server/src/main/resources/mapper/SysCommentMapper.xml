@@ -20,18 +20,6 @@
         </choose>
 
     </select>
-    <select id="getChildrenComment" resultType="top.fxmarkbrown.blog.vo.comment.CommentListVo">
-        SELECT
-            c.*,
-            u.nickname,
-            u.avatar,
-            ru.nickname as replyNickname
-        FROM sys_comment c
-        LEFT JOIN sys_user u ON c.user_id = u.id
-        LEFT JOIN sys_user ru ON c.reply_user_id = ru.id
-        WHERE c.parent_id = #{id}
-        ORDER BY c.create_time DESC
-    </select>
     <select id="getChildrenCommentsByParentIds" resultType="top.fxmarkbrown.blog.vo.comment.CommentListVo">
         SELECT
             c.*,

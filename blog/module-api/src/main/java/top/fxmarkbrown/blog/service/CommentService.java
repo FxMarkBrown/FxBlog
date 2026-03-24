@@ -11,7 +11,7 @@ public interface CommentService {
      * 获取评论列表
      */
 
-    PageResponse<CommentListVo> getComments(PageQuery pageQuery, Integer articleId, String sortType);
+    PageResponse<CommentListVo> getComments(PageQuery pageQuery, Long articleId, String sortType);
 
     /**
      * 新增评论

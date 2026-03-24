@@ -52,7 +52,7 @@ public class SysArticleServiceImpl extends ServiceImpl<SysArticleMapper, SysArti
     }
 
     @Override
-    public SysArticleDetailVo detail(Integer id) {
+    public SysArticleDetailVo detail(Long id) {
         SysArticle sysArticle = baseMapper.selectById(id);
 
         SysArticleDetailVo sysArticleDetailVo = new SysArticleDetailVo();

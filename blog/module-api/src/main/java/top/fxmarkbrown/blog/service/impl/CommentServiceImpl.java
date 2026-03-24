@@ -32,7 +32,7 @@ public class CommentServiceImpl implements CommentService {
     private final SysAsyncServiceImpl sysAsyncServiceImpl;
 
     @Override
-    public PageResponse<CommentListVo> getComments(PageQuery pageQuery, Integer articleId, String sortType) {
+    public PageResponse<CommentListVo> getComments(PageQuery pageQuery, Long articleId, String sortType) {
         PageQuery query = pageQuery == null ? new PageQuery() : pageQuery;
         IPage<CommentListVo> page = sysCommentMapper.getComments(
                 new Page<>(query.getPageNum(), query.getPageSize()),
@@ -48,7 +48,7 @@ public class CommentServiceImpl implements CommentService {
             return;
         }
 
-        List<Integer> parentIds = parentComments.stream()
+        List<Long> parentIds = parentComments.stream()
                 .map(CommentListVo::getId)
                 .filter(id -> id != null && id > 0)
                 .toList();
@@ -62,7 +62,7 @@ public class CommentServiceImpl implements CommentService {
             return;
         }
 
-        Map<Integer, List<CommentListVo>> childrenByParentId = allChildren.stream()
+        Map<Long, List<CommentListVo>> childrenByParentId = allChildren.stream()
                 .filter(comment -> comment.getParentId() != null)
                 .collect(Collectors.groupingBy(CommentListVo::getParentId, LinkedHashMap::new, Collectors.toList()));
 

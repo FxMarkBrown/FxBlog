@@ -13,16 +13,16 @@ import java.util.List;
 public class CommentListVo {
 
     @Schema(description = "评论主键ID，自增唯一标识")
-    private Integer id;
+    private Long id;
 
     @Schema(description = "关联的文章ID，表明该评论所属的文章")
-    private Integer articleId;
+    private Long articleId;
 
     @Schema(description = "关联的文章标题")
     private String articleTitle;
 
     @Schema(description = "评论父级id")
-    private Integer parentId;
+    private Long parentId;
 
     @Schema(description = "评论用户id")
     private Long userId;

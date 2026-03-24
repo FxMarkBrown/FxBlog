@@ -23,7 +23,7 @@ public class ArticleListVo {
     private Long id;
 
     @Schema(description = "分类id")
-    private Long categoryId;
+    private Integer categoryId;
 
     @Schema(description = "用户id")
     private Long userId;

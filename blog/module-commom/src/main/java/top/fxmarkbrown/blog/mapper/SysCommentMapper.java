@@ -17,12 +17,10 @@ import java.util.List;
 @Mapper
 public interface SysCommentMapper extends BaseMapper<SysComment> {
 
-    IPage<CommentListVo> getComments(@Param("page") Page<Object> page, @Param("articleId") Integer articleId,
+    IPage<CommentListVo> getComments(@Param("page") Page<Object> page, @Param("articleId") Long articleId,
                                      @Param("sortType") String sortType);
 
-    List<CommentListVo> getChildrenComment(Integer id);
-
-    List<CommentListVo> getChildrenCommentsByParentIds(@Param("parentIds") List<Integer> parentIds);
+    List<CommentListVo> getChildrenCommentsByParentIds(@Param("parentIds") List<Long> parentIds);
 
     Page<SysCommentVO> selectPage(Page<SysCommentVO> page);
 

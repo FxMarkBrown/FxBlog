@@ -51,7 +51,7 @@ public class UserServiceImpl implements UserService {
             return null;
         }
 
-        List<Integer> ownedIds = new ArrayList<>(ownedComments.size());
+        List<Long> ownedIds = new ArrayList<>(ownedComments.size());
         for (SysComment ownedComment : ownedComments) {
             ownedIds.add(ownedComment.getId());
         }

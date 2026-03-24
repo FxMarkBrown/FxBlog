@@ -23,7 +23,7 @@ public class CommentController {
 
     @GetMapping("/list")
     @Operation(summary = "获取文章评论列表")
-    public Result<PageResponse<CommentListVo>> getComments(PageQuery pageQuery, Integer articleId, String sortType) {
+    public Result<PageResponse<CommentListVo>> getComments(PageQuery pageQuery, Long articleId, String sortType) {
         return Result.success(commentService.getComments(pageQuery, articleId, sortType));
     }
 
