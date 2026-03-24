@@ -61,7 +61,7 @@ pnpm install
 
 ### 2. 配置环境变量
 
-可参考项目内的 [`.env.example`](/mnt/e/Blog/Blog2/blog-web-nuxt/.env.example)。
+可参考项目内的 [`.env.example`](.env.example)。
 
 当前主要变量：
 

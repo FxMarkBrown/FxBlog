@@ -67,9 +67,9 @@ FxBlog
 
 ## 子项目说明
 
-- [`blog`](/mnt/e/Blog/Blog2/blog)：Spring Boot 多模块后端，提供公开接口、后台接口、鉴权、文件、定时任务与 AI 能力
-- [`blog-admin`](/mnt/e/Blog/Blog2/blog-admin)：后台管理端
-- [`blog-web-nuxt`](/mnt/e/Blog/Blog2/blog-web-nuxt)：新的前台门户，面向 SSR 与 SEO
+- [`blog`](blog)：Spring Boot 多模块后端，提供公开接口、后台接口、鉴权、文件、定时任务与 AI 能力
+- [`blog-admin`](blog-admin)：后台管理端
+- [`blog-web-nuxt`](blog-web-nuxt)：新的前台门户，面向 SSR 与 SEO
 
 ## 环境要求
 
@@ -91,11 +91,11 @@ FxBlog
 
 ### 1. 初始化数据库
 
-执行根目录下的 [`blog-pg.sql`](/mnt/e/Blog/Blog2/blog-pg.sql)。
+执行根目录下的 [`blog-pg.sql`](blog-pg.sql)。
 
 ### 2. 启动后端
 
-进入 [`blog`](/mnt/e/Blog/Blog2/blog) 并配置环境变量后启动：
+进入 [`blog`](blog) 并配置环境变量后启动：
 
 ```bash
 bash ./gradlew :module-server:bootRun
@@ -103,7 +103,7 @@ bash ./gradlew :module-server:bootRun
 
 ### 3. 启动后台管理端
 
-进入 [`blog-admin`](/mnt/e/Blog/Blog2/blog-admin)：
+进入 [`blog-admin`](blog-admin)：
 
 ```bash
 pnpm install
@@ -112,12 +112,16 @@ pnpm dev
 
 ### 4. 启动前台门户
 
-进入 [`blog-web-nuxt`](/mnt/e/Blog/Blog2/blog-web-nuxt)：
+进入 [`blog-web-nuxt`](blog-web-nuxt)：
 
 ```bash
 pnpm install
 pnpm dev
 ```
+
+### 5. （生产环境）配置 Nginx
+
+参考 [`nginx_example.txt`](nginx_example.txt)
 
 ## 当前状态
 - blog-web-nuxt: 前端门户正在持续改进中
