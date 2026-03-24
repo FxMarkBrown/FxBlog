@@ -868,11 +868,22 @@ onBeforeUnmount(() => {
     left: 50%;
     transform: translateX(-50%);
     margin-right: 0;
+    width: calc(100% - 132px);
+    display: flex;
+    justify-content: center;
+
+    .logo {
+      max-width: 100%;
+    }
 
     .logo .logo-text {
-      max-width: 160px;
-      font-size: 1em;
+      max-width: 100%;
+      font-size: 0.98rem;
       display: block;
+      text-align: center;
+      letter-spacing: -0.7px;
+      overflow: visible;
+      text-overflow: clip;
     }
   }
 }
@@ -899,19 +910,33 @@ onBeforeUnmount(() => {
     left: 50%;
     transform: translateX(-50%);
     margin-right: 0;
+    width: calc(100% - 124px);
+    display: flex;
+    justify-content: center;
+
+    .logo {
+      max-width: 100%;
+    }
 
     .logo .logo-text {
-      max-width: 160px;
-      font-size: 1em;
+      max-width: 100%;
+      font-size: 0.94rem;
       display: block;
+      text-align: center;
+      letter-spacing: -0.8px;
+      overflow: visible;
+      text-overflow: clip;
     }
   }
 }
 
 @media screen and (max-width: 480px) {
   .nav-left .logo .logo-text {
-    max-width: 120px;
-    font-size: 1.3em;
+    max-width: 100%;
+    font-size: 0.82rem;
+    letter-spacing: -1px;
+    overflow: visible;
+    text-overflow: clip;
   }
 }
 

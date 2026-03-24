@@ -926,10 +926,21 @@ onBeforeUnmount(() => {
   .comment-item,
   .reply-item,
   .comment-header,
-  .reply-header,
-  .editor-footer {
+  .reply-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .editor-footer {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .submit-btn,
+  .cancel-btn {
+    min-width: 112px;
   }
 
   .replies-list {
@@ -939,6 +950,19 @@ onBeforeUnmount(() => {
 }
 
 @include responsive(sm) {
+  .comment-editor .editor-content {
+    padding: $spacing-md;
+  }
+
+  .editor-footer {
+    gap: $spacing-sm;
+  }
+
+  .submit-btn,
+  .cancel-btn {
+    padding: $spacing-sm $spacing-lg;
+  }
+
   .comments-list .comment-item {
     padding: $spacing-md;
     gap: $spacing-md;

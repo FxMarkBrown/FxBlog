@@ -846,7 +846,7 @@ onBeforeUnmount(() => {
               </button>
               <button class="action-btn share" @click="openShareCard">
                 <i class="fas fa-share-alt"></i>
-                卡片分享
+                <span class="share-label">卡片分享</span>
               </button>
             </div>
           </footer>
@@ -1543,8 +1543,10 @@ onBeforeUnmount(() => {
 .article-actions {
   display: flex;
   justify-content: center;
+  align-items: center;
   gap: $spacing-lg;
   margin-bottom: $spacing-xl;
+  flex-wrap: nowrap;
 }
 
 .action-btn {
@@ -1889,12 +1891,65 @@ onBeforeUnmount(() => {
 }
 
 @include responsive(md) {
-  .article-info,
-  .article-stats,
-  .author-info,
-  .tags-section {
+  .article-info {
     flex-direction: column;
     align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  .author-info {
+    width: 100%;
+    align-items: center;
+  }
+
+  .post-meta,
+  .article-stats,
+  .tags-section,
+  .tags-list {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .article-stats {
+    width: 100%;
+    gap: $spacing-md;
+  }
+
+  .stat-item {
+    font-size: 0.92em;
+  }
+
+  .tags-section {
+    gap: $spacing-sm;
+  }
+
+  .article-actions {
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: nowrap;
+  }
+
+  .action-btn {
+    padding: $spacing-sm $spacing-lg;
+  }
+
+  .action-btn.like,
+  .action-btn.favorite {
+    flex: 0 0 auto;
+    justify-content: center;
+    min-width: 92px;
+  }
+
+  .action-btn.share {
+    width: 92px;
+    min-width: 92px;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .share-label {
+    display: none;
   }
 
   .article-title {
