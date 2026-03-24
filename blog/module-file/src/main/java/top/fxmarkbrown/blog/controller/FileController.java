@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.apache.commons.lang3.Strings;
 import top.fxmarkbrown.blog.common.Constants;
 import top.fxmarkbrown.blog.common.Result;
+import top.fxmarkbrown.blog.dto.file.FileReplaceDto;
+import top.fxmarkbrown.blog.dto.file.FileRenameDto;
 import top.fxmarkbrown.blog.entity.FileDetail;
 import top.fxmarkbrown.blog.entity.SysFileOss;
 import top.fxmarkbrown.blog.exception.ServiceException;
@@ -20,8 +22,6 @@ import org.dromara.x.file.storage.core.FileStorageService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -31,8 +31,6 @@ import java.util.stream.Collectors;
 @Tag(name = "文件管理")
 @RequiredArgsConstructor
 public class FileController {
-
-    private static final DateTimeFormatter FILE_DATE_PATH_FORMATTER = DateTimeFormatter.ofPattern("yyyy/MM/dd");
 
     private final FileDetailService fileDetailService;
 
@@ -51,6 +49,13 @@ public class FileController {
     @Operation(summary = "获取存储平台配置")
     public Result<List<SysFileOss>> getOssConfig() {
         return Result.success(fileDetailService.getOssConfig());
+    }
+
+    @SaCheckLogin
+    @GetMapping("/extOptions")
+    @Operation(summary = "获取实际存在的文件类型列表")
+    public Result<List<String>> extOptions() {
+        return Result.success(fileDetailService.listExtOptions());
     }
 
     @SaCheckLogin
@@ -110,6 +115,26 @@ public class FileController {
         return Result.success(FileUrlUtil.toRelativeUrl(fileInfo.getUrl()));
     }
 
+    @SaCheckLogin
+    @PutMapping("/rename")
+    @Operation(summary = "修改文件名或存储路径")
+    public Result<FileDetail> rename(@RequestBody FileRenameDto dto) {
+        FileDetail detail = fileDetailService.rename(dto);
+        detail.setUrl(FileUrlUtil.toRelativeUrl(detail.getUrl()));
+        detail.setThUrl(FileUrlUtil.toRelativeUrl(detail.getThUrl()));
+        return Result.success(detail);
+    }
+
+    @SaCheckLogin
+    @PostMapping("/replace")
+    @Operation(summary = "原地替换文件")
+    public Result<FileDetail> replace(FileReplaceDto dto, @RequestParam("file") MultipartFile file) {
+        FileDetail detail = fileDetailService.replace(dto.getId(), file);
+        detail.setUrl(FileUrlUtil.toRelativeUrl(detail.getUrl()));
+        detail.setThUrl(FileUrlUtil.toRelativeUrl(detail.getThUrl()));
+        return Result.success(detail);
+    }
+
     @GetMapping("/delete")
     @Operation(summary = "删除文件")
     @SaCheckPermission("sys:file:delete")
@@ -126,8 +151,7 @@ public class FileController {
     }
 
     private String buildUploadPath(String source) {
-        String sourcePath = normalizeSourcePath(source);
-        return sourcePath + "/" + LocalDate.now().format(FILE_DATE_PATH_FORMATTER) + "/";
+        return normalizeSourcePath(source) + "/";
     }
 
     private String normalizeSourcePath(String source) {

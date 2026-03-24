@@ -123,7 +123,7 @@
         </el-form-item>
 
         <el-form-item label="文章封面" prop="cover">
-          <UploadImage v-model="form.cover" :limit="1" :source="'article-cover'" />
+          <UploadImage v-model="form.cover" :limit="1" :source="'articleCover'" />
         </el-form-item>
 
         <el-form-item label="文章简介" prop="summary">
@@ -294,7 +294,7 @@
             v-model="form.contentMd"
             placeholder="输入文章内容..."
             height="500px"
-            upload-type="article-content"
+            upload-type="articlePicture"
             :enable-video-insert="true"
           />
         </el-form-item>

@@ -159,7 +159,7 @@ function uploadImg() {
     formData.append('file', file)
 
     try {
-      const uploadResponse = await uploadFileApi(formData, 'avatar')
+      const uploadResponse = await uploadFileApi(formData, 'userAvatar')
       const avatarUrl = unwrapResponseData<string | null>(uploadResponse)
       if (!avatarUrl) {
         throw new Error(String(uploadResponse.message || uploadResponse.msg || '头像上传失败'))

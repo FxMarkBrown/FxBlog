@@ -404,7 +404,7 @@ async function handleCoverUpload(event: Event) {
   formData.append('file', file)
 
   try {
-    const response = await uploadFileApi(formData, 'article-cover')
+    const response = await uploadFileApi(formData, 'articleCover')
     const coverUrl = unwrapResponseData<string | null>(response)
     if (!coverUrl) {
       throw new Error(String(response.message || response.msg || '上传失败'))
@@ -480,7 +480,7 @@ function removeCover() {
                 v-model="articleForm.contentMd"
                 placeholder="输入文章内容..."
                 height="500px"
-                upload-type="article-content"
+                upload-type="articlePicture"
               />
             </ElFormItem>
           </div>

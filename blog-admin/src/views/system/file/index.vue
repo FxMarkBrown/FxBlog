@@ -9,8 +9,12 @@
                 </el-form-item>
                 <el-form-item label="文件类型" prop="ext">
                     <el-select v-model="queryParams.ext" placeholder="请选择文件类型" clearable>
-                        <el-option v-for="item in fileTypeOptions" :key="item.value" :label="item.label"
-                            :value="item.value" />
+                        <el-option
+                            v-for="item in fileTypeOptions"
+                            :key="item.value"
+                            :label="item.label"
+                            :value="item.value"
+                        />
                     </el-select>
                 </el-form-item>
                 <el-form-item>
@@ -47,19 +51,36 @@
             <el-table v-loading="loading" :data="fileList" style="width: 100%">
                 <el-table-column label="文件内容" align="center" prop="filename" width="92">
                     <template #default="scope">
-                        <el-image
-                            v-if="isImageFile(scope.row)"
-                            :preview-src-list="[scope.row.url]"
-                            :initial-index="0"
-                            :src="scope.row.url"
-                            class="file-preview-image"
-                        />
-                        <div v-else class="file-placeholder">
-                            {{ formatFileBadge(scope.row.ext) }}
+                        <div class="file-preview-card">
+                            <el-image
+                                v-if="isImageFile(scope.row)"
+                                :preview-src-list="[scope.row.url]"
+                                :initial-index="0"
+                                :src="scope.row.url"
+                                class="file-preview-image"
+                            />
+                            <div v-else class="file-placeholder" :class="getFilePreviewTone(scope.row)">
+                                <i :class="getFilePreviewIcon(scope.row)"></i>
+                                <span>{{ formatFileBadge(scope.row.ext) }}</span>
+                            </div>
+                            <el-upload
+                                class="file-replace-upload"
+                                :show-file-list="false"
+                                :http-request="(options) => handleReplaceUpload(scope.row, options)"
+                            >
+                                <el-button class="preview-action-button" type="primary" circle icon="RefreshRight" />
+                            </el-upload>
                         </div>
                     </template>
                 </el-table-column>
-                <el-table-column label="文件名" align="center" prop="filename" min-width="140" show-overflow-tooltip />
+                <el-table-column label="文件名" align="center" prop="filename" min-width="180">
+                    <template #default="scope">
+                        <div class="editable-cell">
+                            <span class="editable-cell__text">{{ scope.row.filename }}</span>
+                            <el-button type="primary" link icon="Edit" @click="handleOpenRename(scope.row)" />
+                        </div>
+                    </template>
+                </el-table-column>
                 <el-table-column label="上传分组" align="center" prop="source" width="160" show-overflow-tooltip />
                 <el-table-column label="文件类型" align="center" prop="ext" width="100" show-overflow-tooltip />
                 <el-table-column label="文件大小" align="center" prop="size" width="110">
@@ -74,7 +95,10 @@
                 </el-table-column>
                 <el-table-column label="存储地址" align="center" prop="url" min-width="260">
                     <template #default="scope">
-                        <div class="file-path-cell">{{ scope.row.basePath }}{{ scope.row.path }}{{ scope.row.filename }}</div>
+                        <div class="editable-cell editable-cell--path">
+                            <div class="file-path-cell">{{ scope.row.basePath }}{{ scope.row.path }}{{ scope.row.filename }}</div>
+                            <el-button type="primary" link icon="Edit" @click="handleOpenRename(scope.row)" />
+                        </div>
                     </template>
                 </el-table-column>
                 <el-table-column label="存储平台" align="center" prop="platform" width="110">
@@ -165,13 +189,30 @@
                     :loading="ossConfigLoading" @click="handleSaveOssConfig">保存</el-button>
             </div>
         </el-drawer>
+
+        <el-dialog v-model="renameDialogVisible" title="修改文件信息" width="520px">
+            <el-form ref="renameFormRef" :model="renameForm" :rules="renameRules" label-width="96px">
+                <el-form-item label="文件名" prop="filename">
+                    <el-input v-model="renameForm.filename" placeholder="请输入新的文件名" />
+                </el-form-item>
+                <el-form-item label="存储路径" prop="path">
+                    <el-input v-model="renameForm.path" placeholder="例如 articlePicture/" />
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <div class="dialog-footer">
+                    <el-button @click="renameDialogVisible = false">取 消</el-button>
+                    <el-button type="primary" :loading="renameLoading" @click="handleSubmitRename">保 存</el-button>
+                </div>
+            </template>
+        </el-dialog>
     </div>
 </template>
 
 <script setup lang="ts">
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules, UploadRequestOptions } from 'element-plus'
-import { getFileListApi, deleteFileApi, getOssConfigApi, addOssApi, updateOssApi, uploadApi } from '@/api/file'
+import { getFileListApi, getFileExtOptionsApi, deleteFileApi, getOssConfigApi, addOssApi, updateOssApi, uploadApi, renameFileApi, replaceFileApi } from '@/api/file'
 import { getDictDataByDictTypesApi } from '@/api/system/dict'
 
 const createDefaultOssConfigForm = () => ({
@@ -210,6 +251,14 @@ const ossConfigLoading = ref(false)
 const ossConfigForm = ref<any>(createDefaultOssConfigForm())
 const ossConfigFormRef = ref<FormInstance | null>(null)
 const uploadSource = ref('manual')
+const renameDialogVisible = ref(false)
+const renameLoading = ref(false)
+const renameFormRef = ref<FormInstance | null>(null)
+const renameForm = reactive({
+    id: '',
+    filename: '',
+    path: ''
+})
 
 const resetOssConfigForm = (platform = '') => {
     ossConfigForm.value = {
@@ -243,6 +292,15 @@ const rules = reactive<FormRules>({
     ]
 })
 
+const renameRules = reactive<FormRules>({
+    filename: [
+        { required: true, message: '文件名不能为空', trigger: 'blur' }
+    ],
+    path: [
+        { required: true, message: '存储路径不能为空', trigger: 'blur' }
+    ]
+})
+
 
 // 获取文件列表
 const getList = async () => {
@@ -262,9 +320,17 @@ const getList = async () => {
 // 获取状态列表
 const getDictList = async () => {
     try {
-        const { data } = await getDictDataByDictTypesApi(['sys_file_type', 'sys_file_oss'])
-        fileTypeOptions.value = data.sys_file_type.list
-        ossOptions.value = data.sys_file_oss.list
+        const [{ data: extData }, { data: dictData }] = await Promise.all([
+            getFileExtOptionsApi(),
+            getDictDataByDictTypesApi(['sys_file_oss'])
+        ])
+        fileTypeOptions.value = Array.isArray(extData)
+            ? extData.map((item: string) => ({
+                label: String(item || '').toUpperCase(),
+                value: item
+            }))
+            : []
+        ossOptions.value = dictData.sys_file_oss.list
     } catch (error) {
         fileTypeOptions.value = []
         ossOptions.value = []
@@ -311,6 +377,31 @@ const formatFileBadge = (ext?: string) => {
     return normalized || 'FILE'
 }
 
+const getFilePreviewIcon = (row: any) => {
+    const ext = String(row?.ext || '').toLowerCase()
+    if (['pdf'].includes(ext)) return 'fas fa-file-pdf'
+    if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return 'fas fa-file-archive'
+    if (['mp3', 'wav', 'flac', 'ogg', 'm4a'].includes(ext)) return 'fas fa-file-audio'
+    if (['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(ext)) return 'fas fa-file-video'
+    if (['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'].includes(ext)) return 'fas fa-file-word'
+    if (['java', 'kt', 'js', 'ts', 'vue', 'json', 'xml', 'yml', 'yaml', 'md', 'sql', 'html', 'css', 'scss'].includes(ext)) {
+        return 'fas fa-file-code'
+    }
+    return 'fas fa-file'
+}
+
+const getFilePreviewTone = (row: any) => {
+    const ext = String(row?.ext || '').toLowerCase()
+    if (['pdf'].includes(ext)) return 'file-placeholder--danger'
+    if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return 'file-placeholder--warning'
+    if (['mp3', 'wav', 'flac', 'ogg', 'm4a'].includes(ext)) return 'file-placeholder--success'
+    if (['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(ext)) return 'file-placeholder--violet'
+    if (['java', 'kt', 'js', 'ts', 'vue', 'json', 'xml', 'yml', 'yaml', 'md', 'sql', 'html', 'css', 'scss'].includes(ext)) {
+        return 'file-placeholder--primary'
+    }
+    return 'file-placeholder--neutral'
+}
+
 const handleCopyUrl = async (row: any) => {
     if (!row?.url) {
         ElMessage.warning('文件地址不存在')
@@ -321,6 +412,59 @@ const handleCopyUrl = async (row: any) => {
         ElMessage.success('路径已复制')
     } catch (error) {
         ElMessage.error('复制失败')
+    }
+}
+
+const normalizeRenamePath = (path: string) => {
+    const normalized = String(path || '')
+        .replace(/\\/g, '/')
+        .split(/\/+/)
+        .map(item => item.trim())
+        .filter(Boolean)
+        .map(item => item.replace(/[^\p{L}\p{N}_-]/gu, ''))
+        .filter(Boolean)
+        .join('/')
+    return normalized ? `${normalized}/` : ''
+}
+
+const handleOpenRename = (row: any) => {
+    renameForm.id = String(row.id || '')
+    renameForm.filename = String(row.filename || '')
+    renameForm.path = String(row.path || '')
+    renameDialogVisible.value = true
+    nextTick(() => {
+        renameFormRef.value?.clearValidate()
+    })
+}
+
+const handleSubmitRename = async () => {
+    const valid = await renameFormRef.value?.validate().catch(() => false)
+    if (!valid) {
+        return
+    }
+    renameLoading.value = true
+    try {
+        await renameFileApi({
+            id: renameForm.id,
+            filename: renameForm.filename,
+            path: normalizeRenamePath(renameForm.path)
+        })
+        ElMessage.success('文件信息已更新')
+        renameDialogVisible.value = false
+        getList()
+    } finally {
+        renameLoading.value = false
+    }
+}
+
+const handleReplaceUpload = async (row: any, options: UploadRequestOptions) => {
+    try {
+        await replaceFileApi(String(row.id), options.file as File)
+        ElMessage.success(`${row.filename} 已替换`)
+        options.onSuccess?.({})
+        getList()
+    } catch (error) {
+        options.onError?.(error as any)
     }
 }
 
@@ -406,6 +550,18 @@ watch(drawerVisible, (visible) => {
         })
     }
 })
+
+watch(renameDialogVisible, (visible) => {
+    if (!visible) {
+        renameLoading.value = false
+        renameForm.id = ''
+        renameForm.filename = ''
+        renameForm.path = ''
+        nextTick(() => {
+            renameFormRef.value?.clearValidate()
+        })
+    }
+})
 // 下载
 const handleDownload = (row: any) => {
     if (!row?.url) {
@@ -486,14 +642,68 @@ onMounted(() => {
     border-radius: 10px;
 }
 
+.file-preview-card {
+    position: relative;
+    width: 56px;
+    margin: 0 auto;
+}
+
+.file-replace-upload {
+    position: absolute;
+    right: -6px;
+    bottom: -6px;
+}
+
+.preview-action-button {
+    width: 22px;
+    height: 22px;
+    min-height: 22px;
+    padding: 0;
+    box-shadow: 0 8px 18px rgba(64, 158, 255, 0.22);
+}
+
+.file-replace-upload :deep(.el-button .el-icon) {
+    font-size: 11px;
+}
+
 .file-placeholder {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: var(--el-fill-color-light);
-    color: var(--el-text-color-regular);
-    font-size: 12px;
-    font-weight: 600;
+    gap: 4px;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.file-placeholder i {
+    font-size: 18px;
+}
+
+.file-placeholder--primary {
+    background: linear-gradient(135deg, #409eff, #2563eb);
+}
+
+.file-placeholder--danger {
+    background: linear-gradient(135deg, #f56c6c, #dc2626);
+}
+
+.file-placeholder--warning {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.file-placeholder--success {
+    background: linear-gradient(135deg, #34d399, #059669);
+}
+
+.file-placeholder--violet {
+    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+}
+
+.file-placeholder--neutral {
+    background: linear-gradient(135deg, #64748b, #334155);
 }
 
 .file-path-cell {
@@ -503,6 +713,24 @@ onMounted(() => {
     text-align: left;
     color: var(--el-text-color-regular);
     word-break: break-all;
+}
+
+.editable-cell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.editable-cell--path {
+    justify-content: space-between;
+}
+
+.editable-cell__text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .file-actions {

@@ -198,7 +198,7 @@ const props = withDefaults(defineProps<{
   modelValue: '',
   height: '500px',
   placeholder: '输入文章内容...',
-  uploadType: 'article-content',
+  uploadType: 'articlePicture',
   enableVideoInsert: false
 })
 

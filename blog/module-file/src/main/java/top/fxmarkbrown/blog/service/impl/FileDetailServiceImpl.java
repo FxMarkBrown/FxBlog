@@ -9,8 +9,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import top.fxmarkbrown.blog.common.Constants;
+import top.fxmarkbrown.blog.dto.file.FileRenameDto;
 import top.fxmarkbrown.blog.entity.FileDetail;
 import top.fxmarkbrown.blog.entity.SysFileOss;
+import top.fxmarkbrown.blog.enums.FileOssEnum;
+import top.fxmarkbrown.blog.exception.ServiceException;
 import top.fxmarkbrown.blog.mapper.FileDetailMapper;
 import top.fxmarkbrown.blog.mapper.SysFileOssMapper;
 import top.fxmarkbrown.blog.service.FileDetailService;
@@ -25,10 +28,19 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * 用来将文件上传记录保存到数据库
@@ -53,6 +65,22 @@ public class FileDetailServiceImpl extends ServiceImpl<FileDetailMapper, FileDet
         IPage<FileDetail> page = page(PageUtil.getPage(), wrapper);
         page.getRecords().forEach(this::normalizePublicUrls);
         return page;
+    }
+
+    @Override
+    public List<String> listExtOptions() {
+        return lambdaQuery()
+                .select(FileDetail::getExt)
+                .isNotNull(FileDetail::getExt)
+                .groupBy(FileDetail::getExt)
+                .orderByAsc(FileDetail::getExt)
+                .list()
+                .stream()
+                .map(FileDetail::getExt)
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .distinct()
+                .toList();
     }
 
     /**
@@ -126,6 +154,113 @@ public class FileDetailServiceImpl extends ServiceImpl<FileDetailMapper, FileDet
                 .eq(FileDetail::getFilename, filename)
                 .last("limit 1")
                 .count() > 0;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public FileDetail rename(FileRenameDto dto) {
+        if (dto == null || !StringUtils.hasText(dto.getId())) {
+            throw new ServiceException("文件ID不能为空");
+        }
+
+        FileDetail detail = requireFileDetail(dto.getId());
+        SysFileOss ossConfig = requireLocalOssConfig(detail.getPlatform());
+        String targetFilename = sanitizeFilename(dto.getFilename());
+        if (!StringUtils.hasText(targetFilename)) {
+            throw new ServiceException("文件名不能为空");
+        }
+        String targetPath = normalizeStoredPath(dto.getPath());
+
+        boolean noChange = targetFilename.equals(detail.getFilename()) && targetPath.equals(defaultString(detail.getPath()));
+        if (noChange) {
+            normalizePublicUrls(detail);
+            return detail;
+        }
+
+        long duplicateCount = lambdaQuery()
+                .eq(FileDetail::getPath, targetPath)
+                .eq(FileDetail::getFilename, targetFilename)
+                .ne(FileDetail::getId, detail.getId())
+                .count();
+        if (duplicateCount > 0) {
+            throw new ServiceException("目标路径下已存在同名文件");
+        }
+
+        Path sourceFile = resolvePhysicalFile(detail, ossConfig);
+        if (!Files.exists(sourceFile)) {
+            throw new ServiceException("源文件不存在，无法改名");
+        }
+
+        Path targetFile = resolvePhysicalFile(ossConfig, detail.getBasePath(), targetPath, targetFilename);
+        if (!sourceFile.equals(targetFile) && Files.exists(targetFile)) {
+            throw new ServiceException("目标文件已存在，无法覆盖");
+        }
+
+        try {
+            Path parent = targetFile.getParent();
+            if (parent != null) {
+                Files.createDirectories(parent);
+            }
+            Files.move(sourceFile, targetFile, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            throw new ServiceException("文件改名失败: " + e.getMessage());
+        }
+
+        detail.setFilename(targetFilename);
+        detail.setOriginalFilename(targetFilename);
+        detail.setPath(targetPath);
+        detail.setExt(extractExtension(targetFilename));
+        detail.setSource(extractSourceFromPath(targetPath));
+        detail.setUrl(buildRelativeUrl(ossConfig.getDomain(), detail.getBasePath(), targetPath, targetFilename));
+        updateById(detail);
+        normalizePublicUrls(detail);
+        return detail;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public FileDetail replace(String id, MultipartFile file) {
+        if (!StringUtils.hasText(id)) {
+            throw new ServiceException("文件ID不能为空");
+        }
+        if (file == null || file.isEmpty()) {
+            throw new ServiceException("请选择要替换的文件");
+        }
+
+        FileDetail detail = requireFileDetail(id);
+        SysFileOss ossConfig = requireLocalOssConfig(detail.getPlatform());
+        String uploadFilename = sanitizeFilename(file.getOriginalFilename());
+        if (StringUtils.hasText(uploadFilename)) {
+            String uploadExt = extractExtension(uploadFilename);
+            if (StringUtils.hasText(uploadExt) && StringUtils.hasText(detail.getExt())
+                    && !uploadExt.equalsIgnoreCase(detail.getExt())) {
+                throw new ServiceException("原地替换要求文件扩展名保持一致");
+            }
+        }
+
+        Path targetFile = resolvePhysicalFile(detail, ossConfig);
+        try {
+            Path parent = targetFile.getParent();
+            if (parent != null) {
+                Files.createDirectories(parent);
+            }
+            try (InputStream inputStream = file.getInputStream()) {
+                Files.copy(inputStream, targetFile, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (IOException e) {
+            throw new ServiceException("文件替换失败: " + e.getMessage());
+        }
+
+        detail.setSize(file.getSize());
+        if (StringUtils.hasText(file.getContentType())) {
+            detail.setContentType(file.getContentType());
+        }
+        if (StringUtils.hasText(uploadFilename)) {
+            detail.setOriginalFilename(uploadFilename);
+        }
+        updateById(detail);
+        normalizePublicUrls(detail);
+        return detail;
     }
 
     @Override
@@ -294,6 +429,133 @@ public class FileDetailServiceImpl extends ServiceImpl<FileDetailMapper, FileDet
     public HashInfo jsonToHashInfo(String json) throws JsonProcessingException {
         if (!StringUtils.hasText(json)) return null;
         return objectMapper.readValue(json, HashInfo.class);
+    }
+
+    private FileDetail requireFileDetail(String id) {
+        FileDetail detail = getById(id);
+        if (detail == null) {
+            throw new ServiceException("文件不存在");
+        }
+        return detail;
+    }
+
+    private SysFileOss requireLocalOssConfig(String platform) {
+        if (!FileOssEnum.LOCAL.getValue().equals(platform)) {
+            throw new ServiceException("当前仅支持本地存储文件的改名和替换");
+        }
+        SysFileOss ossConfig = sysFileOssMapper.selectOne(new LambdaQueryWrapper<SysFileOss>()
+                .eq(SysFileOss::getPlatform, platform)
+                .last("limit 1"));
+        if (ossConfig == null || !StringUtils.hasText(ossConfig.getStoragePath())) {
+            throw new ServiceException("未找到本地存储配置");
+        }
+        return ossConfig;
+    }
+
+    private Path resolvePhysicalFile(FileDetail detail, SysFileOss ossConfig) {
+        return resolvePhysicalFile(ossConfig, detail.getBasePath(), detail.getPath(), detail.getFilename());
+    }
+
+    private Path resolvePhysicalFile(SysFileOss ossConfig, String basePath, String path, String filename) {
+        Path storageRoot = toAbsoluteFileSystemPath(ossConfig.getStoragePath());
+        String relativePath = Stream.of(
+                        trimSlashes(basePath),
+                        trimSlashes(path),
+                        sanitizeFilename(filename)
+                )
+                .filter(StringUtils::hasText)
+                .collect(Collectors.joining("/"));
+        return storageRoot.resolve(relativePath).normalize();
+    }
+
+    private Path toAbsoluteFileSystemPath(String path) {
+        Path resolvedPath = Paths.get(path.trim());
+        if (!resolvedPath.isAbsolute()) {
+            resolvedPath = Paths.get(System.getProperty("user.dir"), path.trim());
+        }
+        return resolvedPath.normalize().toAbsolutePath();
+    }
+
+    private String normalizeStoredPath(String path) {
+        if (!StringUtils.hasText(path)) {
+            return "";
+        }
+        String normalized = Stream.of(path.replace("\\", "/").split("/+"))
+                .map(String::trim)
+                .filter(StringUtils::hasText)
+                .map(item -> item.replaceAll("[^\\p{L}\\p{N}_-]", ""))
+                .filter(StringUtils::hasText)
+                .collect(Collectors.joining("/"));
+        if (!StringUtils.hasText(normalized)) {
+            return "";
+        }
+        return normalized + "/";
+    }
+
+    private String sanitizeFilename(String filename) {
+        if (!StringUtils.hasText(filename)) {
+            return "";
+        }
+        String normalized = filename.trim().replace("\\", "/");
+        int lastSlash = normalized.lastIndexOf('/');
+        if (lastSlash >= 0) {
+            normalized = normalized.substring(lastSlash + 1);
+        }
+        normalized = normalized.replace("..", "");
+        normalized = normalized.replaceAll("\\s+", "-");
+        return normalized;
+    }
+
+    private String extractExtension(String filename) {
+        if (!StringUtils.hasText(filename)) {
+            return null;
+        }
+        int dotIndex = filename.lastIndexOf('.');
+        if (dotIndex < 0 || dotIndex == filename.length() - 1) {
+            return null;
+        }
+        return filename.substring(dotIndex + 1).toLowerCase();
+    }
+
+    private String extractSourceFromPath(String path) {
+        if (!StringUtils.hasText(path)) {
+            return "common";
+        }
+        String normalized = trimSlashes(path);
+        return StringUtils.hasText(normalized) ? normalized : "common";
+    }
+
+    private String buildRelativeUrl(String domain, String basePath, String path, String filename) {
+        String normalizedDomain = defaultString(domain).trim().replace("\\", "/");
+        String remainder = Stream.of(
+                        trimSlashes(basePath),
+                        trimSlashes(path),
+                        sanitizeFilename(filename)
+                )
+                .filter(StringUtils::hasText)
+                .collect(Collectors.joining("/"));
+        if (normalizedDomain.startsWith("http://") || normalizedDomain.startsWith("https://")) {
+            String absoluteUrl = normalizedDomain.replaceAll("/+$", "") + "/" + remainder;
+            return FileUrlUtil.toRelativeUrl(absoluteUrl);
+        }
+        String joined = Stream.of(
+                        trimSlashes(normalizedDomain),
+                        remainder
+                )
+                .filter(StringUtils::hasText)
+                .collect(Collectors.joining("/"));
+        return FileUrlUtil.toRelativeUrl("/" + joined);
+    }
+
+    private String trimSlashes(String value) {
+        if (!StringUtils.hasText(value)) {
+            return "";
+        }
+        return value.trim().replace("\\", "/").replaceAll("^/+", "").replaceAll("/+$", "");
+    }
+
+    private String defaultString(String value) {
+        return value == null ? "" : value;
     }
 }
 
