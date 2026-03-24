@@ -24,7 +24,6 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 @RestController
@@ -98,9 +97,10 @@ public class FileController {
             originalFilename = originalFilename.replace("..", "");
             originalFilename = originalFilename.replaceAll("\\s+", "-");
         }
+        String saveFilename = resolveSaveFilename(path, originalFilename);
         FileInfo fileInfo = fileStorageService.of(file)
                 .setPath(path)
-                .setSaveFilename(String.format("%02d_%s", ThreadLocalRandom.current().nextInt(100), originalFilename))
+                .setSaveFilename(saveFilename)
                 .putAttr("source", source)
                 .upload();
 
@@ -144,5 +144,26 @@ public class FileController {
             return "common";
         }
         return String.join("/", segments);
+    }
+
+    private String resolveSaveFilename(String path, String originalFilename) {
+        String normalizedFilename = StringUtils.trimToEmpty(originalFilename);
+        if (StringUtils.isBlank(normalizedFilename)) {
+            normalizedFilename = "file";
+        }
+        if (!fileDetailService.existsByPathAndFilename(path, normalizedFilename)) {
+            return normalizedFilename;
+        }
+
+        int dotIndex = normalizedFilename.lastIndexOf('.');
+        String baseName = dotIndex > 0 ? normalizedFilename.substring(0, dotIndex) : normalizedFilename;
+        String extension = dotIndex > 0 ? normalizedFilename.substring(dotIndex) : "";
+        int suffix = 1;
+        String candidate = baseName + "_" + suffix + extension;
+        while (fileDetailService.existsByPathAndFilename(path, candidate)) {
+            suffix++;
+            candidate = baseName + "_" + suffix + extension;
+        }
+        return candidate;
     }
 }

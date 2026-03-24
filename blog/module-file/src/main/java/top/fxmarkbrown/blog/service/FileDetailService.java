@@ -21,6 +21,11 @@ public interface FileDetailService extends FileRecorder, IService<FileDetail> {
     boolean delete(String url);
 
     /**
+     * 判断指定路径下是否已存在同名文件
+     */
+    boolean existsByPathAndFilename(String path, String filename);
+
+    /**
      * 解析文件真实存储地址
      */
     String resolveStorageUrl(String url);

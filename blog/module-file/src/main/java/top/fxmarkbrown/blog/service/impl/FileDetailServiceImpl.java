@@ -117,6 +117,18 @@ public class FileDetailServiceImpl extends ServiceImpl<FileDetailMapper, FileDet
     }
 
     @Override
+    public boolean existsByPathAndFilename(String path, String filename) {
+        if (!StringUtils.hasText(path) || !StringUtils.hasText(filename)) {
+            return false;
+        }
+        return lambdaQuery()
+                .eq(FileDetail::getPath, path)
+                .eq(FileDetail::getFilename, filename)
+                .last("limit 1")
+                .count() > 0;
+    }
+
+    @Override
     public String resolveStorageUrl(String url) {
         FileDetail detail = findByUrl(url);
         return detail == null ? url : detail.getUrl();
