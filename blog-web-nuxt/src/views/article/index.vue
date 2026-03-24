@@ -697,42 +697,44 @@ onBeforeUnmount(() => {
 <template>
   <div v-loading="loading" class="article-page">
     <template v-if="article">
-      <div class="floating-action-bar" :style="{ left: actionBarLeft }">
-        <ElTooltip effect="dark" content="点赞" placement="top-start">
-          <div class="action-item" @click="toggleLike">
-            <ElBadge :value="article.likeNum || 0" class="item">
-              <div class="action-button">
-                <i class="fas fa-thumbs-up" :class="{ active: article.isLike }"></i>
-              </div>
-            </ElBadge>
-          </div>
-        </ElTooltip>
-        <ElTooltip effect="dark" content="收藏" placement="top-start">
-          <div class="action-item" @click="toggleFavorite">
-            <ElBadge :value="article.favoriteNum || 0" class="item">
-              <div class="action-button">
-                <i class="fas fa-star" :class="{ active: article.isFavorite }"></i>
-              </div>
-            </ElBadge>
-          </div>
-        </ElTooltip>
-        <ElTooltip effect="dark" content="评论" placement="top-start">
-          <div class="action-item" @click="scrollToComments">
-            <ElBadge :value="article.commentNum || 0" class="item">
-              <div class="action-button">
-                <i class="fas fa-comment"></i>
-              </div>
-            </ElBadge>
-          </div>
-        </ElTooltip>
-        <ElTooltip effect="dark" content="沉浸式浏览" placement="top-start">
-          <div class="action-item" @click="toggleSidebar">
-            <div class="action-button">
-              <i class="fas fa-expand"></i>
+      <ClientOnly>
+        <div class="floating-action-bar" :style="{ left: actionBarLeft }">
+          <ElTooltip effect="dark" content="点赞" placement="top-start">
+            <div class="action-item" @click="toggleLike">
+              <ElBadge :value="article.likeNum || 0" class="item">
+                <div class="action-button">
+                  <i class="fas fa-thumbs-up" :class="{ active: article.isLike }"></i>
+                </div>
+              </ElBadge>
             </div>
-          </div>
-        </ElTooltip>
-      </div>
+          </ElTooltip>
+          <ElTooltip effect="dark" content="收藏" placement="top-start">
+            <div class="action-item" @click="toggleFavorite">
+              <ElBadge :value="article.favoriteNum || 0" class="item">
+                <div class="action-button">
+                  <i class="fas fa-star" :class="{ active: article.isFavorite }"></i>
+                </div>
+              </ElBadge>
+            </div>
+          </ElTooltip>
+          <ElTooltip effect="dark" content="评论" placement="top-start">
+            <div class="action-item" @click="scrollToComments">
+              <ElBadge :value="article.commentNum || 0" class="item">
+                <div class="action-button">
+                  <i class="fas fa-comment"></i>
+                </div>
+              </ElBadge>
+            </div>
+          </ElTooltip>
+          <ElTooltip effect="dark" content="沉浸式浏览" placement="top-start">
+            <div class="action-item" @click="toggleSidebar">
+              <div class="action-button">
+                <i class="fas fa-expand"></i>
+              </div>
+            </div>
+          </ElTooltip>
+        </div>
+      </ClientOnly>
 
       <div id="articleBox" class="content-layout" :class="{ center: !showSidebar }">
         <main class="article-main">
