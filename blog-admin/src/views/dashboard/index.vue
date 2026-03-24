@@ -388,27 +388,6 @@ onUnmounted(() => {
   transform: scale(1.1);
 }
 
-.icon-wrapper .el-icon {
-  font-size: 30px;
-  color: #fff;
-}
-
-.icon-wrapper.primary {
-  background: linear-gradient(135deg, #1890ff, #36a9ff);
-}
-
-.icon-wrapper.success {
-  background: linear-gradient(135deg, #52c41a, #73d13d);
-}
-
-.icon-wrapper.warning {
-  background: linear-gradient(135deg, #faad14, #ffc53d);
-}
-
-.icon-wrapper.info {
-  background: linear-gradient(135deg, #13c2c2, #36cfc9);
-}
-
 .data-wrapper {
   flex: 1;
 }

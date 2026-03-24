@@ -79,6 +79,9 @@ function close() {
 </template>
 
 <style lang="scss" scoped>
+@use '@/styles/variables.scss' as *;
+@use '@/styles/mixins.scss' as *;
+
 .announcement-container {
   width: 100%;
   background: $primary;

@@ -257,6 +257,9 @@ onBeforeUnmount(() => {
 </template>
 
 <style lang="scss" scoped>
+@use '@/styles/variables.scss' as *;
+@use '@/styles/mixins.scss' as *;
+
 .sidebar {
   position: sticky;
   top: 80px;

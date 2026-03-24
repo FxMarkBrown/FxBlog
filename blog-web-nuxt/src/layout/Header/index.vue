@@ -356,6 +356,9 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped lang="scss">
+@use '@/styles/variables.scss' as *;
+@use '@/styles/mixins.scss' as *;
+
 .site-header {
   position: fixed;
   top: 0;

@@ -5,7 +5,7 @@
       </div>
       <el-scrollbar>
         <el-menu style="height: 100%;"
-          :default-active="activeMenu"
+          :default-active="String(activeMenu)"
           :collapse="isCollapse"
           :background-color="settingsStore.theme === 'dark' ? '#1d1e1f' : (settingsStore.sidebarStyle === 'light' ? '#ffffff' : '#304156')"
           :text-color="settingsStore.theme === 'dark' ? '#bfcbd9' : (settingsStore.sidebarStyle === 'light' ? '#303133' : '#bfcbd9')"
@@ -53,8 +53,8 @@
         if (dashboardRoute) {
           // 将 dashboard 提升为一级路由
           return {
-            path: '/dashboard',
             ...dashboardRoute,
+            path: '/dashboard',
             children: undefined
           }
         }
@@ -70,28 +70,6 @@
     }
     return path
   })
-  
-  // 修改路径处理函数
-  const resolvePath = (routePath: string) => {
-    // 如果是外部链接，直接返回原路径
-    if (isExternal(routePath)) {
-      return routePath
-    }
-    
-    // 如果是根路径，直接返回
-    if (routePath === '/') return routePath
-    
-    // 移除开头和结尾的斜杠
-    routePath = routePath.replace(/^\/+|\/+$/g, '')
-    
-    // 如果是仪表盘路径，特殊处理
-    if (routePath === 'dashboard') {
-      return '/dashboard'
-    }
-    
-    // 其他路径，确保只有一个斜杠
-    return '/' + routePath
-  }
   
   // 添加 select 事件处理函数
   const openExternalLink = (url: string) => {

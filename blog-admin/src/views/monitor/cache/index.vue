@@ -238,9 +238,9 @@ const handleClear = async () => {
     await clearCacheApi()
     ElMessage.success('清空成功')
     queryParams.pageNum = 1
-    getList()
-    getInfo()
-    getMemoryInfo()
+    await getList()
+    await getInfo()
+    await getMemoryInfo()
   } catch (error) {
   }
 }

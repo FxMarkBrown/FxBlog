@@ -417,7 +417,7 @@ const rules = reactive<FormRules>({
       required: true,
       message: '请输入转载地址',
       trigger: 'blur',
-      validator: (rule: any, value: string, callback: any) => {
+      validator: (_rule: any, value: string, callback: any) => {
         if (form.isOriginal === 0 && !value) {
           callback(new Error('转载文章必须填写转载地址'))
         } else {
@@ -597,7 +597,7 @@ const handleUpdate = async (row: any) => {
     const res = await getDetailApi(row.id)
     dialog.visible = true
     Object.assign(form, res.data)
-    nextTick(() => {
+    await nextTick(() => {
       formRef.value?.clearValidate()
     })
   } catch (error) {
@@ -677,27 +677,6 @@ watch(() => dialog.visible, (visible) => {
     })
   }
 })
-
-// 图片上传前的处理
-const beforeAvatarUpload = (file: File) => {
-  // 这里添加文件类型和大小限制
-  const isJPG = file.type === 'image/jpeg'
-  const isPNG = file.type === 'image/png'
-  const isLt2M = file.size / 1024 / 1024 < 2
-
-  if (!isJPG && !isPNG) {
-    ElMessage.error('上传头像图片只能是 JPG/PNG 格式!')
-    return false
-  }
-  if (!isLt2M) {
-    ElMessage.error('上传头像图片大小不能超过 2MB!')
-    return false
-  }
-
-  // 模拟上传
-  form.cover = URL.createObjectURL(file)
-  return false
-}
 </script>
 
 <style lang="scss" scoped>

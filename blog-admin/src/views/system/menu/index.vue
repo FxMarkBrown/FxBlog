@@ -79,10 +79,10 @@
         <el-row :gutter="20">
           <el-col :span="24">
             <el-form-item label="上级菜单" prop="parentId">
-              <el-tree-select
+              <ElTreeSelect
                 v-model="menuForm.parentId"
                 :data="menuOptions"
-                :props="{ label: 'title', value: 'id' }"
+                :props="{ label: 'title', children: 'children' }"
                 value-key="id"
                 placeholder="选择上级菜单"
                 check-strictly
@@ -195,7 +195,7 @@
 </template>
 
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox, ElTreeSelect } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 import IconSelect from '@/components/IconSelect/index.vue'
 import {
@@ -243,7 +243,7 @@ const rules = {
 const menuForm = reactive<any>({
   id: undefined,
   parentId: 0,
-  name: '',
+  title: '',
   sort: 0,
   path: '',
   component: '',
@@ -296,7 +296,7 @@ const submitForm = async () => {
       ElMessage.success('修改成功')
     }
     dialogVisible.value = false
-    getList()
+    await getList()
   } catch (error) {
   } finally {
     submitLoading.value = false
@@ -304,29 +304,24 @@ const submitForm = async () => {
 }
 
 // 删除菜单
-const handleDelete = (row: any) => {
-  ElMessageBox.confirm(
-    `确定要删除菜单"${row.title}"吗？`,
-    '警告',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    }
-  ).then(async () => {
-    try {
-      await deleteMenuApi(row.id)
-      ElMessage.success('删除成功')
-      getList()
-    } catch (error) {
-    }
-  }).catch(() => {})
+const handleDelete = async (row: any) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除菜单"${row.title}"吗？`,
+      '警告',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+    await deleteMenuApi(row.id)
+    ElMessage.success('删除成功')
+    await getList()
+  } catch (error) {
+  }
 }
 
-// 查询
-const handleQuery = () => {
-  getList()
-}
 // 重置表单
 const resetForm = () => {
   menuForm.id = undefined
@@ -339,7 +334,7 @@ const resetForm = () => {
   menuForm.type = MenuTypeEnum.CATALOG
   menuForm.perm = ''
   menuForm.icon = ''
-  menuForm.hidden = 0,
+  menuForm.hidden = 0
   menuForm.isExternal = 0
 }
 

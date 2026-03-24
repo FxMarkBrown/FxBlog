@@ -265,6 +265,9 @@ function formatDate(date?: string) {
 </template>
 
 <style lang="scss" scoped>
+@use '@/styles/variables.scss' as *;
+@use '@/styles/mixins.scss' as *;
+
 .search-input-wrapper {
   display: flex;
   align-items: center;

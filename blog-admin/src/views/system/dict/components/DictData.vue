@@ -220,7 +220,7 @@ const handleBatchDelete = () => {
       await deleteDictDataApi(selectedIds.value)
       selectedIds.value = []
       ElMessage.success('删除成功')
-      getList()
+      await getList()
     } catch (error) {
     }
   }).catch(() => {})
@@ -235,7 +235,7 @@ const handleDelete = (row: any) => {
     try {
       await deleteDictDataApi(row.id)
       ElMessage.success('删除成功')
-      getList()
+      await getList()
     } catch (error) {
     }
   }).catch(() => {})
@@ -303,7 +303,7 @@ const submitForm = async () => {
       ElMessage.success('修改成功')
     }
     dialogVisible.value = false
-    getList()
+    await getList()
   } catch (error) {
   } finally {
     submitLoading.value = false

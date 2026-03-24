@@ -22,18 +22,18 @@ const svgClass = computed(() => (props.className ? `svg-icon ${props.className}`
   <span :class="svgClass" aria-hidden="true" v-html="svgContent"></span>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
 .svg-icon {
   display: inline-flex;
   width: 1em;
   height: 1em;
   vertical-align: -0.15em;
   overflow: hidden;
-}
 
-.svg-icon:deep(svg) {
-  width: 100%;
-  height: 100%;
-  fill: currentColor;
+  :deep(svg) {
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+  }
 }
 </style>

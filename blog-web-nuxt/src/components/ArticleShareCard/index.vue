@@ -528,6 +528,9 @@ watch(
 </template>
 
 <style scoped lang="scss">
+@use '@/styles/variables.scss' as *;
+@use '@/styles/mixins.scss' as *;
+
 .dialog-header {
   h3 {
     margin: 0;

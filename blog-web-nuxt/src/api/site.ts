@@ -13,7 +13,7 @@ export function getNoticeApi() {
 
 // 获取天气效果配置
 export function getWeatherEffectApi() {
-  return useApiClient()('/api/weather/effect')
+  return useApiClient()<ApiResponse<Record<string, unknown> | null>>('/api/weather/effect')
 }
 
 // 上报访问信息

@@ -370,6 +370,34 @@ function getFeedbackStatus(status: string | number) {
 }
 
 /**
+ * 反馈类型标签文案。
+ */
+function getFeedbackTypeLabel(type: string) {
+  return getFeedbackType(type)?.label || ''
+}
+
+/**
+ * 反馈类型标签样式。
+ */
+function getFeedbackTypeStyle(type: string) {
+  return getFeedbackType(type)?.style
+}
+
+/**
+ * 反馈状态标签文案。
+ */
+function getFeedbackStatusLabel(status: string | number) {
+  return getFeedbackStatus(status)?.label || ''
+}
+
+/**
+ * 反馈状态标签样式。
+ */
+function getFeedbackStatusStyle(status: string | number) {
+  return getFeedbackStatus(status)?.style
+}
+
+/**
  * 拉取反馈相关字典数据。
  */
 async function getFeedbackDict() {
@@ -1240,16 +1268,16 @@ function handleAvatarUpdate(newAvatarUrl: string) {
                 <ElCard v-for="feedback in myFeedbacks" :key="feedback.id" class="feedback-item">
                   <div class="feedback-header">
                     <div class="feedback-info">
-                      <ElTag v-if="getFeedbackType(feedback.type)" :type="getFeedbackType(feedback.type).style">
-                        {{ getFeedbackType(feedback.type).label }}
+                      <ElTag v-if="getFeedbackTypeLabel(feedback.type)" :type="getFeedbackTypeStyle(feedback.type)">
+                        {{ getFeedbackTypeLabel(feedback.type) }}
                       </ElTag>
                       <span class="feedback-time">
                         <i class="far fa-clock"></i>
                         {{ feedback.createTime }}
                       </span>
                     </div>
-                    <ElTag v-if="getFeedbackStatus(feedback.status)" :type="getFeedbackStatus(feedback.status).style">
-                      {{ getFeedbackStatus(feedback.status).label }}
+                    <ElTag v-if="getFeedbackStatusLabel(feedback.status)" :type="getFeedbackStatusStyle(feedback.status)">
+                      {{ getFeedbackStatusLabel(feedback.status) }}
                     </ElTag>
                   </div>
                   <div class="feedback-content">
@@ -1286,6 +1314,9 @@ function handleAvatarUpdate(newAvatarUrl: string) {
 </template>
 
 <style scoped lang="scss">
+@use '@/styles/variables.scss' as *;
+@use '@/styles/mixins.scss' as *;
+
 :deep(input[aria-hidden=true]) {
   display: none !important;
 }

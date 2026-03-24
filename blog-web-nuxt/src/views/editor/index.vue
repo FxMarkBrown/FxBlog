@@ -25,6 +25,9 @@ interface ArticleFormState {
   status: number | string | ''
 }
 
+type ArticleFormSource = Partial<ArticleDetail> & Partial<ArticleFormState>
+type ArticleFormInput = ArticleDetail | Partial<ArticleFormState> | null | undefined
+
 interface CategoryItem {
   id: number | string
   name: string
@@ -291,7 +294,8 @@ async function loadArticleDetail() {
 
   try {
     const response = await getArticleInfoApi(articleForm.id)
-    Object.assign(articleForm, normalizeArticleForm(unwrapResponseData<ArticleDetail | null>(response) || {}))
+    const articleDetail = unwrapResponseData<ArticleDetail | null>(response)
+    Object.assign(articleForm, normalizeArticleForm(articleDetail))
   } catch (error) {
     showError((error as Error)?.message || '获取文章详情失败')
   }
@@ -300,22 +304,23 @@ async function loadArticleDetail() {
 /**
  * 规范化文章编辑表单数据结构。
  */
-function normalizeArticleForm(data: Partial<ArticleDetail & ArticleFormState>) {
-  const normalizedTagIds = Array.isArray(data.tagIds)
-    ? data.tagIds
-    : Array.isArray(data.tags)
-      ? data.tags.map((item) => item.id).filter((item): item is number | string => item !== undefined && item !== null)
-      : []
+function normalizeArticleForm(data: ArticleFormInput) {
+  const source = (data ?? {}) as ArticleFormSource
+  const articleTags = Array.isArray(source.tags) ? source.tags : []
+
+  const normalizedTagIds = Array.isArray(source.tagIds)
+    ? source.tagIds
+    : articleTags.map((item) => item.id).filter((item): item is number | string => item !== undefined && item !== null)
 
   return {
     ...createDefaultArticleForm(),
-    ...data,
-    id: data.id ?? articleForm.id,
-    categoryId: data.categoryId ?? '',
+    ...source,
+    id: source.id ?? articleForm.id,
+    categoryId: source.categoryId ?? '',
     tagIds: normalizedTagIds,
-    cover: String(data.cover || ''),
-    contentMd: String(data.contentMd || ''),
-    content: String(data.content || '')
+    cover: String(source.cover || ''),
+    contentMd: String(source.contentMd || ''),
+    content: String(source.content || '')
   }
 }
 
@@ -407,7 +412,8 @@ async function handleCoverUpload(event: Event) {
     const response = await uploadFileApi(formData, 'articleCover')
     const coverUrl = unwrapResponseData<string | null>(response)
     if (!coverUrl) {
-      throw new Error(String(response.message || response.msg || '上传失败'))
+      showError(String(response.message || response.msg || '上传失败'))
+      return
     }
     articleForm.cover = coverUrl
     showSuccess('上传成功')

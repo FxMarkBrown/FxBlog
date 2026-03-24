@@ -84,12 +84,6 @@ public class AiConversationController {
         return Result.success(aiQuotaCoreService.getQuotaSnapshot(StpUtil.getLoginIdAsLong()));
     }
 
-    @PostMapping("/send/{conversationId}")
-    @Operation(summary = "发送 AI 会话消息")
-    public Result<List<AiMessageVo>> sendMessage(@PathVariable Long conversationId, @RequestBody AiSendMessageDto sendMessageDto) {
-        return Result.success(aiConversationService.sendMessage(conversationId, sendMessageDto));
-    }
-
     @PostMapping(value = "/stream/{conversationId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(summary = "流式发送 AI 会话消息")
     public SseEmitter streamMessage(@PathVariable Long conversationId,

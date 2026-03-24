@@ -164,9 +164,6 @@
     type: 'add'
   })
   
-  // 角色选项
-  const roleOptions = ref([])
-  
   // 表单数据
   const form = reactive({
     id: undefined,
@@ -218,7 +215,7 @@
       })
       await deleteCategoryApi(selectedIds.value)
       ElMessage.success('批量删除成功')
-      getList()
+      await getList()
       selectedIds.value = []
     } catch (error) {
     }
@@ -234,7 +231,7 @@
       })
       await deleteCategoryApi(row.id)
       ElMessage.success('删除成功')
-      getList()
+      await getList()
     } catch (error) {
     }
   }
@@ -290,7 +287,7 @@
         await updateCategoryApi(form)
         ElMessage.success('修改成功')
       }
-      getList()
+      await getList()
       dialog.visible = false
       form.id = undefined
       form.name = ''

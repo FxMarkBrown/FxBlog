@@ -138,6 +138,9 @@ onBeforeUnmount(() => {
 </template>
 
 <style lang="scss">
+@use '@/styles/variables.scss' as *;
+@use '@/styles/mixins.scss' as *;
+
 .app-root {
   position: relative;
   isolation: isolate;

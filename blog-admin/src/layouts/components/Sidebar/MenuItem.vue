@@ -35,7 +35,6 @@
 import { computed } from 'vue'
 import AppLink from './Link.vue'
 import { isExternal } from '@/utils/validate'
-import type { RouteRecordRaw } from 'vue-router'
 
 const props = defineProps<{
   route: any

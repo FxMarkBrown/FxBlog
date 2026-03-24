@@ -69,6 +69,9 @@ onBeforeUnmount(() => {
 </template>
 
 <style lang="scss" scoped>
+@use '@/styles/variables.scss' as *;
+@use '@/styles/mixins.scss' as *;
+
 .emoji-picker {
   position: relative;
   display: inline-block;

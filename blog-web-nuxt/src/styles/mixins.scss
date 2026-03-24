@@ -1,5 +1,5 @@
 @use 'sass:color';
-@use '@/styles/variables.scss' as *;
+@use 'variables.scss' as *;
 
 @mixin flex-center {
   display: flex;

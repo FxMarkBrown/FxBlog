@@ -256,7 +256,11 @@ function ensureSelectedModel() {
   if (storedModelId && !availableIds.has(storedModelId)) {
     window.localStorage.removeItem(AI_MODEL_STORAGE_KEY)
   }
-  const defaultModel = chatModels.value.find((item) => item.defaultModel) || chatModels.value[0]
+  const defaultModel = chatModels.value.find((item) => item.defaultModel) ?? chatModels.value[0]
+  if (!defaultModel) {
+    selectedModelId.value = ''
+    return
+  }
   const nextModelId = availableIds.has(selectedModelId.value)
     ? selectedModelId.value
     : (availableIds.has(storedModelId) ? storedModelId : defaultModel.id)
@@ -370,7 +374,7 @@ async function createGlobalConversation() {
   const response = await createGlobalConversationApi(buildCreateConversationPayload())
   const conversation = unwrapResponseData<AnyRecord | null>(response)
   if (conversation) {
-    router.push({ path: '/ai', query: buildConversationQuery(conversation) })
+    await router.push({ path: '/ai', query: buildConversationQuery(conversation) })
   }
 }
 
@@ -813,10 +817,11 @@ async function deleteConversation(conversation: AnyRecord) {
     if (conversation.id !== conversationId.value) {
       return
     }
-    if (conversations.value.length) {
+    const nextConversation = conversations.value[0]
+    if (nextConversation) {
       await router.replace({
         path: '/ai',
-        query: buildConversationQuery(conversations.value[0])
+        query: buildConversationQuery(nextConversation)
       })
       return
     }
@@ -1016,7 +1021,7 @@ function getRoleLabel(role: string) {
               <ElDropdown
                 trigger="click"
                 placement="bottom-end"
-                @command="(command) => handleConversationCommand(String(command), conversation)"
+                @command="(command: string | number | object) => handleConversationCommand(String(command), conversation)"
                 @click.stop
               >
                 <button type="button" class="history-menu-btn" @click.stop>
@@ -1142,6 +1147,9 @@ function getRoleLabel(role: string) {
 </template>
 
 <style lang="scss" scoped>
+@use '@/styles/variables.scss' as *;
+@use '@/styles/mixins.scss' as *;
+
 .ai-page {
   height: calc(100vh - 176px);
   padding: 10px 24px 16px;

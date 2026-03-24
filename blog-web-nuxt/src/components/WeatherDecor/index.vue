@@ -4,6 +4,8 @@ import { createWeatherEngine } from '@/components/WeatherDecor/engine'
 import { unwrapResponseData } from '@/utils/response'
 import {
   DEFAULT_WEATHER_EFFECT,
+  type WeatherEffect,
+  type WeatherRenderProfile,
   buildCloudLayers,
   normalizeWeatherEffect,
   resolveRefreshMinutes,
@@ -14,7 +16,7 @@ import {
 const route = useRoute()
 const siteStore = useSiteStore()
 const canvasRef = ref<HTMLElement | null>(null)
-const effect = ref({ ...DEFAULT_WEATHER_EFFECT })
+const effect = ref<WeatherEffect>({ ...DEFAULT_WEATHER_EFFECT })
 const cloudLayers = ref<Array<{ id: string; style: Record<string, string> }>>([])
 const loading = ref(false)
 const lastFetchAt = ref(0)
@@ -33,7 +35,7 @@ const themeMode = computed(() => {
   return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
 })
 
-const renderProfile = computed(() =>
+const renderProfile = computed<WeatherRenderProfile>(() =>
   resolveRenderProfile({
     effect: effect.value,
     reducedMotion: reducedMotion.value,
@@ -59,13 +61,13 @@ const particleClasses = computed(() => [
   effect.value.enabled ? 'is-active' : '',
   renderProfile.value.reducedMotion ? 'is-reduced' : '',
   `weather-decor--${effect.value.weather}`,
-  `weather-preset--${String((renderProfile.value as Record<string, unknown>).particlePreset || 'none')}`
+  `weather-preset--${renderProfile.value.particlePreset || 'none'}`
 ])
 
-const showClouds = computed(() => effect.value.enabled && shouldShowCloudLayer(String(effect.value.weather)))
+const showClouds = computed(() => effect.value.enabled && shouldShowCloudLayer(effect.value.weather))
 const refreshMinutes = computed(() => resolveRefreshMinutes(siteStore.websiteInfo as Record<string, unknown>))
 const sceneSignature = computed(() => {
-  const profile = renderProfile.value as Record<string, any>
+  const profile = renderProfile.value
   return [
     effect.value.enabled ? 1 : 0,
     effect.value.weather,
@@ -198,8 +200,7 @@ function syncEngine() {
     }
 
     engine.start({
-      ...(renderProfile.value as Record<string, any>),
-      weather: effect.value.weather,
+      ...renderProfile.value,
       isNight: effect.value.isNight,
       themeMode: themeMode.value
     })
@@ -229,11 +230,7 @@ function initReducedMotion() {
   motionQuery.value = window.matchMedia('(prefers-reduced-motion: reduce)')
   reducedMotion.value = motionQuery.value.matches
 
-  if (typeof motionQuery.value.addEventListener === 'function') {
-    motionQuery.value.addEventListener('change', handleReducedMotionChange)
-  } else if (typeof motionQuery.value.addListener === 'function') {
-    motionQuery.value.addListener(handleReducedMotionChange)
-  }
+  motionQuery.value.addEventListener('change', handleReducedMotionChange)
 }
 
 /**
@@ -244,11 +241,7 @@ function removeReducedMotionListener() {
     return
   }
 
-  if (typeof motionQuery.value.removeEventListener === 'function') {
-    motionQuery.value.removeEventListener('change', handleReducedMotionChange)
-  } else if (typeof motionQuery.value.removeListener === 'function') {
-    motionQuery.value.removeListener(handleReducedMotionChange)
-  }
+  motionQuery.value.removeEventListener('change', handleReducedMotionChange)
 
   motionQuery.value = null
 }

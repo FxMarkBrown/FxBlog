@@ -1,27 +1,19 @@
 <template>
   <svg :class="svgClass" :style="svgStyle" aria-hidden="true">
-    <use :xlink:href="iconName" />
+    <use :href="iconName" />
   </svg>
 </template>
 
 <script setup lang="ts">
-const props = defineProps({
-  name: {
-    type: String,
-    required: true
-  },
-  color: {
-    type: String,
-    default: ''
-  },
-  mr: {
-    type: Number,
-    default: 0
-  },
-  size: {
-    type: [Number, String],
-    default: 20
-  }
+const props = withDefaults(defineProps<{
+  name: string
+  color?: string
+  mr?: number
+  size?: number | string
+}>(), {
+  color: '',
+  mr: 0,
+  size: 20
 })
 
 const iconName = computed(() => `#icon-${props.name}`)

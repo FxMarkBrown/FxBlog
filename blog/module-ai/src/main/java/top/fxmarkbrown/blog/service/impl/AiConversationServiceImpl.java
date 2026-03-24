@@ -166,64 +166,6 @@ public class AiConversationServiceImpl implements AiConversationService {
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
-    public List<AiMessageVo> sendMessage(Long conversationId, AiSendMessageDto sendMessageDto) {
-        SysAiConversation conversation = getOwnedConversation(conversationId);
-        String content = sendMessageDto == null ? "" : sendMessageDto.getContent();
-        content = content == null ? "" : content.trim();
-        if (!StringUtils.hasText(content)) {
-            throw new ServiceException("消息内容不能为空");
-        }
-        if (content.length() > 4000) {
-            throw new ServiceException("消息内容不能超过 4000 个字符");
-        }
-        aiQuotaService.assertRequestQuota(conversation.getUserId());
-
-        SysAiMessage userMessage = SysAiMessage.builder()
-                .conversationId(conversationId)
-                .role(Constants.AI_MESSAGE_ROLE_USER)
-                .content(content)
-                .build();
-        messageMapper.insert(userMessage);
-
-        List<SysAiMessage> historyMessages = messageMapper.selectList(
-                new LambdaQueryWrapper<SysAiMessage>()
-                        .eq(SysAiMessage::getConversationId, conversationId)
-                        .orderByAsc(SysAiMessage::getCreateTime)
-                        .orderByAsc(SysAiMessage::getId)
-        );
-
-        List<AiRetrievedChunkVo> citations = aiChatService.retrieveCitations(conversation, historyMessages);
-        ChatResponse chatResponse = aiChatService.generateResponse(conversation, historyMessages, citations);
-        String answer = aiChatService.extractText(chatResponse);
-        String reasoningContent = aiChatService.extractReasoning(chatResponse);
-        List<AiToolCallVo> toolCalls = aiChatService.extractToolCalls(chatResponse);
-        Usage usage = aiChatService.extractUsage(chatResponse);
-        long consumedTokens = applyModelQuotaMultiplier(resolveConsumedTokens(content, answer, reasoningContent, usage), conversation);
-
-        SysAiMessage assistantMessage = SysAiMessage.builder()
-                .conversationId(conversationId)
-                .role(Constants.AI_MESSAGE_ROLE_ASSISTANT)
-                .content(answer)
-                .quotePayload(buildQuotePayload(reasoningContent, citations, toolCalls))
-                .tokensIn(zeroToNull(defaultInt(usage == null ? null : usage.getPromptTokens())))
-                .tokensOut(zeroToNull(defaultInt(usage == null ? null : usage.getCompletionTokens())))
-                .build();
-        messageMapper.insert(assistantMessage);
-        aiQuotaService.consumeTokens(conversation.getUserId(), consumedTokens, conversationId, conversation.getTitle());
-
-        conversationMapper.updateById(SysAiConversation.builder()
-                .id(conversationId)
-                .summary(buildConversationSummary(content))
-                .modelProvider(conversation.getModelProvider())
-                .modelName(conversation.getModelName())
-                .lastMessageAt(LocalDateTime.now())
-                .build());
-
-        return List.of(toMessageVo(userMessage), toMessageVo(assistantMessage));
-    }
-
-    @Override
     public SseEmitter streamMessage(Long conversationId, AiSendMessageDto sendMessageDto) {
         SysAiConversation conversation = getOwnedConversation(conversationId);
         String content = normalizeMessageContent(sendMessageDto);

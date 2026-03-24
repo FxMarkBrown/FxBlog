@@ -182,10 +182,10 @@ function createImage(onload: () => void) {
 /**
  * 获取验证码背景图地址。
  */
-function getImageSrc() {
+function getImageSrc(): string {
   const length = props.imageList.length
   if (length > 0) {
-    return props.imageList[getNonceByRange(0, length - 1)]
+    return props.imageList[getNonceByRange(0, length - 1)] ?? ''
   }
   return `https://loyer.wang/view/ftp/wallpaper/${getNonceByRange(1, 1000)}.jpg`
 }
@@ -486,7 +486,7 @@ defineExpose({
     class="slide-verify"
     :class="{ 'is-dark': isDarkMode }"
     :style="{ width: `${props.canvasWidth}px` }"
-    onselectstart="return false;"
+    @selectstart.prevent
   >
     <div v-if="isLoading" class="img-loading" :style="{ height: `${props.canvasHeight}px` }" />
 
@@ -502,8 +502,8 @@ defineExpose({
     </template>
 
     <template v-else>
-      <img ref="canvasRef" class="slide-canvas" :width="props.canvasWidth" :height="props.canvasHeight">
-      <img ref="blockRef" :class="['slide-block', { 'verify-fail': verifyFail }]">
+      <img ref="canvasRef" class="slide-canvas" src="" alt="" :width="props.canvasWidth" :height="props.canvasHeight">
+      <img ref="blockRef" class="slide-block" :class="{ 'verify-fail': verifyFail }" src="" alt="">
     </template>
 
     <div

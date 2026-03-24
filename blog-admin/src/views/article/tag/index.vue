@@ -214,7 +214,7 @@
       })
       await deleteTagApi(selectedIds.value)
       ElMessage.success('批量删除成功')
-      getList()
+      await getList()
       selectedIds.value = []
     } catch (error) {
     }
@@ -230,7 +230,7 @@
       })
       await deleteTagApi(row.id)
       ElMessage.success('删除成功')
-      getList()
+      await getList()
     } catch (error) {
     }
   }
@@ -286,7 +286,7 @@
         await updateTagApi(tagForm)
         ElMessage.success('修改成功')
       }
-      getList()
+      await getList()
       dialog.visible = false
       tagForm.id = undefined
       tagForm.name = ''

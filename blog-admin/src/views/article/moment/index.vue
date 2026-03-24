@@ -179,7 +179,7 @@ const handleBatchDelete = async () => {
     })
     await deleteSysMomentApi(selectedIds.value)
     ElMessage.success('批量删除成功')
-    getList()
+    await getList()
     selectedIds.value = []
   } catch (error) {
   }
@@ -195,7 +195,7 @@ const handleDelete = async (row: any) => {
     })
     await deleteSysMomentApi(row.id)
     ElMessage.success('删除成功')
-    getList()
+    await getList()
   } catch (error) {
   }
 }
@@ -249,7 +249,7 @@ const submitForm = async () => {
       await updateSysMomentApi(momentForm)
       ElMessage.success('修改成功')
     }
-    getList()
+    await getList()
     dialog.visible = false
     momentForm.id = undefined
     momentForm.content = ''

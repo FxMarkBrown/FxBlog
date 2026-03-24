@@ -185,7 +185,7 @@ const handleBatchDelete = () => {
         try {
             await deleteAlbumApi(selectedIds.value)
             ElMessage.success('批量删除成功')
-            getList()
+            await getList()
             selectedIds.value = []
         } catch (error) {
         }
@@ -202,7 +202,7 @@ const handleDelete = (row: any) => {
         try {
             await deleteAlbumApi(row.id)
             ElMessage.success('删除成功')
-            getList()
+            await getList()
         } catch (error) {
         }
     })

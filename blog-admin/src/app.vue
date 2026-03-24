@@ -18,7 +18,7 @@ onMounted(() => {
 })
 </script>
 
-<style>
+<style lang="scss">
 
 
 

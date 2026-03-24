@@ -59,7 +59,7 @@
         <el-table-column label="参数名称" align="center" prop="configName" />
         <el-table-column label="参数键名" align="center" prop="configKey" />
         <el-table-column label="参数键值" align="center" prop="configValue" />
-        <el-table-column label="系统内置" align="center"prop="configType">
+        <el-table-column label="系统内置" align="center" prop="configType">
             <template #default="scope">
                 <el-tag v-if="scope.row.configType === 'Y'" type="success">是</el-tag>
                 <el-tag v-else type="danger">否</el-tag>
@@ -256,7 +256,7 @@ const handleUpdate = async (row: any) => {
     Object.assign(form, response.data);
     open.value = true;
     title.value = "修改参数配置";
-    nextTick(() => {
+    await nextTick(() => {
       formRef.value?.clearValidate()
     })
   } catch (error) {
@@ -278,7 +278,7 @@ const submitForm = async () => {
     }
     open.value = false;
     reset()
-    getList();
+    await getList();
   } catch (error) {
   }
 };
@@ -300,7 +300,7 @@ const handleBatchDelete = async () => {
     )
     await deleteSysConfigApi(selectedIds.value)
     selectedIds.value = []
-    getList();
+    await getList();
     ElMessage.success("删除成功");
   } catch (error) {
   }
@@ -315,7 +315,7 @@ const handleDelete = async (row: any) => {
       type: "warning",
     });
     await deleteSysConfigApi(row.id)
-    getList();
+    await getList();
     ElMessage.success("删除成功");
   } catch (error) {
   }

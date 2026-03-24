@@ -3,7 +3,7 @@ import { getToken } from '@/utils/cookie'
 
 // 获取 AI 会话可用模型列表。
 export function getConversationModelOptionsApi() {
-  return useApiClient()<ApiResponse<unknown[]>>('/api/ai/conversation/models')
+  return useApiClient()<ApiResponse<Record<string, unknown>[]>>('/api/ai/conversation/models')
 }
 
 // 创建新的全局 AI 会话。
@@ -44,14 +44,6 @@ export function getConversationMessagesApi(conversationId: number | string, quer
 // 获取当前用户的 AI 额度概览。
 export function getConversationQuotaApi() {
   return useApiClient()<ApiResponse<Record<string, unknown>>>('/api/ai/conversation/quota')
-}
-
-// 发送普通非流式消息。
-export function sendConversationMessageApi(conversationId: number | string, data: Record<string, unknown>) {
-  return useApiClient()<ApiResponse<Record<string, unknown>>>(`/api/ai/conversation/send/${conversationId}`, {
-    method: 'POST',
-    body: data
-  })
 }
 
 // 发送流式消息，并逐段消费服务端 SSE 事件。

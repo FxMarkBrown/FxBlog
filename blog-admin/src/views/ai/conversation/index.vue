@@ -240,7 +240,7 @@ const doDelete = async (ids: number[]) => {
     messageList.value = []
   }
   selectedIds.value = []
-  getList()
+  await getList()
 }
 
 /**

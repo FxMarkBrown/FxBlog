@@ -172,7 +172,11 @@ function onDrag(event: MouseEvent) {
 function startTouch(event: TouchEvent) {
   if (event.touches.length === 2) {
     event.preventDefault()
-    const [touch1, touch2] = [event.touches[0], event.touches[1]]
+    const touch1 = event.touches[0]
+    const touch2 = event.touches[1]
+    if (!touch1 || !touch2) {
+      return
+    }
     initialDistance.value = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY)
     initialScale.value = scale.value
     return
@@ -180,16 +184,24 @@ function startTouch(event: TouchEvent) {
 
   const target = event.target as HTMLElement | null
   if (event.touches.length === 1 && target?.tagName.toLowerCase() === 'img') {
+    const touch = event.touches[0]
+    if (!touch) {
+      return
+    }
     event.preventDefault()
     isDragging.value = true
-    lastMousePosition.x = event.touches[0].clientX
-    lastMousePosition.y = event.touches[0].clientY
+    lastMousePosition.x = touch.clientX
+    lastMousePosition.y = touch.clientY
   }
 }
 
 function onTouch(event: TouchEvent) {
   if (event.touches.length === 2) {
-    const [touch1, touch2] = [event.touches[0], event.touches[1]]
+    const touch1 = event.touches[0]
+    const touch2 = event.touches[1]
+    if (!touch1 || !touch2 || initialDistance.value <= 0) {
+      return
+    }
     const currentDistance = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY)
     const nextScale = (currentDistance / initialDistance.value) * initialScale.value
     if (nextScale >= 0.1 && nextScale <= 3) {
@@ -199,12 +211,16 @@ function onTouch(event: TouchEvent) {
   }
 
   if (isDragging.value && event.touches.length === 1) {
-    const deltaX = event.touches[0].clientX - lastMousePosition.x
-    const deltaY = event.touches[0].clientY - lastMousePosition.y
+    const touch = event.touches[0]
+    if (!touch) {
+      return
+    }
+    const deltaX = touch.clientX - lastMousePosition.x
+    const deltaY = touch.clientY - lastMousePosition.y
     position.x += deltaX
     position.y += deltaY
-    lastMousePosition.x = event.touches[0].clientX
-    lastMousePosition.y = event.touches[0].clientY
+    lastMousePosition.x = touch.clientX
+    lastMousePosition.y = touch.clientY
   }
 }
 
@@ -257,6 +273,7 @@ defineExpose({
       <div ref="previewWrapper" class="preview-wrapper" @click.stop @mousedown.stop>
         <img
           :src="currentImage"
+          alt="预览图片"
           :style="{
             transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`
           }"

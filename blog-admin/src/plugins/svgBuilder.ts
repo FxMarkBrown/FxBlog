@@ -1,6 +1,10 @@
 import { existsSync, readFileSync, readdirSync } from 'fs'
 import path from 'path'
-import type { Plugin } from 'vite'
+
+interface HtmlTransformPlugin {
+  name: string
+  transformIndexHtml?: (html: string) => string
+}
 
 let idPrefix = ''
 const svgTitle = /<svg([^>+].*?)>/
@@ -27,18 +31,18 @@ function findSvgFile(dir: string): string[] {
     const svg = readFileSync(path.join(dir, dirent.name))
       .toString()
       .replace(clearReturn, '')
-      .replace(svgTitle, ($1, $2) => {
-        let width = 0
-        let height = 0
-        let content = $2.replace(clearHeightWidth, (s1, s2, s3) => {
-          if (s2 === 'width') {
-            width = s3
-          } else if (s2 === 'height') {
-            height = s3
+      .replace(svgTitle, (_fullMatch: string, attrs: string) => {
+        let width = '0'
+        let height = '0'
+        let content = attrs.replace(clearHeightWidth, (_attrMatch: string, attrName: string, attrValue: string) => {
+          if (attrName === 'width') {
+            width = attrValue
+          } else if (attrName === 'height') {
+            height = attrValue
           }
           return ''
         })
-        if (!hasViewBox.test($2)) {
+        if (!hasViewBox.test(attrs)) {
           content += `viewBox="0 0 ${width} ${height}"`
         }
         return `<symbol id="${idPrefix}-${dirent.name.replace('.svg', '')}" ${content}>`
@@ -50,13 +54,10 @@ function findSvgFile(dir: string): string[] {
   return svgRes
 }
 
-export const svgBuilder = (svgPath: string, prefix = 'icon'): Plugin => {
+export const svgBuilder = (svgPath: string, prefix = 'icon'): HtmlTransformPlugin => {
   if (!svgPath || !existsSync(svgPath)) {
     return {
-      name: 'svg-transform',
-      transformIndexHtml(html: string) {
-        return html
-      }
+      name: 'svg-transform'
     }
   }
 
@@ -70,7 +71,7 @@ export const svgBuilder = (svgPath: string, prefix = 'icon'): Plugin => {
         '<body>',
         `
           <body>
-            <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="position: absolute; width: 0; height: 0">
+            <svg xmlns="http://www.w3.org/2000/svg" style="position: absolute; width: 0; height: 0">
               ${res.join('')}
             </svg>
         `

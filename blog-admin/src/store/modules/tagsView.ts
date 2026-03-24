@@ -75,19 +75,22 @@ export const useTagsViewStore = defineStore('tagsView', () => {
   }
 
   const addVisitedView = (view: TagView) => {
+    const viewPath = view.path ?? ''
+
     // 不添加 redirect 路由的标签
-    if (view.path.includes('/redirect')) return
+    if (viewPath.includes('/redirect')) return
     
     // 如果已经存在相同路径的标签，则不添加
-    if (visitedViews.value.some(v => v.path === view.path)) return
+    if (visitedViews.value.some(v => v.path === viewPath)) return
     
     // 创建新标签
     const newTag = Object.assign({}, view, {
+      path: viewPath,
       title: view.meta?.title || 'no-name'
     })
 
     // 如果是仪表盘，插入到数组开头
-    if (view.path === '/dashboard' || view.path === '/') {
+    if (viewPath === '/dashboard' || viewPath === '/') {
       visitedViews.value.unshift(newTag)
     } else {
       // 其他标签添加到末尾

@@ -231,7 +231,7 @@ const handleSaveRule = async () => {
     const { data } = await updateAiQuotaRuleApi(ruleForm)
     Object.assign(ruleForm, createDefaultRuleForm(), data || {})
     ElMessage.success('额度规则已保存')
-    getList()
+    await getList()
   } finally {
     saveLoading.value = false
   }
@@ -258,7 +258,7 @@ const handleAdjustManual = async (row: any) => {
       manualBonusTokens: Number(value)
     })
     ElMessage.success('手动额度已更新')
-    getList()
+    await getList()
   } catch (error) {
     if (error === 'cancel' || error === 'close') {
       return

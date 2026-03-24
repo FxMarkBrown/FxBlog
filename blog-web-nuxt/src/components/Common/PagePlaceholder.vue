@@ -15,6 +15,9 @@ const props = defineProps<PagePlaceholderProps>()
 </template>
 
 <style scoped lang="scss">
+@use '@/styles/variables.scss' as *;
+@use '@/styles/mixins.scss' as *;
+
 .page-placeholder {
   padding: 32px;
 }

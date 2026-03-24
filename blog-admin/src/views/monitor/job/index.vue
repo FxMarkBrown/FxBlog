@@ -235,7 +235,7 @@
 <script lang="ts" setup>
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { listJobApi, getJobApi, addJobApi, updateJobApi, delJobApi,exportJobApi, changeJobStatusApi, runJobApi } from '@/api/monitor/job'
+import { listJobApi, getJobApi, addJobApi, updateJobApi, delJobApi, changeJobStatusApi, runJobApi } from '@/api/monitor/job'
 import CronTab from './components/CronTab.vue'
 import {QuestionFilled, Timer} from "@element-plus/icons-vue";
 
@@ -249,13 +249,6 @@ const jobFormRef = ref()
 // 选中数组
 const selectedIds = ref<Array<string | number>>([])
 
-const dialogVisible = ref(false)
-// 非单个禁用
-const single = ref(true)
-// 非多个禁用
-const multiple = ref(true)
-// 显示搜索条件
-const showSearch = ref(true)
 // 总条数
 const total = ref(0)
 // 定时任务表格数据
@@ -267,8 +260,6 @@ const open = ref(false)
 // cron表达式弹出层
 const cronVisible = ref(false)
 const loading = ref(false)
-// 是否显示详细信息
-const detailOpen = ref(false)
 // 查询参数
 const queryParams = reactive({
   pageNum: 1,
@@ -372,8 +363,6 @@ const resetQuery = () => {
 /** 多选框选中数据 */
 const handleSelectionChange = (selection: any[]) => {
   selectedIds.value = selection.map(item => item.jobId)
-  single.value = selection.length !== 1
-  multiple.value = !selection.length
 }
 
 /** 任务状态修改 */
@@ -420,7 +409,7 @@ const handleUpdate = async (row: any) => {
     Object.assign(form, data)
     open.value = true
     title.value = '修改定时任务'
-    nextTick(() => {
+    await nextTick(() => {
       jobFormRef.value?.clearValidate()
     })
   } catch (error) {
@@ -443,7 +432,7 @@ const submitForm = async () => {
     }
     open.value = false
     reset()
-    getList()
+    await getList()
   } catch (error) {
   }
 }
@@ -454,7 +443,7 @@ const handleDelete = async (row?: any) => {
   try {
     await ElMessageBox.confirm('确定要删除"' + row.jobName + '"这个定时任务吗？')
     await delJobApi(row.jobId)
-    getList()
+    await getList()
     ElMessage.success('删除成功')
   } catch (error) {
   }
@@ -468,17 +457,8 @@ const handleBatcheDelete = async () => {
   try {
     await ElMessageBox.confirm('确定要删除"' + selectedIds.value.length + '"个定时任务吗？')
     await delJobApi(selectedIds.value)
-    getList()
+    await getList()
     ElMessage.success('删除成功')
-  } catch (error) {
-  }
-}
-
-/** 导出按钮操作 */
-const handleExport = async () => {
-  try {
-    await exportJobApi(queryParams)
-    ElMessage.success('导出成功')
   } catch (error) {
   }
 }

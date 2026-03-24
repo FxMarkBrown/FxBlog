@@ -7,8 +7,8 @@ export function getArticleDetailApi(id: number | string) {
 }
 
 // 获取文章列表
-export function getArticlesApi(params: Record<string, unknown>) {
-  return useApiClient()<ApiResponse<PageResult<ArticleSummary>>>('/api/article/list', { params })
+export function getArticlesApi(query: Record<string, unknown>) {
+  return useApiClient()<ApiResponse<PageResult<ArticleSummary>>>('/api/article/list', { query })
 }
 
 // 获取归档列表
@@ -27,8 +27,8 @@ export function getCarouselArticlesApi() {
 }
 
 // 获取文章评论列表
-export function getCommentsApi(params: Record<string, unknown>) {
-  return useApiClient()<ApiResponse<PageResult<ArticleComment>>>('/api/comment/list', { params })
+export function getCommentsApi(query: Record<string, unknown>) {
+  return useApiClient()<ApiResponse<PageResult<ArticleComment>>>('/api/comment/list', { query })
 }
 
 // 添加文章评论
@@ -46,7 +46,7 @@ export function getRecommendArticlesApi() {
 
 // 获取全部分类
 export function getAllCategoriesApi() {
-  return useApiClient()('/api/article/categorie-all')
+  return useApiClient()<ApiResponse<ArticleCategoryGroup[]>>('/api/article/categorie-all')
 }
 
 // 获取我的文章列表。

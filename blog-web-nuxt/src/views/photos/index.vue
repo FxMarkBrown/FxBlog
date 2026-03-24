@@ -118,6 +118,7 @@ function showError(message: string) {
     font-weight: 700;
     margin-bottom: 15px;
     background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+    background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     letter-spacing: 2px;

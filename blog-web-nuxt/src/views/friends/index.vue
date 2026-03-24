@@ -379,6 +379,7 @@ onMounted(() => {
     margin-bottom: 16px;
     font-weight: 800;
     background: linear-gradient(135deg, #409eff, #7c3aed);
+    background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     letter-spacing: 2px;
@@ -519,6 +520,7 @@ onMounted(() => {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
+    line-clamp: 2;
     overflow: hidden;
   }
 }
@@ -626,6 +628,7 @@ onMounted(() => {
     margin-bottom: 6px;
     font-weight: 700;
     background: linear-gradient(135deg, #409eff, #7c3aed);
+    background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }

@@ -1,6 +1,5 @@
-import { RouteRecordRaw } from "vue-router";
+import type { RouteRecordRaw } from "vue-router";
 import { constantRoutes } from "@/router";
-import { store } from "@/store";
 import { getRouters } from "@/api/system/auth";
 import { defineStore } from "pinia";
 import { ref } from "vue";
@@ -9,42 +8,46 @@ import ParentView from '@/components/ParentView/index.vue'
 
 const Layout = () => import("@/layouts/index.vue");
 
+type BackendRoute = {
+  path: string;
+  name?: string;
+  redirect?: string;
+  meta?: RouteRecordRaw["meta"];
+  component?: string;
+  children?: BackendRoute[];
+}
+
 /**
  * 递归过滤有权限的异步(动态)路由
- *
- * @param routes 接口返回的异步(动态)路由
- * @returns 返回用户有权限的异步(动态)路由
  */
-const filterAsyncRoutes = (routes: RouteRecordRaw[]) => {
-  const asyncRoutes: any[] = [];
+const filterAsyncRoutes = (routes: BackendRoute[]) => {
+  const asyncRoutes: RouteRecordRaw[] = [];
 
   routes.forEach((route) => {
+    const { component: routeComponent, children, ...routeRecord } = route
+    const tmpRoute = { ...routeRecord } as RouteRecordRaw
 
-    const tmpRoute = { ...route }; // ES6扩展运算符复制新对象
-    
-    if (!route.name) {
-      tmpRoute.name = route.name;
-    }
-
-    if(tmpRoute.component) {
-      if (tmpRoute.component?.toString() == "Layout") {
+    if (routeComponent) {
+      if (routeComponent === "Layout") {
         tmpRoute.component = Layout;
-      } else if (tmpRoute.component === 'ParentView') {
+      } else if (routeComponent === 'ParentView') {
         tmpRoute.component = ParentView
-      }  else {
-        const component = modules[`../../views${tmpRoute.component}.vue`];
-        if (component) {
-          tmpRoute.component = component;
-        } else {
-          return;
-        } 
-      }
-
-      if (tmpRoute.children) {
-        // 递归处理子路由
-        tmpRoute.children = filterAsyncRoutes(tmpRoute.children);
+      } else {
+        {
+          const component = modules[`../../views${routeComponent}.vue`];
+          if (component) {
+            tmpRoute.component = component;
+          } else {
+            return;
+          }
+        }
       }
     }
+
+    if (children?.length) {
+      tmpRoute.children = filterAsyncRoutes(children);
+    }
+
     asyncRoutes.push(tmpRoute);
 
   });
@@ -72,7 +75,7 @@ export const usePermissionStore = defineStore("permission", () => {
       getRouters()
         .then(({ data: asyncRoutes }) => {
           // 根据角色获取有访问权限的路由
-          const accessedRoutes = filterAsyncRoutes(asyncRoutes);
+          const accessedRoutes = filterAsyncRoutes(asyncRoutes as BackendRoute[]);
           setRoutes(accessedRoutes);
           resolve(accessedRoutes);
         })
@@ -81,26 +84,8 @@ export const usePermissionStore = defineStore("permission", () => {
         });
     });
   }
-  /**
-   * 获取与激活的顶部菜单项相关的混合模式左侧菜单集合
-   */
-  const mixLeftMenus = ref<RouteRecordRaw[]>([]);
-  function setMixLeftMenus(topMenuPath: string) {
-    const matchedItem = routes.value.find((item) => item.path === topMenuPath);
-    if (matchedItem && matchedItem.children) {
-      mixLeftMenus.value = matchedItem.children;
-    }
-  }
   return {
     routes,
-    setRoutes,
     generateRoutes,
-    mixLeftMenus,
-    setMixLeftMenus,
   };
 });
-
-// 非setup
-export function usePermissionStoreHook() {
-  return usePermissionStore(store);
-}

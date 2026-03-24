@@ -307,6 +307,7 @@ import { getDictDataByDictTypesApi } from '@/api/system/dict'
 import { uploadApi } from '@/api/file'
 
 import { Editor, Toolbar } from '@wangeditor-next/editor-for-vue'
+import type { IDomEditor, IEditorConfig, IToolbarConfig } from '@wangeditor-next/editor'
 import '@wangeditor-next/editor/dist/css/style.css'
 import {
   ChatDotRound,
@@ -319,10 +320,13 @@ import {
   Tools,
   User
 } from "@element-plus/icons-vue";
-const editorRef = shallowRef()
+
+type WangEditorInsertFn = (url: string, alt?: string, href?: string) => void
+
+const editorRef = shallowRef<IDomEditor | null>(null)
 const mode = 'default'
-const toolbarConfig = {}
-const editorConfig = {
+const toolbarConfig: Partial<IToolbarConfig> = {}
+const editorConfig: Partial<IEditorConfig> = {
   placeholder: "请输入内容...",
   MENU_CONF: {
     // 配置上传图片
@@ -412,8 +416,6 @@ const mergeLoginTypes = (items: any[] = []) => {
 
 const submitLoading = ref(false)
 
-const files = ref();
-
 const rules = {
   name: [{ required: true, message: '请输入网站名称', trigger: 'blur' }],
   logo: [{ required: true, message: '请上传网站Logo', trigger: 'change' }],
@@ -449,20 +451,17 @@ const getDictDataByDictTypes = async () => {
   }
 }
 
-const handleCreated = (editor:any) => {
+const handleCreated = (editor: IDomEditor) => {
   editorRef.value = editor // 记录 editor 实例，重要！
 }
 
 //编辑器上传图片
-function contentUpload(file: any, insertFn: any) {
-  files.value = file;
-  // FormData 对象
-  var formData = new FormData();
-  // 文件对象
-  formData.append("file", files.value);
+function contentUpload(file: File, insertFn: WangEditorInsertFn) {
+  const formData = new FormData()
+  formData.append("file", file)
   uploadApi(formData).then((res: any) => {
-    insertFn(res.data, "", res.data);
-  });
+    insertFn(res.data, "", res.data)
+  })
 }
 
 onMounted(() => {

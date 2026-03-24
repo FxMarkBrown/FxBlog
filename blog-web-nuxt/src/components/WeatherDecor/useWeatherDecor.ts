@@ -1,5 +1,83 @@
+export const WEATHER_TYPES = [
+  'unknown',
+  'sunny',
+  'cloudy',
+  'overcast',
+  'light_rain',
+  'heavy_rain',
+  'thunderstorm',
+  'snow',
+  'windy',
+  'fog',
+  'dust'
+] as const
+
+export const WEATHER_SEASONS = ['spring', 'summer', 'autumn', 'winter'] as const
+export const WEATHER_INTENSITIES = ['light', 'normal', 'rich'] as const
+export const WEATHER_PARTICLE_PRESETS = [
+  'sunny',
+  'light_rain',
+  'heavy_rain',
+  'thunderstorm',
+  'snow',
+  'windy',
+  'dust',
+  'sakura',
+  'leaves',
+  'fireflies'
+] as const
+
+export type WeatherType = typeof WEATHER_TYPES[number]
+export type WeatherSeason = typeof WEATHER_SEASONS[number]
+export type WeatherIntensity = typeof WEATHER_INTENSITIES[number]
+export type WeatherParticlePreset = typeof WEATHER_PARTICLE_PRESETS[number]
+export type WeatherAccentEffect = 'none' | 'sakura' | 'leaves' | 'fireflies'
+type WeatherParticleWeather = Extract<WeatherType, WeatherParticlePreset>
+
+export interface WeatherEffect {
+  enabled: boolean
+  city: string
+  weather: WeatherType
+  isNight: boolean
+  temperature: number | null
+  windLevel: number
+  humidity: number | null
+  season: WeatherSeason
+  airQuality: string
+  intensity: WeatherIntensity
+}
+
+export interface WeatherEffectPayload extends Record<string, unknown> {
+  enabled?: unknown
+  city?: unknown
+  weather?: unknown
+  isNight?: unknown
+  temperature?: unknown
+  windLevel?: unknown
+  humidity?: unknown
+  season?: unknown
+  airQuality?: unknown
+  intensity?: unknown
+}
+
+export interface WeatherRenderProfile {
+  weather: WeatherType
+  accentEffect: WeatherAccentEffect
+  particlePreset: WeatherParticlePreset | null
+  particleEnabled: boolean
+  densityScale: number
+  cloudCount: number
+  reducedMotion: boolean
+  isMobile: boolean
+  pageFactor: number
+  showMist: boolean
+  showLightning: boolean
+  showDustGlow: boolean
+  showWindLines: boolean
+}
+
 const DEFAULT_REFRESH_MINUTES = 30
-const PARTICLE_WEATHER_TYPES = new Set([
+const PARTICLE_WEATHER_TYPES = new Set<WeatherParticleWeather>([
   'sunny',
   'light_rain',
   'heavy_rain',
@@ -8,7 +86,7 @@ const PARTICLE_WEATHER_TYPES = new Set([
   'windy',
   'dust'
 ])
-const CLOUD_WEATHER_TYPES = new Set([
+const CLOUD_WEATHER_TYPES = new Set<WeatherType>([
   'sunny',
   'cloudy',
   'overcast',
@@ -20,15 +98,15 @@ const CLOUD_WEATHER_TYPES = new Set([
   'fog',
   'dust'
 ])
-const CALM_WEATHER_TYPES = new Set(['sunny', 'cloudy', 'overcast'])
-const STORMY_WEATHER_TYPES = new Set(['light_rain', 'heavy_rain', 'thunderstorm', 'snow', 'fog', 'dust'])
-const INTENSITY_SCALE: Record<string, number> = {
+const CALM_WEATHER_TYPES = new Set<WeatherType>(['sunny', 'cloudy', 'overcast'])
+const STORMY_WEATHER_TYPES = new Set<WeatherType>(['light_rain', 'heavy_rain', 'thunderstorm', 'snow', 'fog', 'dust'])
+const INTENSITY_SCALE: Record<WeatherIntensity, number> = {
   light: 0.72,
   normal: 1,
   rich: 1.28
 }
 
-export const DEFAULT_WEATHER_EFFECT = Object.freeze({
+export const DEFAULT_WEATHER_EFFECT: Readonly<WeatherEffect> = Object.freeze({
   enabled: false,
   city: '北京',
   weather: 'unknown',
@@ -41,10 +119,26 @@ export const DEFAULT_WEATHER_EFFECT = Object.freeze({
   intensity: 'normal'
 })
 
-export function normalizeWeatherEffect(payload: Record<string, unknown> = {}) {
-  const weather = typeof payload.weather === 'string' ? payload.weather : DEFAULT_WEATHER_EFFECT.weather
-  const season = typeof payload.season === 'string' ? payload.season : DEFAULT_WEATHER_EFFECT.season
-  const intensity = typeof payload.intensity === 'string' ? payload.intensity : DEFAULT_WEATHER_EFFECT.intensity
+function isWeatherType(value: unknown): value is WeatherType {
+  return typeof value === 'string' && WEATHER_TYPES.includes(value as WeatherType)
+}
+
+function isWeatherSeason(value: unknown): value is WeatherSeason {
+  return typeof value === 'string' && WEATHER_SEASONS.includes(value as WeatherSeason)
+}
+
+function isWeatherIntensity(value: unknown): value is WeatherIntensity {
+  return typeof value === 'string' && WEATHER_INTENSITIES.includes(value as WeatherIntensity)
+}
+
+function isParticleWeatherType(value: WeatherType): value is WeatherParticleWeather {
+  return PARTICLE_WEATHER_TYPES.has(value as WeatherParticleWeather)
+}
+
+export function normalizeWeatherEffect(payload: WeatherEffectPayload = {}): WeatherEffect {
+  const weather = isWeatherType(payload.weather) ? payload.weather : DEFAULT_WEATHER_EFFECT.weather
+  const season = isWeatherSeason(payload.season) ? payload.season : DEFAULT_WEATHER_EFFECT.season
+  const intensity = isWeatherIntensity(payload.intensity) ? payload.intensity : DEFAULT_WEATHER_EFFECT.intensity
 
   return {
     ...DEFAULT_WEATHER_EFFECT,
@@ -57,7 +151,8 @@ export function normalizeWeatherEffect(payload: Record<string, unknown> = {}) {
     intensity: INTENSITY_SCALE[intensity] ? intensity : DEFAULT_WEATHER_EFFECT.intensity,
     temperature: toFiniteNumber(payload.temperature),
     windLevel: toFiniteNumber(payload.windLevel, 0),
-    humidity: toFiniteNumber(payload.humidity)
+    humidity: toFiniteNumber(payload.humidity),
+    airQuality: String(payload.airQuality || DEFAULT_WEATHER_EFFECT.airQuality)
   }
 }
 
@@ -78,16 +173,17 @@ export function resolveRenderProfile({
   routePath = '/',
   viewportWidth = 1440
 }: {
-  effect?: typeof DEFAULT_WEATHER_EFFECT | Record<string, unknown>
+  effect?: WeatherEffect | WeatherEffectPayload
   reducedMotion?: boolean
   isMobile?: boolean
   deviceMemory?: number
   routePath?: string
   viewportWidth?: number
 } = {}) {
-  const weather = String(effect.weather || DEFAULT_WEATHER_EFFECT.weather)
+  const normalizedEffect = normalizeWeatherEffect(effect as WeatherEffectPayload)
+  const weather = normalizedEffect.weather
   const articleLikePage = routePath.startsWith('/post/')
-  let densityScale = INTENSITY_SCALE[String(effect.intensity || DEFAULT_WEATHER_EFFECT.intensity)] || INTENSITY_SCALE.normal
+  let densityScale = INTENSITY_SCALE[normalizedEffect.intensity]
 
   if (isMobile || viewportWidth < 1100) {
     densityScale *= 0.78
@@ -117,24 +213,24 @@ export function resolveRenderProfile({
     }
   }
 
-  const accentEffect = resolveAccentEffect(effect)
+  const accentEffect = resolveAccentEffect(normalizedEffect)
   const particlePreset = resolveParticlePreset(weather, accentEffect)
 
   return {
     weather,
     accentEffect,
     particlePreset,
-    particleEnabled: Boolean(effect.enabled) && !reducedMotion && Boolean(particlePreset),
+    particleEnabled: normalizedEffect.enabled && !reducedMotion && Boolean(particlePreset),
     densityScale,
     cloudCount,
     reducedMotion,
     isMobile,
     pageFactor: articleLikePage ? 0.76 : 1,
-    showMist: Boolean(effect.enabled) && ['fog', 'dust', 'cloudy', 'overcast'].includes(weather),
-    showLightning: Boolean(effect.enabled) && weather === 'thunderstorm' && !reducedMotion,
-    showDustGlow: Boolean(effect.enabled) && weather === 'dust',
-    showWindLines: Boolean(effect.enabled) && weather === 'windy'
-  }
+    showMist: normalizedEffect.enabled && ['fog', 'dust', 'cloudy', 'overcast'].includes(weather),
+    showLightning: normalizedEffect.enabled && weather === 'thunderstorm' && !reducedMotion,
+    showDustGlow: normalizedEffect.enabled && weather === 'dust',
+    showWindLines: normalizedEffect.enabled && weather === 'windy'
+  } satisfies WeatherRenderProfile
 }
 
 export function buildCloudLayers(profile: {
@@ -174,15 +270,15 @@ export function buildCloudLayers(profile: {
 }
 
 export function shouldShowCloudLayer(weather: string) {
-  return CLOUD_WEATHER_TYPES.has(weather)
+  return CLOUD_WEATHER_TYPES.has(weather as WeatherType)
 }
 
-function resolveAccentEffect(effect: Record<string, unknown>) {
-  if (!effect?.enabled) {
+function resolveAccentEffect(effect: WeatherEffect): WeatherAccentEffect {
+  if (!effect.enabled) {
     return 'none'
   }
 
-  const weather = String(effect.weather || DEFAULT_WEATHER_EFFECT.weather)
+  const weather = effect.weather
   if (STORMY_WEATHER_TYPES.has(weather)) {
     return 'none'
   }
@@ -202,18 +298,20 @@ function resolveAccentEffect(effect: Record<string, unknown>) {
   return 'none'
 }
 
-function resolveParticlePreset(weather: string, accentEffect: string) {
+function resolveParticlePreset(weather: WeatherType, accentEffect: WeatherAccentEffect): WeatherParticlePreset | null {
   if (accentEffect && accentEffect !== 'none') {
     return accentEffect
   }
 
-  if (PARTICLE_WEATHER_TYPES.has(weather)) {
+  if (isParticleWeatherType(weather)) {
     return weather
   }
 
   return null
 }
 
+function toFiniteNumber(value: unknown): number | null
+function toFiniteNumber(value: unknown, fallback: number): number
 function toFiniteNumber(value: unknown, fallback: number | null = null) {
   const number = Number(value)
   return Number.isFinite(number) ? number : fallback

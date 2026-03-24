@@ -6,11 +6,10 @@
   </template>
   
   <script setup lang="ts">
-  import { useSettingsStore,useUserStore } from '@/store'
+  import { useSettingsStore } from '@/store'
   import settings from '@/config/settings'  // 导入系统配置
   
   const settingsStore = useSettingsStore()
-  const userStore = useUserStore()
   const watermarkRef = ref<HTMLCanvasElement | null>(null)
   const wrapperRef = ref<HTMLDivElement | null>(null)
   const showWatermark = computed(() => settingsStore.watermark)

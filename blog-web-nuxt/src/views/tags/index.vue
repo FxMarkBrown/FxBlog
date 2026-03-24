@@ -201,6 +201,9 @@ onMounted(() => {
 </template>
 
 <style lang="scss" scoped>
+@use '@/styles/variables.scss' as *;
+@use '@/styles/mixins.scss' as *;
+
 .tags-page {
   max-width: 1400px;
   margin: 0 auto;
@@ -253,6 +256,7 @@ onMounted(() => {
     font-size: 1.6em;
     font-weight: 800;
     background: linear-gradient(120deg, $primary, color.adjust($primary, $hue: 60deg));
+    background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     margin-bottom: $spacing-sm;

@@ -359,6 +359,9 @@ function renderTime(time?: string | number) {
 </template>
 
 <style lang="scss" scoped>
+@use '@/styles/variables.scss' as *;
+@use '@/styles/mixins.scss' as *;
+
 .notifications-page {
   display: flex;
   gap: 20px;

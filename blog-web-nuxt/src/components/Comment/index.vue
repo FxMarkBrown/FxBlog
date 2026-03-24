@@ -588,6 +588,9 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped lang="scss">
+@use '@/styles/variables.scss' as *;
+@use '@/styles/mixins.scss' as *;
+
 .comment-section {
   margin-top: $spacing-xl;
 }

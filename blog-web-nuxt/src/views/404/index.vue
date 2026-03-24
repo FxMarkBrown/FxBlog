@@ -12,6 +12,9 @@
 </template>
 
 <style scoped lang="scss">
+@use '@/styles/variables.scss' as *;
+@use '@/styles/mixins.scss' as *;
+
 .not-found {
   display: flex;
   min-height: calc(100vh - 140px);

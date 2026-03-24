@@ -119,6 +119,9 @@ onBeforeUnmount(() => {
 </template>
 
 <style lang="scss" scoped>
+@use '@/styles/variables.scss' as *;
+@use '@/styles/mixins.scss' as *;
+
 .floating-buttons {
   position: fixed;
   right: 20px;

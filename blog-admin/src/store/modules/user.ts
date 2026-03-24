@@ -1,15 +1,25 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { getUserInfoApi, logoutApi } from '@/api/system/auth'
-import { store } from '@/store'
 import { removeToken } from '@/utils/auth'
 
 export const useUserStore = defineStore('user', () => {
-  const createDefaultUserState = () => ({
+  interface UserState {
+    roles: string[]
+    intro: string | null
+    avatar: string | null
+    nickname: string | null
+    username: string | null
+    permissions: string[]
+    [key: string]: unknown
+  }
+
+  const createDefaultUserState = (): UserState => ({
     roles: [],
     intro: null,
     avatar: null,
     nickname: null,
+    username: null,
     permissions: []
   })
 
@@ -59,7 +69,3 @@ export const useUserStore = defineStore('user', () => {
     resetToken,
   }
 })
-
-export function useUserStoreHook() {
-  return useUserStore(store)
-}

@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import type { ArticleSummary } from '@/types/article'
-import type { PageResult } from '@/types/common'
-import { formatTime } from '@/utils/time'
 import { IMAGE_ERROR_PLACEHOLDER } from '@/utils/placeholders'
 
 interface ArticleListProps {
@@ -110,6 +108,9 @@ function getReadTime(article: ArticleSummary) {
 </template>
 
 <style lang="scss" scoped>
+@use '@/styles/variables.scss' as *;
+@use '@/styles/mixins.scss' as *;
+
 .posts-list {
   display: flex;
   flex-direction: column;
@@ -173,6 +174,7 @@ function getReadTime(article: ArticleSummary) {
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
+  line-clamp: 3;
   overflow: hidden;
 }
 

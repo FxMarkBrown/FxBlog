@@ -105,8 +105,8 @@ function resolveReadTime(content: string) {
     .replace(/`[^`]*`/g, ' ')
     .replace(/\$\$[\s\S]*?\$\$/g, ' ')
     .replace(/\$[^$\n]+\$/g, ' ')
-    .replace(/!\[[^\]]*\]\([^)]+\)/g, ' ')
-    .replace(/\[[^\]]*\]\([^)]+\)/g, ' ')
+    .replace(/!\[[^\]]*]\([^)]+\)/g, ' ')
+    .replace(/\[[^\]]*]\([^)]+\)/g, ' ')
     .replace(/[#>*_~\-|]/g, ' ')
   const readableLength = textContent.replace(/\s+/g, '').length
   return Math.max(1, Math.ceil(readableLength / 300))
@@ -442,6 +442,9 @@ function updateActiveHeading() {
 
   for (let index = headingElements.value.length - 1; index >= 0; index -= 1) {
     const heading = headingElements.value[index]
+    if (!heading) {
+      continue
+    }
     if (heading.getBoundingClientRect().top <= headerHeight + 100) {
       activeHeading.value = heading.id
       break
@@ -904,6 +907,9 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped lang="scss">
+@use '@/styles/variables.scss' as *;
+@use '@/styles/mixins.scss' as *;
+
 .article-page {
   max-width: 1300px;
   margin: 0 auto;
@@ -1287,8 +1293,7 @@ onBeforeUnmount(() => {
 
     code {
       display: block;
-      padding: 1em;
-      padding-left: 4em;
+      padding: 1em 1em 1em 4em;
       margin-left: 0;
       overflow-x: auto;
       font-family: 'Fira Code', monospace;
@@ -1766,8 +1771,7 @@ onBeforeUnmount(() => {
 
     .toc-item {
       --toc-indent: 0px;
-      padding: $spacing-sm $spacing-md;
-      padding-left: calc(16px + var(--toc-indent));
+      padding: $spacing-sm $spacing-md $spacing-sm calc(16px + var(--toc-indent));
       margin: 2px 0;
       cursor: pointer;
       border-radius: $border-radius-sm;

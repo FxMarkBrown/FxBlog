@@ -258,7 +258,7 @@ const handleBatchDelete = () => {
     try {
       await deleteOperationLogsApi(selectedIds.value)
       ElMessage.success('删除成功')
-      getList()
+      await getList()
     } catch (error) {
     }
   }).catch(() => {
@@ -275,7 +275,7 @@ const handleDelete = (row: any) => {
     try {
       await deleteOperationLogsApi(row.id)
       ElMessage.success('删除成功')
-      getList()
+      await getList()
     } catch (error) {
     }
   }).catch(() => {
@@ -299,11 +299,3 @@ onMounted(() => {
   getList()
 })
 </script>
-<style scoped>
-
-.mb-2 {
-  margin-bottom: 16px;
-}
-
-
-</style>

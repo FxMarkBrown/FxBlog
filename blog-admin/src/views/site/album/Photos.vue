@@ -266,7 +266,7 @@ const confirmMove = async () => {
         moveDialog.visible = false
         moveDialog.targetAlbumId = undefined
         selectedIds.value = []
-        getList()
+        await getList()
     } catch (error) {
     }
 }
@@ -299,7 +299,7 @@ const handleBatchDelete = () => {
         try {
             await deletePhotoApi(selectedIds.value)
             ElMessage.success('批量删除成功')
-            getList()
+            await getList()
             selectedIds.value = []
         } catch (error) {
         }
@@ -316,7 +316,7 @@ const handleDelete = (row: any) => {
         try {
             await deletePhotoApi(row.id)
             ElMessage.success('删除成功')
-            getList()
+            await getList()
         } catch (error) {
         }
     })
@@ -509,6 +509,7 @@ const handleEditorDialogClosed = () => {
                 display: -webkit-box;
                 -webkit-line-clamp: 3;
                 -webkit-box-orient: vertical;
+                line-clamp: 3;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);

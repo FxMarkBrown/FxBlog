@@ -213,7 +213,7 @@ const pwdRules = reactive<any>({
   confirmPassword: [
     { required: true, message: '请确认新密码', trigger: 'blur' },
     {
-      validator: (rule: any, value: string, callback: Function) => {
+      validator: (_rule: any, value: string, callback: Function) => {
         if (value !== pwdForm.newPassword) {
           callback(new Error('两次输入的密码不一致'))
         } else {
@@ -267,7 +267,7 @@ const submitUserForm = async () => {
     }
     await updateUserProfileApi(userForm)
     ElMessage.success('修改成功')
-    getUser()
+    await getUser()
   } catch (error) {
     console.error('提交失败:', error)
   } finally {

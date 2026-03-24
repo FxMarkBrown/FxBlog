@@ -74,6 +74,9 @@ function startRotation() {
 </template>
 
 <style lang="scss" scoped>
+@use '@/styles/variables.scss' as *;
+@use '@/styles/mixins.scss' as *;
+
 .moments-list {
   background: var(--card-bg);
   border-radius: $border-radius-lg;

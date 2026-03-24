@@ -223,6 +223,9 @@ watch(
 </template>
 
 <style lang="scss" scoped>
+@use '@/styles/variables.scss' as *;
+@use '@/styles/mixins.scss' as *;
+
 .categories-page {
   max-width: 1400px;
   margin: 0 auto;

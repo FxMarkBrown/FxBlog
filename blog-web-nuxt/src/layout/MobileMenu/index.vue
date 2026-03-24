@@ -192,6 +192,9 @@ async function handleLogout() {
 </template>
 
 <style scoped lang="scss">
+@use '@/styles/variables.scss' as *;
+@use '@/styles/mixins.scss' as *;
+
 :deep(.mobile-menu-drawer .el-drawer__body) {
   padding: 0;
   background: var(--card-bg);

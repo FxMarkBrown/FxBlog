@@ -20,7 +20,7 @@
           <div v-for="(day, dayIndex) in week" 
                :key="dayIndex" 
                class="day"
-               :class="getActivityClass(day.count)"
+               :data-level="day.count"
                :data-empty="day.count === -1"
                :title="day.date ? `${formatDate(day.date)} · ${day.count} 次贡献` : ''">
           </div>
@@ -32,7 +32,7 @@
         <div v-for="level in 5" 
              :key="level" 
              class="day"
-             :class="`activity-${level - 1}`">
+             :data-level="level - 1">
         </div>
       <span>较多</span>
     </div>
@@ -59,8 +59,7 @@ const props = defineProps<{
 const generateEmptyYear = () => {
   const data: DayData[] = []
   const endDate = dayjs()
-  const startDate = dayjs().subtract(1, 'year').add(1, 'day')
-  let currentDate = startDate
+  let currentDate = dayjs().subtract(1, 'year').add(1, 'day')
   
   while (currentDate.isBefore(endDate) || currentDate.isSame(endDate, 'day')) {
     data.push({
@@ -90,17 +89,15 @@ const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', 
 const weeklyData = computed(() => {
   const weeks: DayData[][] = []
   let week: DayData[] = []
-  const startDate = dayjs().subtract(1, 'year').add(1, 'day')
-  let currentDate = startDate
 
   // 补充开始日期之前的空格子
-  const startDayOfWeek = currentDate.day()
+  const startDayOfWeek = dayjs().subtract(1, 'year').add(1, 'day').day()
   for (let i = 0; i < startDayOfWeek; i++) {
     week.push({ date: '', count: -1 }) // -1 表示空格子
   }
   
   // 填充实际数据
-  mergedData.value.forEach((day, index) => {
+  mergedData.value.forEach((day) => {
     week.push(day)
     if (week.length === 7) {
       weeks.push(week)
@@ -123,9 +120,6 @@ const formatDate = (dateStr: string) => {
   return dayjs(dateStr).format('YYYY年M月D日 dddd')
 }
 
-const getActivityClass = (value: number) => {
-  return `activity-${value}`
-}
 </script>
 
 <style scoped>
@@ -207,11 +201,11 @@ const getActivityClass = (value: number) => {
   transform: scale(1.2);
 }
 
-.activity-0 { background-color: var(--contribution-empty-bg); }
-.activity-1 { background-color: var(--contribution-level-1); }
-.activity-2 { background-color: var(--contribution-level-2); }
-.activity-3 { background-color: var(--contribution-level-3); }
-.activity-4 { background-color: var(--contribution-level-4); }
+.day[data-level="0"] { background-color: var(--contribution-empty-bg); }
+.day[data-level="1"] { background-color: var(--contribution-level-1); }
+.day[data-level="2"] { background-color: var(--contribution-level-2); }
+.day[data-level="3"] { background-color: var(--contribution-level-3); }
+.day[data-level="4"] { background-color: var(--contribution-level-4); }
 
 .legend {
   display: flex;
@@ -223,7 +217,6 @@ const getActivityClass = (value: number) => {
   font-size: 14px;
 }
 
-:global(html.dark) .contribution-graph,
 :global(html[data-theme='dark']) .contribution-graph {
   --contribution-empty-bg: #161b22;
   --contribution-level-1: #0e4429;

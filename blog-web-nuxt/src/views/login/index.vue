@@ -253,7 +253,9 @@ async function login() {
     const response = await loginApi(loginForm)
     const userInfo = unwrapResponseData<LoginUserInfo | null>(response)
     if (!userInfo?.token) {
-      throw new Error(String(response.message || response.msg || '登录失败，请重试'))
+      showError(String(response.message || response.msg || '登录失败，请重试'))
+      refresh()
+      return
     }
 
     authStore.setToken(String(userInfo.token))
@@ -415,7 +417,7 @@ async function handleThirdPartyLogin(type: string) {
 
   if (type === 'wechat') {
     wechatForm.showQrcode = true
-    getWechatLoginCode()
+    await getWechatLoginCode()
     return
   }
 
@@ -423,7 +425,8 @@ async function handleThirdPartyLogin(type: string) {
     const response = await getAuthRenderApi(type)
     const authUrl = unwrapResponseData<string | null>(response)
     if (!authUrl) {
-      throw new Error(String(response.message || response.msg || '获取第三方登录地址失败'))
+      showError(String(response.message || response.msg || '获取第三方登录地址失败'))
+      return
     }
 
     const referrer = document.referrer
@@ -820,6 +823,9 @@ function backToHome() {
 </template>
 
 <style scoped lang="scss">
+@use '@/styles/variables.scss' as *;
+@use '@/styles/mixins.scss' as *;
+
 .login-container {
   position: relative;
   display: flex;

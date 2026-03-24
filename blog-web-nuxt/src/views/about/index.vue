@@ -84,6 +84,9 @@ function cleanupImagePreview() {
 </template>
 
 <style lang="scss" scoped>
+@use '@/styles/variables.scss' as *;
+@use '@/styles/mixins.scss' as *;
+
 .about-page {
   max-width: 1200px;
   margin: $spacing-lg auto $spacing-md;

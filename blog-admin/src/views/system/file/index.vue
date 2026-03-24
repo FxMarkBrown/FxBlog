@@ -347,7 +347,7 @@ const handleDelete = (row: any) => {
         try {
             await deleteFileApi(row.url)
             ElMessage.success('删除成功')
-            getList()
+            await getList()
         } catch (error) {
         }
     }).catch(() => undefined)
@@ -360,7 +360,7 @@ const handleManualUpload = async (options: UploadRequestOptions) => {
         await uploadApi(formData, uploadSource.value || 'manual')
         ElMessage.success(`${options.file.name} 上传成功`)
         options.onSuccess?.({})
-        getList()
+        await getList()
     } catch (error) {
         options.onError?.(error as any)
     }
@@ -451,7 +451,7 @@ const handleSubmitRename = async () => {
         })
         ElMessage.success('文件信息已更新')
         renameDialogVisible.value = false
-        getList()
+        await getList()
     } finally {
         renameLoading.value = false
     }
@@ -462,7 +462,7 @@ const handleReplaceUpload = async (row: any, options: UploadRequestOptions) => {
         await replaceFileApi(String(row.id), options.file as File)
         ElMessage.success(`${row.filename} 已替换`)
         options.onSuccess?.({})
-        getList()
+        await getList()
     } catch (error) {
         options.onError?.(error as any)
     }

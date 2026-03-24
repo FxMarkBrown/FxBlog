@@ -203,7 +203,7 @@ const handleDelete = async (row: any) => {
   try {
     await ElMessageBox.confirm('确定要删除"' + row.jobName + '"这个调度日志吗？')
     await delleteJobLogApi(row.id)
-    getList()
+    await getList()
     ElMessage.success('删除成功')
   } catch (error) {
   }
@@ -219,7 +219,7 @@ const handleBatchDelete = async () => {
     await ElMessageBox.confirm('确定要删除"' + selectedIds.value.length + '"个调度日志吗？')
     await delleteJobLogApi(selectedIds.value)
     selectedIds.value = []
-    getList()
+    await getList()
     ElMessage.success('删除成功')
   } catch (error) {
   }
@@ -230,7 +230,7 @@ const handleClean = async () => {
   try {
     await ElMessageBox.confirm('确定要清空所有调度日志吗？')
     await cleanJobLogApi()
-    getList()
+    await getList()
     ElMessage.success('清空成功')
   } catch (error) {
   }

@@ -123,7 +123,7 @@
       })
       await deleteMessageApi(selectedIds.value)
       ElMessage.success('批量删除成功')
-      getList()
+      await getList()
       selectedIds.value = []
     } catch (error) {
     }
@@ -139,18 +139,11 @@
       })
       await deleteMessageApi(row.id)
       ElMessage.success('删除成功')
-      getList()
+      await getList()
     } catch (error) {
     }
   }
 
-  // 搜索
-  const handleQuery = () => {
-    queryParams.pageNum = 1
-    getList()
-  }
-  
-  
   // 分页大小改变
   const handleSizeChange = (val: number) => {
     queryParams.pageSize = val

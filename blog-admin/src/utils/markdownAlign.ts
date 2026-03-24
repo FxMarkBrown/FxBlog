@@ -2,7 +2,6 @@ interface MarkdownAlignToken {
   block: boolean
   map?: [number, number]
   content: string
-  meta?: Record<string, unknown>
   attrSet: (name: string, value: string) => void
 }
 
@@ -83,9 +82,6 @@ export function installMarkdownAlignPlugin(md: MarkdownAlignIt) {
     const bodyToken = state.push('blog_align_body', '', 0)
     bodyToken.block = true
     bodyToken.content = state.getLines(startLine + 1, nextLine, 0, false)
-    bodyToken.meta = {
-      direction
-    }
 
     const closeToken = state.push('blog_align_close', 'div', -1)
     closeToken.block = true

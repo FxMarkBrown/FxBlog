@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { tsParticles } from '@tsparticles/engine'
+import type { ISourceOptions } from '@tsparticles/engine'
 import { loadSlim } from '@tsparticles/slim'
 
 const hostRef = ref<HTMLElement | null>(null)
@@ -32,7 +33,7 @@ function ensureSlimLoaded() {
 /**
  * 生成登录页粒子参数。
  */
-function createParticleOptions() {
+function createParticleOptions(): ISourceOptions {
   const isDarkMode = getThemeMode() === 'dark'
 
   return {
@@ -119,7 +120,7 @@ async function renderParticles() {
   await ensureSlimLoaded()
 
   if (particlesContainer) {
-    await particlesContainer.destroy()
+    particlesContainer.destroy()
     particlesContainer = null
   }
 
@@ -135,7 +136,7 @@ async function renderParticles() {
  */
 async function destroyParticles() {
   if (particlesContainer) {
-    await particlesContainer.destroy()
+    particlesContainer.destroy()
     particlesContainer = null
   }
 

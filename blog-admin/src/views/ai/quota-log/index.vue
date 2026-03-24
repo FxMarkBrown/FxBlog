@@ -166,7 +166,7 @@ const getBizTagType = (bizType: string) => {
   if (bizType === 'like') return 'danger'
   if (bizType === 'favorite') return 'primary'
   if (bizType === 'consume') return 'info'
-  return ''
+  return undefined
 }
 
 /**

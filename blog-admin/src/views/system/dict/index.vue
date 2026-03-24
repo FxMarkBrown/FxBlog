@@ -301,7 +301,7 @@ const submitForm = async () => {
       ElMessage.success('修改成功')
     }
     dialogVisible.value = false
-    getList()
+    await getList()
   } catch (error) {
   } finally {
     submitLoading.value = false
@@ -322,7 +322,7 @@ const handleDelete = async (row: any) => {
     )
     await deleteDictApi(row.id)
     ElMessage.success('删除成功')
-    getList()
+    await getList()
   } catch (error) {
   }
 }
@@ -376,7 +376,7 @@ const handleBatchDelete = async () => {
     await deleteDictApi(selectedIds.value)
     selectedIds.value = []
     ElMessage.success('删除成功')
-    getList()
+    await getList()
   } catch (error) {
   }
 }

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { Link, VideoPlay } from '@element-plus/icons-vue'
 import { ElLoading, ElMessage } from 'element-plus'
 import { defineAsyncComponent } from 'vue'
 import { marked } from 'marked'
 import { allToolbar, DropdownToolbar } from 'md-editor-v3'
+import type { ToolbarNames } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 import { uploadFileApi } from '@/api/file'
 import { unwrapResponseData } from '@/utils/response'
@@ -66,8 +66,8 @@ const editorStyle = computed(() => ({
   width: '100%'
 }))
 
-const editorToolbars = computed<(string | number)[]>(() => {
-  const toolbars = [...allToolbar] as (string | number)[]
+const editorToolbars = computed<ToolbarNames[]>(() => {
+  const toolbars = [...allToolbar] as ToolbarNames[]
   const titleIndex = toolbars.indexOf('title')
   const alignInsertIndex = titleIndex === -1 ? toolbars.length : titleIndex + 1
   toolbars.splice(alignInsertIndex, 0, 0)
@@ -459,7 +459,7 @@ defineExpose({
 
           <DropdownToolbar title="插入链接" :visible="linkDropdownVisible" @on-change="handleLinkDropdownChange">
             <template #default>
-              <Link class="custom-toolbar-icon custom-toolbar-icon--svg" />
+              <i class="fas fa-link custom-toolbar-icon"></i>
             </template>
 
             <template #overlay>
@@ -481,7 +481,7 @@ defineExpose({
             @on-change="handleVideoDropdownChange"
           >
             <template #default>
-              <VideoPlay class="custom-toolbar-icon custom-toolbar-icon--svg" />
+              <i class="fas fa-video custom-toolbar-icon"></i>
             </template>
 
             <template #overlay>
@@ -582,11 +582,6 @@ defineExpose({
   :deep(.custom-toolbar-icon) {
     color: inherit;
     font-size: 16px;
-  }
-
-  :deep(.custom-toolbar-icon--svg) {
-    width: 16px;
-    height: 16px;
   }
 
   :deep(.md-editor) {

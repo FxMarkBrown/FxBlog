@@ -171,6 +171,9 @@ function previewImage(images: string[], index: number) {
 </template>
 
 <style lang="scss" scoped>
+@use '@/styles/variables.scss' as *;
+@use '@/styles/mixins.scss' as *;
+
 .moments-container {
   max-width: 800px;
   margin: 0 auto;

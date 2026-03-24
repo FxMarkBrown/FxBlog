@@ -74,8 +74,8 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
-import { useUserStore,useSettingsStore } from '@/store/index'
-import {CaretBottom, Lock, SwitchButton, User} from "@element-plus/icons-vue";
+import { CaretBottom, Lock, SwitchButton, User } from '@element-plus/icons-vue'
+import { useSettingsStore, useUserStore } from '@/store'
 
 const router = useRouter()
 const userStore = useUserStore()

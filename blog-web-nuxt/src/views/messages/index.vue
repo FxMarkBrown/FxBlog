@@ -176,6 +176,7 @@ async function listMessage() {
               <span class="barrage-items">
                 <img
                   :src="String(danmu.avatar || touristAvatar)"
+                  :alt="`${danmu.nickname || '游客'}头像`"
                   width="30"
                   height="30"
                   style="border-radius: 50%"

@@ -44,11 +44,6 @@ public interface AiConversationService {
     IPage<AiMessageVo> pageMessages(Long conversationId);
 
     /**
-     * 以普通请求方式发送一条消息并返回完整结果。
-     */
-    List<AiMessageVo> sendMessage(Long conversationId, AiSendMessageDto sendMessageDto);
-
-    /**
      * 以流式方式发送一条消息并返回 SSE 通道。
      */
     SseEmitter streamMessage(Long conversationId, AiSendMessageDto sendMessageDto);

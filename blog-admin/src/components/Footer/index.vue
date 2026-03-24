@@ -21,8 +21,6 @@
 
 <script setup lang="ts">
 import { useSettingsStore } from '@/store/modules/settings'
-import settings from '@/config/settings'
-
 
 const settingsStore = useSettingsStore()
 const title = computed(() => settingsStore.title)

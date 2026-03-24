@@ -330,6 +330,9 @@ watch(
 </template>
 
 <style lang="scss" scoped>
+@use '@/styles/variables.scss' as *;
+@use '@/styles/mixins.scss' as *;
+
 .album-header {
   position: relative;
   min-height: 400px;
@@ -447,6 +450,7 @@ watch(
       letter-spacing: -1px;
       background: linear-gradient(120deg, #ffffff 0%, #e0e0e0 50%, #ffffff 100%);
       background-size: 200% auto;
+      background-clip: text;
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       animation: shine 3s linear infinite;

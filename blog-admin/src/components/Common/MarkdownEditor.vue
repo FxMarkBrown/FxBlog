@@ -152,7 +152,7 @@ import { ElLoading, ElMessage } from 'element-plus'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { marked } from 'marked'
 import { allToolbar, config, DropdownToolbar, MdEditor } from 'md-editor-v3'
-import type { ExposeParam, InsertParam } from 'md-editor-v3'
+import type { ExposeParam, InsertParam, ToolbarNames } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 
 import { uploadApi } from '@/api/file'
@@ -230,7 +230,7 @@ const editorStyle = computed(() => ({
 }))
 
 const editorToolbars = computed(() => {
-  const toolbars = [...allToolbar] as (string | number)[]
+  const toolbars: ToolbarNames[] = [...allToolbar]
   const titleIndex = toolbars.indexOf('title')
   const alignInsertIndex = titleIndex === -1 ? toolbars.length : titleIndex + 1
   toolbars.splice(alignInsertIndex, 0, 0)

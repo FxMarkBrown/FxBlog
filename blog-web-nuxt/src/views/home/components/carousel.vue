@@ -28,6 +28,9 @@ const emit = defineEmits<{
 </template>
 
 <style lang="scss" scoped>
+@use '@/styles/variables.scss' as *;
+@use '@/styles/mixins.scss' as *;
+
 .custom-carousel {
   width: 100%;
   border-radius: $border-radius-lg;

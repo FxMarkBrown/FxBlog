@@ -239,16 +239,6 @@ const handleSelectionChange = (selection: { id: any }[]) => {
     selectedIds.value = selection.map(item => item.id)
 }
 
-/** 新增按钮操作 */
-const handleAdd = () => {
-    reset()
-    open.value = true
-    title.value = "添加反馈"
-    nextTick(() => {
-        formRef.value?.clearValidate()
-    })
-}
-
 /** 修改按钮操作 */
 const handleUpdate = async (row : any) => {
     reset()
@@ -257,7 +247,7 @@ const handleUpdate = async (row : any) => {
         Object.assign(form, response.data)
         open.value = true
         title.value = "修改反馈"
-        nextTick(() => {
+        await nextTick(() => {
             formRef.value?.clearValidate()
         })
     } catch (error) {

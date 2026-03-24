@@ -263,8 +263,7 @@ const tagsStyles = [
 
 <style scoped lang="scss">
 .drawer-content {
-  padding: 0 20px 20px 20px;
-  padding-bottom: 50px;
+  padding: 0 20px 50px;
   height: 100%;
   overflow-y: auto;
 }

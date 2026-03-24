@@ -162,6 +162,9 @@ onMounted(() => {
 </template>
 
 <style scoped lang="scss">
+@use '@/styles/variables.scss' as *;
+@use '@/styles/mixins.scss' as *;
+
 .archives-page {
   max-width: 1400px;
   margin: 0 auto;

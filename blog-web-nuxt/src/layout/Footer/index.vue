@@ -56,6 +56,9 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped lang="scss">
+@use '@/styles/variables.scss' as *;
+@use '@/styles/mixins.scss' as *;
+
 .site-footer {
   background: var(--card-bg);
   padding: $spacing-lg 0;

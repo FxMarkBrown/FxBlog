@@ -116,7 +116,7 @@ const selectIcon = (iconName: string) => {
   color: #409EFF;
 }
 
-.icon-item .el-icon {
+.icon-item {
   font-size: 24px;
   margin-bottom: 8px;
 }

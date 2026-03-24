@@ -176,7 +176,8 @@ function uploadImg() {
       const uploadResponse = await uploadFileApi(formData, 'userAvatar')
       const avatarUrl = unwrapResponseData<string | null>(uploadResponse)
       if (!avatarUrl) {
-        throw new Error(String(uploadResponse.message || uploadResponse.msg || '头像上传失败'))
+        showError(String(uploadResponse.message || uploadResponse.msg || '头像上传失败'))
+        return
       }
 
       await updateProfileApi({
@@ -272,7 +273,7 @@ function closeDialog() {
       <div class="avatar-cropper-sidebar">
         <div class="avatar-cropper-sidebar__title">预览</div>
         <div class="avatar-upload-preview">
-          <img :src="previewImageUrl || String(user?.avatar || '')">
+          <img :src="previewImageUrl || String(user?.avatar || '')" alt="头像裁剪预览">
         </div>
       </div>
     </div>
@@ -375,23 +376,24 @@ function closeDialog() {
 .avatar-cropper-canvas :deep(.cropper-face) {
   z-index: 4;
   border-radius: 24px;
-  background:
+  background-image:
     linear-gradient(rgba(96, 165, 250, 0.12), rgba(96, 165, 250, 0.12)),
     linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.18) 0,
-      rgba(255, 255, 255, 0.18) 1px,
-      transparent 1px,
-      transparent 33.333%
+          90deg,
+          rgba(255, 255, 255, 0.18) 0,
+          rgba(255, 255, 255, 0.18) 1px,
+          transparent 1px,
+          transparent 33.333%
     ),
     linear-gradient(
-      rgba(255, 255, 255, 0.18) 0,
-      rgba(255, 255, 255, 0.18) 1px,
-      transparent 1px,
-      transparent 33.333%
+          rgba(255, 255, 255, 0.18) 0,
+          rgba(255, 255, 255, 0.18) 1px,
+          transparent 1px,
+          transparent 33.333%
     );
-  background-size: auto, 33.333% 100%, 100% 33.333%;
   background-position: center;
+  background-repeat: no-repeat, repeat, repeat;
+  background-size: auto, 33.333% 100%, 100% 33.333%;
   opacity: 1;
   cursor: grab;
 }

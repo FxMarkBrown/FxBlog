@@ -4,7 +4,7 @@ import { getAllCategoriesApi, getArticlesApi, getCarouselArticlesApi } from '@/a
 import ArticleList from '@/components/ArticleList/index.vue'
 import Sidebar from '@/components/Sidebar/index.vue'
 import { usePageSeo } from '@/composables/useSeo'
-import type { ArticleSummary } from '@/types/article'
+import type { ArticleCategoryGroup, ArticleSummary } from '@/types/article'
 import type { PageResult } from '@/types/common'
 import { unwrapResponseData } from '@/utils/response'
 import Carousel from '@/views/home/components/carousel.vue'
@@ -26,12 +26,18 @@ const params = reactive({
 const articleList = ref<ArticleSummary[]>([])
 const carouselSlides = ref<ArticleSummary[]>([])
 const activeName = ref('all')
-const defaultCategory = {
+type CategoryTab = {
+  id: string | number
+  name: string
+  icon: string
+}
+
+const defaultCategory: CategoryTab = {
   id: 'all',
   name: '全部',
   icon: 'fas fa-layer-group'
 }
-const categories = ref<Array<{ id: string | number; name: string; icon: string }>>([{ ...defaultCategory }])
+const categories = ref<CategoryTab[]>([{ ...defaultCategory }])
 
 usePageSeo({
   title: () => `${siteStore.websiteInfo.name || siteStore.websiteInfo.title || runtimeConfig.public.siteName}`,
@@ -139,13 +145,14 @@ async function getCarouselArticles() {
 async function getAllCategories() {
   const response = await getAllCategoriesApi().catch(() => null)
   const icons = ['far fa-file-alt', 'fas fa-book-open', 'fas fa-feather-alt', 'fas fa-mug-hot', 'fas fa-bookmark', 'fas fa-pen-fancy']
-  const categoriesData = unwrapResponseData<Array<{ id: string | number; name: string }> | null>(response) || []
+  const categoriesData = unwrapResponseData<ArticleCategoryGroup[] | null>(response) || []
 
   categories.value = [
     { ...defaultCategory },
-    ...categoriesData.map((category, index) => ({
-      ...category,
-      icon: icons[index % icons.length]
+    ...categoriesData.map<CategoryTab>((category, index) => ({
+      id: category.id ?? `category-${index}`,
+      name: String(category.name || category.categoryName || '未命名分类'),
+      icon: icons[index % icons.length] ?? defaultCategory.icon
     }))
   ]
 }
@@ -189,6 +196,9 @@ onMounted(() => {
 </template>
 
 <style lang="scss" scoped>
+@use '@/styles/variables.scss' as *;
+@use '@/styles/mixins.scss' as *;
+
 .home {
   max-width: 1400px;
   margin: 0 auto;

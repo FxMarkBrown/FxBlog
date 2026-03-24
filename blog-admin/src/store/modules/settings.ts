@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia'
+import {defineStore} from 'pinia'
 
 export interface SettingsState {
   theme: 'light' | 'dark'
@@ -34,31 +34,9 @@ export const useSettingsStore = defineStore('settings', {
   }),
 
   actions: {
-    // 预览设置
-    previewSettings(settings: Partial<SettingsState>) {
-      // 应用主题色
-      if (settings.themeColor) {
-        // 更新 CSS 变量
-        document.documentElement.style.setProperty('--el-color-primary', settings.themeColor)
-        // 生成不同透明度的主题色变体
-        const colorObj = this.generateThemeColors(settings.themeColor)
-        Object.entries(colorObj).forEach(([key, value]) => {
-          document.documentElement.style.setProperty(key, value)
-        })
-      }
-      
-      // 添加字体大小设置
-      if (settings.fontSize) {
-        document.documentElement.setAttribute('data-size', settings.fontSize)
-      }
-      // 更新设置并立即保存
-      Object.assign(this, settings)
-      sessionStorage.setItem('settings', JSON.stringify(this.$state))
-    },
-
     // 生成主题色的不同透明度变体
     generateThemeColors(primary: string) {
-      const colors = {
+      return {
         '--el-color-primary': primary,
         '--el-color-primary-light-1': this.lighten(primary, 0.1),
         '--el-color-primary-light-2': this.lighten(primary, 0.2),
@@ -72,7 +50,6 @@ export const useSettingsStore = defineStore('settings', {
         '--el-color-primary-dark-1': this.darken(primary, 0.1),
         '--el-color-primary-dark-2': this.darken(primary, 0.2),
       }
-      return colors
     },
 
     // 颜色变浅
