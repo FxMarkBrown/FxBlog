@@ -147,6 +147,9 @@ function buildParticleOptions(scene: Record<string, unknown>) {
   const density = Number(scene.densityScale || 1)
   const particlePreset = PARTICLE_PRESETS[preset] || PARTICLE_PRESETS.sunny
   const colors = particlePreset.colors(darkTheme)
+  const shape = typeof particlePreset.shape === 'function'
+    ? particlePreset.shape(darkTheme)
+    : particlePreset.shape
 
   return {
     fullScreen: {
@@ -172,7 +175,7 @@ function buildParticleOptions(scene: Record<string, unknown>) {
       color: {
         value: colors
       },
-      shape: particlePreset.shape,
+      shape,
       opacity: particlePreset.opacity(density, darkTheme),
       size: particlePreset.size(density, Boolean(scene.isMobile)),
       move: particlePreset.move(density),
@@ -514,40 +517,51 @@ const PARTICLE_PRESETS = {
 
 function createRainPreset(isHeavy: boolean) {
   return {
-    colors: (darkTheme: boolean) => darkTheme ? ['#c7e0ff', '#e2f1ff'] : ['#5c8fce', '#7fb2ed'],
+    colors: (darkTheme: boolean) => darkTheme ? ['#c7e0ff', '#e2f1ff'] : ['#4d82c7', '#76aee8'],
     number: (density: number, isMobile: boolean) => Math.round((isMobile ? (isHeavy ? 48 : 34) : (isHeavy ? 92 : 70)) * density),
-    shape: {
+    shape: (darkTheme: boolean) => ({
       type: 'image',
       options: {
         image: [
-          createImageShape(`
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="50" viewBox="0 0 14 50">
-              <path d="M10 2 4 48" fill="none" stroke="#ddecff" stroke-linecap="round" stroke-width="2.2"/>
-            </svg>
-          `, 14, 50)
+          createImageShape(buildRainDropSvg(darkTheme), 16, 58)
         ]
       }
-    },
+    }),
     opacity: (density: number, darkTheme: boolean) => ({
-      value: { min: darkTheme ? 0.22 : 0.28, max: darkTheme ? 0.72 : 0.82 }
+      value: { min: darkTheme ? 0.24 : 0.42, max: darkTheme ? 0.74 : 0.94 }
     }),
     size: () => ({
-      value: { min: isHeavy ? 14 : 12, max: isHeavy ? 20 : 16 }
+      value: { min: isHeavy ? 18 : 14, max: isHeavy ? 24 : 20 }
     }),
     move: (density: number) => ({
       enable: true,
-      direction: 'bottom-right',
-      drift: 0,
+      direction: 'bottom',
+      drift: isHeavy ? 0.14 : 0.08,
       outModes: {
         default: 'out'
       },
       speed: { min: isHeavy ? 6 : 4.2, max: (isHeavy ? 10 : 7.5) * density },
       straight: true
-    }),
-    rotate: {
-      value: 18
-    }
+    })
   }
+}
+
+function buildRainDropSvg(darkTheme: boolean) {
+  if (darkTheme) {
+    return `
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="58" viewBox="0 0 16 58">
+        <path d="M8.2 2.5 6.5 55.5" fill="none" stroke="#cfe4ff" stroke-linecap="round" stroke-width="2.4" opacity="0.94"/>
+        <path d="M8 3.5 6.9 53.5" fill="none" stroke="#ffffff" stroke-linecap="round" stroke-width="1.05" opacity="0.28"/>
+      </svg>
+    `
+  }
+
+  return `
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="58" viewBox="0 0 16 58">
+      <path d="M8.2 2.5 6.5 55.5" fill="none" stroke="#5e87bc" stroke-linecap="round" stroke-width="2.7" opacity="0.98"/>
+      <path d="M8 3.5 6.9 53.5" fill="none" stroke="#dcebff" stroke-linecap="round" stroke-width="1.15" opacity="0.52"/>
+    </svg>
+  `
 }
 
 function createImageShape(svg: string, width: number, height: number) {

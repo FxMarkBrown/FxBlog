@@ -615,13 +615,13 @@ onBeforeUnmount(() => {
 }
 
 .weather-rain-veil__layer--a {
-  background-image: repeating-linear-gradient(-18deg, rgba(226, 239, 255, 0.15) 0 2px, transparent 2px 16px);
+  background-image: repeating-linear-gradient(-4deg, rgba(196, 220, 248, 0.12) 0 1px, transparent 1px 18px);
   animation: rainVeilMove 8s linear infinite;
 }
 
 .weather-rain-veil__layer--b {
-  background-image: repeating-linear-gradient(-18deg, rgba(198, 224, 255, 0.08) 0 1px, transparent 1px 18px);
-  opacity: 0.7;
+  background-image: repeating-linear-gradient(-6deg, rgba(140, 185, 232, 0.1) 0 1px, transparent 1px 20px);
+  opacity: 0.58;
   animation: rainVeilMove 12s linear infinite reverse;
 }
 
@@ -782,7 +782,10 @@ onBeforeUnmount(() => {
 :root:not([data-theme='dark']) .weather-particle-layer.weather-decor--light_rain .weather-canvas,
 :root:not([data-theme='dark']) .weather-particle-layer.weather-decor--snow .weather-canvas,
 :root:not([data-theme='dark']) .weather-particle-layer.weather-decor--windy .weather-canvas {
-  opacity: 0.98;
+  opacity: 1;
+  filter:
+    drop-shadow(0 0 0.42rem rgba(70, 117, 172, 0.26))
+    drop-shadow(0 0 0.08rem rgba(116, 156, 204, 0.24));
 }
 
 :root:not([data-theme='dark']) .weather-particle-layer.weather-decor--snow .weather-canvas {
@@ -793,6 +796,28 @@ onBeforeUnmount(() => {
 :root:not([data-theme='dark']) .weather-particle-layer.weather-decor--thunderstorm .weather-canvas,
 :root:not([data-theme='dark']) .weather-particle-layer.weather-decor--dust .weather-canvas {
   opacity: 1;
+  filter:
+    drop-shadow(0 0 0.52rem rgba(66, 111, 165, 0.28))
+    drop-shadow(0 0 0.12rem rgba(114, 154, 200, 0.26));
+}
+
+:root:not([data-theme='dark']) .weather-decor--light_rain .weather-rain-veil,
+:root:not([data-theme='dark']) .weather-decor--heavy_rain .weather-rain-veil,
+:root:not([data-theme='dark']) .weather-decor--thunderstorm .weather-rain-veil {
+  opacity: 0.42;
+}
+
+:root:not([data-theme='dark']) .weather-decor--light_rain .weather-rain-veil__layer--a,
+:root:not([data-theme='dark']) .weather-decor--heavy_rain .weather-rain-veil__layer--a,
+:root:not([data-theme='dark']) .weather-decor--thunderstorm .weather-rain-veil__layer--a {
+  background-image: repeating-linear-gradient(-4deg, rgba(108, 149, 197, 0.2) 0 1px, transparent 1px 18px);
+}
+
+:root:not([data-theme='dark']) .weather-decor--light_rain .weather-rain-veil__layer--b,
+:root:not([data-theme='dark']) .weather-decor--heavy_rain .weather-rain-veil__layer--b,
+:root:not([data-theme='dark']) .weather-decor--thunderstorm .weather-rain-veil__layer--b {
+  background-image: repeating-linear-gradient(-6deg, rgba(78, 121, 172, 0.18) 0 1px, transparent 1px 20px);
+  opacity: 0.68;
 }
 
 .weather-decor--snow .weather-atmosphere {
@@ -1044,10 +1069,10 @@ onBeforeUnmount(() => {
 
 @keyframes rainVeilMove {
   from {
-    transform: translate3d(0, -6%, 0);
+    transform: translate3d(-0.4%, -8%, 0);
   }
   to {
-    transform: translate3d(2%, 8%, 0);
+    transform: translate3d(0.8%, 10%, 0);
   }
 }
 
