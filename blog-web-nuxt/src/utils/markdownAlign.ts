@@ -3,6 +3,10 @@ import type MarkdownIt from 'markdown-it'
 const ALIGN_BLOCK_OPEN_PATTERN = /^:::\s*align-(left|right|center)\s*$/
 const ALIGN_BLOCK_CLOSE_PATTERN = /^:::\s*$/
 
+function renderAlignBody(md: MarkdownIt, content: string) {
+  return `<div class="blog-align-scroll"><div class="blog-align-scroll-content">${md.render(content)}</div></div>`
+}
+
 /**
  * 为 Markdown 渲染器补充 `::: align-*` 容器语法。
  */
@@ -62,5 +66,5 @@ export function installMarkdownAlignPlugin(md: MarkdownIt) {
 
   md.renderer.rules.blog_align_open = (tokens, idx, options, _env, self) => self.renderToken(tokens, idx, options)
   md.renderer.rules.blog_align_close = (tokens, idx, options, _env, self) => self.renderToken(tokens, idx, options)
-  md.renderer.rules.blog_align_body = (tokens, idx) => md.render(tokens[idx].content)
+  md.renderer.rules.blog_align_body = (tokens, idx) => renderAlignBody(md, tokens[idx].content)
 }

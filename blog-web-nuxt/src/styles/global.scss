@@ -243,11 +243,45 @@ img {
     bottom: -0.45rem;
   }
 
-  > :first-child {
+  .blog-align-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0.35rem 0 0.7rem;
+    margin: 0;
+    box-sizing: border-box;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(64, 158, 255, 0.4) transparent;
+  }
+
+  .blog-align-scroll::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .blog-align-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .blog-align-scroll::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(64, 158, 255, 0.32);
+  }
+
+  .blog-align-scroll-content {
+    display: inline-block;
+    min-width: 100%;
+    width: max-content;
+    box-sizing: border-box;
+    text-align: inherit;
+  }
+
+  .blog-align-scroll-content > :first-child {
     margin-top: 0 !important;
   }
 
-  > :last-child {
+  .blog-align-scroll-content > :last-child {
     margin-bottom: 0 !important;
   }
 
@@ -291,5 +325,13 @@ img {
   &::before,
   &::after {
     color: rgba(96, 165, 250, 0.92);
+  }
+
+  .blog-align-scroll {
+    scrollbar-color: rgba(96, 165, 250, 0.42) transparent;
+  }
+
+  .blog-align-scroll::-webkit-scrollbar-thumb {
+    background: rgba(96, 165, 250, 0.36);
   }
 }
