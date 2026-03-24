@@ -43,7 +43,7 @@
     </el-card>
 
     <!-- 添加或修改对话框 -->
-    <el-dialog :title="dialog.title" v-model="dialog.visible" width="600px" append-to-body destroy-on-close
+    <el-dialog :title="dialog.title" v-model="dialog.visible" width="min(92vw, 860px)" append-to-body destroy-on-close
       class="custom-dialog">
       <el-form ref="momentFormRef" :model="momentForm" :rules="rules" label-width="80px" class="custom-form">
         <el-form-item label="内容" prop="content">
@@ -136,8 +136,14 @@ const rules = reactive<FormRules>({
   ],
 })
 
-const parseImage = (images: string) => {
-  return images.split(',')
+const parseImage = (images?: string | null) => {
+  if (!images) {
+    return []
+  }
+  return String(images)
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
 }
 
 // 获取标签列表
