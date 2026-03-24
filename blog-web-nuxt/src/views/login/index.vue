@@ -707,7 +707,7 @@ function backToHome() {
         </div>
 
         <ElForm ref="registerFormRef" :model="registerForm" :rules="rules">
-          <ElFormItem label="昵称" prop="nickname">
+          <ElFormItem class="form-item" prop="nickname">
             <ElInput v-model="registerForm.nickname" placeholder="请输入昵称">
               <template #prefix>
                 <i class="fas fa-user"></i>
@@ -879,24 +879,52 @@ function backToHome() {
 
 .submit-btn {
   width: 100%;
-  height: 42px;
+  height: 52px;
   border: none;
-  border-radius: 8px;
-  background: #6366f1;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #5b67f1 0%, #6677ff 100%);
   color: #fff;
-  font-size: 16px;
-  font-weight: 500;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
   cursor: pointer;
-  transition: all 0.2s;
+  box-shadow: 0 14px 30px rgba(99, 102, 241, 0.26);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
 }
 
 .submit-btn:hover {
-  background: #4f46e5;
   transform: translateY(-1px);
+  filter: brightness(1.03);
+  box-shadow: 0 18px 36px rgba(99, 102, 241, 0.3);
 }
 
 .submit-btn:active {
   transform: translateY(0);
+  box-shadow: 0 10px 22px rgba(99, 102, 241, 0.22);
+}
+
+.form-item :deep(.el-input-group__append) {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.form-item :deep(.el-input-group__append .el-button) {
+  height: 100%;
+  padding: 0 18px;
+  border: none;
+  border-left: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 0 12px 12px 0;
+  background: rgba(99, 102, 241, 0.08);
+  color: #4f46e5;
+  font-weight: 600;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.form-item :deep(.el-input-group__append .el-button:hover) {
+  background: rgba(99, 102, 241, 0.14);
+  color: #4338ca;
 }
 
 .divider {
@@ -1184,15 +1212,47 @@ function backToHome() {
   color: #cbd5e1;
 }
 
+.login-container.is-dark .submit-btn {
+  background: linear-gradient(135deg, #6466f1 0%, #6d63f4 100%);
+  box-shadow: 0 16px 34px rgba(79, 70, 229, 0.28);
+}
+
+.login-container.is-dark .form-item :deep(.el-input-group__append .el-button) {
+  border-left-color: rgba(148, 163, 184, 0.18);
+  background: rgba(99, 102, 241, 0.16);
+  color: #c7d2fe;
+}
+
+.login-container.is-dark .form-item :deep(.el-input-group__append .el-button:hover) {
+  background: rgba(99, 102, 241, 0.24);
+  color: #e0e7ff;
+}
+
 @media (max-width: 768px) {
   .login-container {
-    min-height: calc(100vh + 70px);
-    padding: 20px;
+    align-items: flex-start;
+    min-height: 100vh;
+    margin-top: 0;
+    padding: calc(env(safe-area-inset-top, 0px) + 18px) 20px 24px;
   }
 
   .login-body {
-    padding: 28px 24px 24px;
+    margin-top: 0;
+    padding: 24px 20px 22px;
     border-radius: 24px;
+  }
+
+  .form-header {
+    margin-bottom: 24px;
+  }
+
+  .form-title {
+    font-size: 22px;
+  }
+
+  .submit-btn {
+    height: 48px;
+    font-size: 17px;
   }
 }
 </style>
