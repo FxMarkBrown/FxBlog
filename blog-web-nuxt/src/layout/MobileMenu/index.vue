@@ -23,7 +23,7 @@ const routes: MobileMenuEntry[] = [
   { path: '/photos', title: '相册', icon: 'fas fa-images' },
   { path: '/messages', title: '留言', icon: 'fas fa-envelope' },
   { path: '/friends', title: '友链', icon: 'fas fa-users' },
-  { path: '/ai', title: 'AI对话', icon: 'fas fa-robot' }
+  { path: '/ai', title: '对话', icon: 'fas fa-robot' }
 ]
 
 const shortcutEntries = computed(() => {
@@ -107,7 +107,7 @@ async function handleLogout() {
       class="mobile-menu-drawer"
       direction="ltr"
       :with-header="false"
-      size="50%"
+      size="clamp(224px, 72vw, 304px)"
       @update:model-value="uiStore.setMobileMenuVisible"
     >
       <div class="mobile-menu">
@@ -200,6 +200,14 @@ async function handleLogout() {
 :deep(.mobile-menu-drawer .el-drawer) {
   box-shadow: 12px 0 36px rgba(15, 23, 42, 0.16);
   border-right: 1px solid var(--border-color);
+  border-radius: 0 22px 22px 0 !important;
+  overflow: hidden !important;
+  background: var(--card-bg);
+}
+
+:deep(.mobile-menu-drawer .el-drawer__body) {
+  border-radius: inherit;
+  overflow: hidden;
 }
 
 .mobile-menu {
@@ -210,7 +218,7 @@ async function handleLogout() {
 }
 
 .menu-header {
-  padding: 20px;
+  padding: 24px 20px 18px;
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
@@ -218,42 +226,49 @@ async function handleLogout() {
 }
 
 .site-name {
-  font-size: 1.2rem;
+  font-size: 1.18rem;
   font-weight: 600;
+  line-height: 1.28;
+  letter-spacing: 0.01em;
   color: var(--text-primary);
   margin: 0;
 }
 
 .menu-content {
   flex: 1;
-  padding: 16px;
+  padding: 14px 14px 18px;
   overflow-y: auto;
 }
 
 .menu-item {
   display: flex;
   align-items: center;
+  min-height: 54px;
   padding: 14px 16px;
   color: var(--text-primary);
   text-decoration: none;
-  border-radius: 8px;
-  margin-bottom: 8px;
+  border-radius: 14px;
+  margin-bottom: 10px;
   transition: all 0.3s ease;
 }
 
 .menu-item i {
-  margin-right: 12px;
+  width: 20px;
+  margin-right: 14px;
   font-size: 18px;
+  text-align: center;
   transition: transform 0.3s ease;
 }
 
 .menu-item span {
   flex: 1;
+  font-size: 0.96rem;
   font-weight: 500;
+  line-height: 1.35;
 }
 
 .shortcut-item {
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 .menu-action {
@@ -298,10 +313,11 @@ async function handleLogout() {
 }
 
 .menu-footer {
-  padding: 16px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
   text-align: center;
   color: var(--text-secondary);
-  font-size: 0.9rem;
+  font-size: 0.84rem;
+  line-height: 1.35;
   border-top: 1px solid var(--border-color);
 }
 
@@ -318,7 +334,7 @@ async function handleLogout() {
 
 @include responsive(sm) {
   :deep(.mobile-menu-drawer.el-drawer__container .el-drawer) {
-    width: min(82vw, 320px) !important;
+    width: clamp(224px, 72vw, 304px) !important;
   }
 }
 </style>

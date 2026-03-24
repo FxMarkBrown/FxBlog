@@ -108,6 +108,7 @@ export default defineNuxtConfig({
         'qrcode',
         'vue-danmaku',
         'vue-cropper',
+        'element-plus',
         '@tsparticles/engine',
         '@tsparticles/slim'
       ]
