@@ -8,9 +8,6 @@ type SitemapEntry = {
   priority?: string
 }
 
-/**
- * 动态输出站点 sitemap。
- */
 export default defineEventHandler(async (event) => {
   const runtimeConfig = useRuntimeConfig(event)
   const siteUrl = String(runtimeConfig.public.siteUrl || 'http://localhost:3000').replace(/\/+$/, '')
@@ -98,9 +95,6 @@ export default defineEventHandler(async (event) => {
   return xml
 })
 
-/**
- * 去重 sitemap 项。
- */
 function dedupeEntries(entries: SitemapEntry[]) {
   const seen = new Set<string>()
   return entries.filter((entry) => {
@@ -113,17 +107,11 @@ function dedupeEntries(entries: SitemapEntry[]) {
   })
 }
 
-/**
- * 转换为 sitemap 可接受的 ISO 日期。
- */
 function toIsoDate(value: string) {
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString()
 }
 
-/**
- * 转义 XML 特殊字符。
- */
 function escapeXml(value: string) {
   return value
     .replace(/&/g, '&amp;')
