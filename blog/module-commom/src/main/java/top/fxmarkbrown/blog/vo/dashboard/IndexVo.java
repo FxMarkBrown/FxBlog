@@ -24,7 +24,7 @@ public class IndexVo {
     private Long messageCount ;
 
     @Schema(description = "访问量")
-    private int visitCount;
+    private Long visitCount;
 
     @Schema(description = "贡献度")
     private List<ContributionData> contributionData;

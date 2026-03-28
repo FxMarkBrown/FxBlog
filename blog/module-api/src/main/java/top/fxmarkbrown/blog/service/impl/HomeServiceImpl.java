@@ -11,10 +11,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 import top.fxmarkbrown.blog.common.CacheNames;
 import top.fxmarkbrown.blog.common.Constants;
-import top.fxmarkbrown.blog.common.RedisConstants;
 import top.fxmarkbrown.blog.common.Result;
 import top.fxmarkbrown.blog.entity.SysArticle;
 import top.fxmarkbrown.blog.entity.SysNotice;
+import top.fxmarkbrown.blog.entity.SysSiteStats;
 import top.fxmarkbrown.blog.entity.SysUser;
 import top.fxmarkbrown.blog.entity.SysWebConfig;
 import top.fxmarkbrown.blog.enums.WeatherEffectTypeEnum;
@@ -22,12 +22,12 @@ import top.fxmarkbrown.blog.mapper.SysArticleMapper;
 import top.fxmarkbrown.blog.mapper.SysNoticeMapper;
 import top.fxmarkbrown.blog.mapper.SysUserMapper;
 import top.fxmarkbrown.blog.service.HomeService;
+import top.fxmarkbrown.blog.service.SiteStatsService;
 import top.fxmarkbrown.blog.service.WeatherEffectCacheService;
 import top.fxmarkbrown.blog.service.WebConfigCacheService;
 import top.fxmarkbrown.blog.utils.HttpUtil;
 import top.fxmarkbrown.blog.utils.IpUtil;
 import top.fxmarkbrown.blog.utils.JsonUtil;
-import top.fxmarkbrown.blog.utils.RedisUtil;
 import top.fxmarkbrown.blog.vo.home.WeatherEffectVo;
 
 import java.math.BigDecimal;
@@ -48,7 +48,7 @@ public class HomeServiceImpl implements HomeService {
 
     private final WebConfigCacheService webConfigCacheService;
     private final WeatherEffectCacheService weatherEffectCacheService;
-    private final RedisUtil redisUtil;
+    private final SiteStatsService siteStatsService;
     private final SysNoticeMapper noticeMapper;
     private final SysUserMapper sysUserMapper;
     private final SysArticleMapper sysArticleMapper;
@@ -62,15 +62,9 @@ public class HomeServiceImpl implements HomeService {
         long articleCount = sysArticleMapper.selectCount(new LambdaQueryWrapper<SysArticle>()
                 .eq(SysArticle::getStatus, Constants.YES));
         long likeCount = adminUser != null ? sysArticleMapper.selectReceivedLikeCount(adminUser.getId()) : 0L;
-
-        long blogViewsCount = 0;
-        long visitorCount = 0;
-        if (redisUtil.hasKey(RedisConstants.BLOG_VIEWS_COUNT)) {
-            blogViewsCount = Long.parseLong(redisUtil.get(RedisConstants.BLOG_VIEWS_COUNT).toString());
-        }
-        if (redisUtil.hasKey(RedisConstants.UNIQUE_VISITOR_COUNT)) {
-            visitorCount = Long.parseLong(redisUtil.get(RedisConstants.UNIQUE_VISITOR_COUNT).toString());
-        }
+        SysSiteStats siteStats = siteStatsService.getCurrentStats();
+        long blogViewsCount = siteStats.getBlogViewsCount() == null ? 0L : siteStats.getBlogViewsCount();
+        long visitorCount = siteStats.getUniqueVisitorCount() == null ? 0L : siteStats.getUniqueVisitorCount();
 
         return Result.success(sysWebConfig)
                 .putExtra("blogViewsCount", blogViewsCount)
@@ -105,11 +99,7 @@ public class HomeServiceImpl implements HomeService {
         OperatingSystem operatingSystem = userAgent.getOperatingSystem();
         String uuid = ipAddress + browser.getName() + operatingSystem.getName();
         String md5 = DigestUtils.md5DigestAsHex(uuid.getBytes());
-        if (!redisUtil.sIsMember(RedisConstants.UNIQUE_VISITOR, md5)) {
-            redisUtil.increment(RedisConstants.UNIQUE_VISITOR_COUNT, 1);
-            redisUtil.sAdd(RedisConstants.UNIQUE_VISITOR, md5);
-        }
-        redisUtil.increment(RedisConstants.BLOG_VIEWS_COUNT, 1);
+        siteStatsService.reportVisit(md5);
     }
 
     @Override
