@@ -1,5 +1,4 @@
-import { tsParticles } from '@tsparticles/engine'
-import { loadSlim } from '@tsparticles/slim'
+import { Mesh, Program, Renderer, Triangle } from 'ogl'
 import type { WeatherParticlePreset } from './useWeatherDecor'
 
 interface WeatherScene {
@@ -11,7 +10,373 @@ interface WeatherScene {
   isMobile?: boolean
 }
 
-let slimLoader: Promise<void> | null = null
+const VERTEX_SHADER = /* glsl */ `
+attribute vec2 position;
+attribute vec2 uv;
+
+varying vec2 vUv;
+
+void main() {
+  vUv = uv;
+  gl_Position = vec4(position, 0.0, 1.0);
+}
+`
+
+const FRAGMENT_SHADER = /* glsl */ `
+precision highp float;
+
+varying vec2 vUv;
+
+uniform vec2 uResolution;
+uniform float uTime;
+uniform float uPreset;
+uniform float uDensity;
+uniform float uDark;
+uniform float uNight;
+uniform float uMobile;
+
+const float PRESET_SUNNY = 1.0;
+const float PRESET_LIGHT_RAIN = 2.0;
+const float PRESET_HEAVY_RAIN = 3.0;
+const float PRESET_THUNDERSTORM = 4.0;
+const float PRESET_SNOW = 5.0;
+const float PRESET_WINDY = 6.0;
+const float PRESET_DUST = 7.0;
+const float PRESET_AURORA = 8.0;
+const float PRESET_SAKURA = 9.0;
+const float PRESET_LEAVES = 10.0;
+const float PRESET_FIREFLIES = 11.0;
+
+float hash11(float p) {
+  p = fract(p * 0.1031);
+  p *= p + 33.33;
+  p *= p + p;
+  return fract(p);
+}
+
+float hash21(vec2 p) {
+  vec3 p3 = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973));
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
+
+vec2 hash22(vec2 p) {
+  float n = hash21(p);
+  return vec2(n, hash21(p + n + 17.19));
+}
+
+mat2 rotate2d(float angle) {
+  float s = sin(angle);
+  float c = cos(angle);
+  return mat2(c, -s, s, c);
+}
+
+float noise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+
+  float a = hash21(i);
+  float b = hash21(i + vec2(1.0, 0.0));
+  float c = hash21(i + vec2(0.0, 1.0));
+  float d = hash21(i + vec2(1.0, 1.0));
+
+  vec2 u = f * f * (3.0 - 2.0 * f);
+
+  return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+}
+
+float fbm(vec2 p) {
+  float value = 0.0;
+  float amplitude = 0.5;
+
+  for (int i = 0; i < 5; i++) {
+    value += amplitude * noise(p);
+    p = p * 2.03 + vec2(13.1, 9.7);
+    amplitude *= 0.52;
+  }
+
+  return value;
+}
+
+float softCircle(vec2 p, vec2 center, float radius, float blur) {
+  return smoothstep(radius + blur, radius - blur, distance(p, center));
+}
+
+float ellipseMask(vec2 p, vec2 center, vec2 radius, float rotation, float blur) {
+  vec2 q = (p - center) * rotate2d(rotation);
+  float d = length(q / radius);
+  return smoothstep(1.0 + blur, 1.0 - blur, d);
+}
+
+float lineMask(vec2 p, vec2 a, vec2 b, float thickness, float blur) {
+  vec2 pa = p - a;
+  vec2 ba = b - a;
+  float h = clamp(dot(pa, ba) / max(dot(ba, ba), 0.0001), 0.0, 1.0);
+  float d = length(pa - ba * h);
+  return smoothstep(thickness + blur, thickness - blur, d);
+}
+
+vec3 nightPalette(float t) {
+  vec3 a = vec3(0.09, 0.22, 0.36);
+  vec3 b = vec3(0.24, 0.72, 0.66);
+  vec3 c = vec3(0.47, 0.63, 0.95);
+  return mix(mix(a, b, smoothstep(0.12, 0.68, t)), c, smoothstep(0.58, 1.0, t));
+}
+
+vec3 dayPalette(float t) {
+  vec3 a = vec3(0.95, 0.91, 0.82);
+  vec3 b = vec3(0.74, 0.86, 0.95);
+  vec3 c = vec3(0.98, 0.82, 0.56);
+  return mix(mix(a, b, smoothstep(0.1, 0.72, t)), c, smoothstep(0.62, 1.0, t));
+}
+
+vec4 renderAurora(vec2 uv, float aspect, float time) {
+  vec2 p = uv;
+  p.x *= aspect;
+  float vertical = 1.0 - uv.y;
+  vec3 color = vec3(0.0);
+  float alpha = 0.0;
+
+  for (int i = 0; i < 3; i++) {
+    float fi = float(i);
+    float offset = fi * 1.37;
+    float wave = 0.16 + fi * 0.08;
+    float ribbon = 0.22
+      + 0.12 * sin(p.x * (1.3 + fi * 0.28) - time * (0.08 + fi * 0.02) + offset)
+      + 0.05 * fbm(vec2(p.x * 1.8 + offset, time * 0.07 + fi * 0.9));
+    float mask = smoothstep(wave, wave * 0.18, abs(vertical - ribbon));
+    vec3 ribbonColor = mix(vec3(0.14, 0.72, 0.64), vec3(0.53, 0.76, 1.0), fi * 0.35);
+    ribbonColor = mix(ribbonColor, vec3(0.62, 0.42, 0.92), smoothstep(0.55, 1.0, fbm(vec2(p.x * 2.8 - fi, vertical * 3.6 + time * 0.05))));
+    color += ribbonColor * mask * (0.52 - fi * 0.08);
+    alpha += mask * (0.34 - fi * 0.04);
+  }
+
+  float haze = fbm(vec2(p.x * 1.9, uv.y * 3.2 - time * 0.025));
+  color += vec3(0.06, 0.14, 0.24) * haze * 0.45;
+  alpha += smoothstep(0.18, 0.72, haze) * 0.12;
+
+  for (int i = 0; i < 20; i++) {
+    float fi = float(i);
+    vec2 seed = vec2(fi * 13.1, fi * 7.7);
+    vec2 star = hash22(seed) * vec2(1.0, 0.7);
+    float blink = 0.35 + 0.65 * sin(time * (0.4 + hash11(fi + 4.0)) + fi * 1.7);
+    float glow = softCircle(uv, vec2(star.x, star.y * 0.5 + 0.45), 0.0016 + hash11(fi + 9.0) * 0.0024, 0.0025);
+    color += vec3(0.82, 0.9, 1.0) * glow * blink * 0.26;
+    alpha += glow * blink * 0.1;
+  }
+
+  alpha *= smoothstep(0.08, 0.58, vertical) * smoothstep(1.12, 0.28, vertical);
+  return vec4(color, clamp(alpha, 0.0, 0.82));
+}
+
+vec4 renderSunny(vec2 uv, float aspect, float time, float density, float darkMode) {
+  vec2 p = uv;
+  p.x *= aspect;
+  vec3 color = mix(vec3(0.98, 0.85, 0.62), vec3(0.87, 0.94, 1.0), uv.y);
+  float veil = fbm(vec2(p.x * 1.6 - time * 0.02, uv.y * 2.3 + time * 0.015));
+  color *= 0.18 + veil * 0.46;
+  float alpha = 0.12 + veil * 0.12;
+
+  for (int i = 0; i < 14; i++) {
+    float fi = float(i);
+    vec2 seed = vec2(fi * 17.1, fi * 4.7);
+    vec2 drift = hash22(seed);
+    vec2 pos = vec2(fract(drift.x + time * (0.006 + hash11(fi) * 0.01)), fract(drift.y + time * (0.01 + hash11(fi + 8.0) * 0.018)));
+    pos.y = fract(pos.y + sin(time * 0.08 + fi) * 0.05);
+    float glow = softCircle(uv, pos, mix(0.012, 0.038, hash11(fi + 11.0)) * density, 0.03);
+    vec3 moteColor = mix(vec3(1.0, 0.81, 0.55), vec3(0.82, 0.93, 1.0), hash11(fi + 3.0));
+    color += moteColor * glow * (darkMode > 0.5 ? 0.2 : 0.34);
+    alpha += glow * 0.08;
+  }
+
+  return vec4(color, clamp(alpha, 0.0, darkMode > 0.5 ? 0.32 : 0.48));
+}
+
+vec4 renderRain(vec2 uv, float aspect, float time, float density, float heavy, float thunder, float darkMode) {
+  vec2 p = uv;
+  p.x *= aspect;
+  vec3 color = mix(vec3(0.46, 0.64, 0.82), vec3(0.82, 0.9, 0.98), darkMode);
+  float alpha = 0.0;
+  int drops = 30;
+
+  for (int i = 0; i < 30; i++) {
+    float fi = float(i);
+    vec2 seed = vec2(fi * 11.7, fi * 7.1);
+    float x = fract(hash21(seed) * 1.2 + time * (0.18 + hash11(fi + 1.0) * 0.08));
+    float y = fract(hash21(seed + 3.1) - time * mix(0.95, 1.7, heavy) * (0.52 + hash11(fi + 2.0)));
+    vec2 start = vec2(x, y);
+    vec2 end = start + vec2(-0.012 * aspect * mix(0.8, 1.4, heavy), 0.09 + 0.06 * heavy);
+    float streak = lineMask(p, vec2(start.x * aspect, start.y), vec2(end.x * aspect, end.y), 0.0016 + heavy * 0.0008, 0.0032);
+    color += mix(vec3(0.58, 0.72, 0.9), vec3(0.88, 0.95, 1.0), hash11(fi + 5.0)) * streak * (0.38 + heavy * 0.18);
+    alpha += streak * (0.08 + heavy * 0.04);
+  }
+
+  float mist = fbm(vec2(p.x * 3.0 + time * 0.08, uv.y * 4.8 - time * 0.12));
+  color += vec3(0.15, 0.2, 0.28) * mist * (0.26 + heavy * 0.18);
+  alpha += mist * (0.06 + heavy * 0.07);
+
+  if (thunder > 0.5) {
+    float flash = smoothstep(0.93, 1.0, sin(time * 0.68 + sin(time * 0.17) * 2.0) * 0.5 + 0.5);
+    color += vec3(0.7, 0.82, 1.0) * flash * 0.5;
+    alpha += flash * 0.16;
+  }
+
+  return vec4(color, clamp(alpha, 0.0, 0.62));
+}
+
+vec4 renderSnow(vec2 uv, float aspect, float time, float density, float darkMode) {
+  vec2 p = uv;
+  p.x *= aspect;
+  vec3 color = mix(vec3(0.86, 0.92, 1.0), vec3(1.0, 1.0, 1.0), darkMode);
+  float alpha = 0.08;
+
+  for (int i = 0; i < 18; i++) {
+    float fi = float(i);
+    float layer = mod(fi, 3.0);
+    float speed = 0.035 + layer * 0.018;
+    vec2 seed = vec2(fi * 8.1, fi * 15.7);
+    vec2 base = hash22(seed);
+    float sway = sin(time * (0.35 + hash11(fi + 4.0)) + fi) * 0.04;
+    vec2 pos = vec2(fract(base.x + sway + layer * 0.06), fract(base.y - time * speed));
+    float radius = mix(0.004, 0.012, hash11(fi + 7.0)) * density * (0.8 + layer * 0.24);
+    float flake = softCircle(uv, pos, radius, radius * 1.8);
+    color += vec3(0.96, 0.98, 1.0) * flake * (0.28 + layer * 0.1);
+    alpha += flake * (0.08 + layer * 0.03);
+  }
+
+  return vec4(color, clamp(alpha, 0.0, darkMode > 0.5 ? 0.52 : 0.64));
+}
+
+vec4 renderWind(vec2 uv, float aspect, float time, float density, float darkMode) {
+  vec2 p = uv;
+  p.x *= aspect;
+  vec3 color = mix(vec3(0.58, 0.76, 0.94), vec3(0.9, 0.95, 1.0), darkMode);
+  float alpha = 0.0;
+
+  for (int i = 0; i < 9; i++) {
+    float fi = float(i);
+    float y = fract(hash11(fi * 7.9) + fi * 0.06 + 0.12);
+    float sweep = fract(hash11(fi * 4.1) + time * (0.12 + fi * 0.007));
+    vec2 a = vec2((sweep - 0.22) * aspect, y);
+    vec2 b = a + vec2((0.28 + hash11(fi + 2.0) * 0.18) * aspect, 0.015 * sin(time * 0.45 + fi));
+    float line = lineMask(p, a, b, 0.003 + hash11(fi + 8.0) * 0.003, 0.015);
+    color += mix(vec3(0.68, 0.84, 1.0), vec3(0.96, 0.98, 1.0), hash11(fi + 5.0)) * line * 0.5;
+    alpha += line * 0.12;
+  }
+
+  float field = fbm(vec2(p.x * 1.7 - time * 0.12, uv.y * 4.0 + time * 0.04));
+  color += vec3(0.2, 0.35, 0.52) * field * 0.12;
+  alpha += field * 0.05;
+  return vec4(color, clamp(alpha, 0.0, darkMode > 0.5 ? 0.34 : 0.42));
+}
+
+vec4 renderDust(vec2 uv, float aspect, float time, float density, float darkMode) {
+  vec2 p = uv;
+  p.x *= aspect;
+  vec3 color = mix(vec3(0.85, 0.62, 0.34), vec3(0.96, 0.78, 0.52), darkMode * 0.4);
+  float alpha = 0.0;
+
+  float haze = fbm(vec2(p.x * 2.0 - time * 0.03, uv.y * 3.1 + time * 0.02));
+  color += vec3(0.62, 0.38, 0.18) * haze * 0.32;
+  alpha += haze * 0.18;
+
+  for (int i = 0; i < 16; i++) {
+    float fi = float(i);
+    vec2 base = hash22(vec2(fi * 9.4, fi * 3.2));
+    vec2 pos = vec2(fract(base.x + time * (0.01 + hash11(fi + 1.0) * 0.03)), fract(base.y + sin(time * 0.12 + fi) * 0.06));
+    float mote = softCircle(uv, pos, mix(0.006, 0.018, hash11(fi + 6.0)) * density, 0.03);
+    color += mix(vec3(0.92, 0.74, 0.48), vec3(0.72, 0.46, 0.21), hash11(fi + 2.0)) * mote * 0.38;
+    alpha += mote * 0.08;
+  }
+
+  return vec4(color, clamp(alpha, 0.0, darkMode > 0.5 ? 0.46 : 0.52));
+}
+
+vec4 renderPetals(vec2 uv, float aspect, float time, float density, float leaves) {
+  vec2 p = uv;
+  p.x *= aspect;
+  vec3 warm = mix(vec3(0.98, 0.72, 0.83), vec3(0.86, 0.55, 0.22), leaves);
+  vec3 deep = mix(vec3(0.92, 0.52, 0.73), vec3(0.66, 0.32, 0.12), leaves);
+  vec3 color = vec3(0.0);
+  float alpha = 0.0;
+
+  for (int i = 0; i < 14; i++) {
+    float fi = float(i);
+    vec2 seed = hash22(vec2(fi * 13.7, fi * 5.9));
+    float speed = mix(0.028, 0.05, leaves) + hash11(fi + 4.0) * 0.01;
+    float drift = sin(time * (0.3 + hash11(fi + 9.0) * 0.25) + fi) * (leaves > 0.5 ? 0.12 : 0.08);
+    vec2 center = vec2(fract(seed.x + drift + time * 0.015), fract(seed.y - time * speed));
+    float rotation = time * (0.24 + hash11(fi + 2.0)) + fi;
+    vec2 radiusA = vec2(mix(0.014, 0.022, leaves), mix(0.028, 0.036, leaves)) * density;
+    vec2 radiusB = vec2(mix(0.013, 0.018, leaves), mix(0.022, 0.028, leaves)) * density;
+    float shape = ellipseMask(uv, center + vec2(-radiusA.x * 0.35, 0.0) * rotate2d(rotation), radiusA, rotation, 0.12);
+    shape += ellipseMask(uv, center + vec2(radiusA.x * 0.35, 0.0) * rotate2d(rotation), radiusB, rotation + 0.8, 0.12);
+    shape = clamp(shape, 0.0, 1.0);
+    color += mix(warm, deep, hash11(fi + 12.0)) * shape * 0.34;
+    alpha += shape * 0.08;
+  }
+
+  return vec4(color, clamp(alpha, 0.0, 0.56));
+}
+
+vec4 renderFireflies(vec2 uv, float time, float density, float darkMode) {
+  vec3 color = vec3(0.0);
+  float alpha = 0.0;
+
+  for (int i = 0; i < 12; i++) {
+    float fi = float(i);
+    vec2 seed = hash22(vec2(fi * 6.1, fi * 14.4));
+    vec2 pos = vec2(
+      fract(seed.x + sin(time * (0.21 + hash11(fi + 2.0) * 0.2) + fi) * 0.08),
+      fract(seed.y + cos(time * (0.14 + hash11(fi + 7.0) * 0.18) + fi * 1.7) * 0.06)
+    );
+    float blink = 0.5 + 0.5 * sin(time * (1.2 + hash11(fi + 12.0) * 1.6) + fi * 2.4);
+    float glow = softCircle(uv, pos, (0.005 + hash11(fi + 8.0) * 0.01) * density, 0.03);
+    vec3 glowColor = mix(vec3(0.98, 0.84, 0.42), vec3(0.78, 1.0, 0.62), hash11(fi + 5.0));
+    color += glowColor * glow * blink * (darkMode > 0.5 ? 0.7 : 0.52);
+    alpha += glow * blink * 0.12;
+  }
+
+  return vec4(color, clamp(alpha, 0.0, darkMode > 0.5 ? 0.62 : 0.5));
+}
+
+void main() {
+  vec2 uv = vUv;
+  float aspect = uResolution.x / max(uResolution.y, 1.0);
+  float time = uTime;
+  vec4 scene = vec4(0.0);
+
+  if (uPreset == PRESET_AURORA) {
+    scene = renderAurora(uv, aspect, time);
+  } else if (uPreset == PRESET_SUNNY) {
+    scene = renderSunny(uv, aspect, time, uDensity, uDark);
+  } else if (uPreset == PRESET_LIGHT_RAIN) {
+    scene = renderRain(uv, aspect, time, uDensity, 0.0, 0.0, uDark);
+  } else if (uPreset == PRESET_HEAVY_RAIN) {
+    scene = renderRain(uv, aspect, time, uDensity, 1.0, 0.0, uDark);
+  } else if (uPreset == PRESET_THUNDERSTORM) {
+    scene = renderRain(uv, aspect, time, uDensity, 1.0, 1.0, uDark);
+  } else if (uPreset == PRESET_SNOW) {
+    scene = renderSnow(uv, aspect, time, uDensity, uDark);
+  } else if (uPreset == PRESET_WINDY) {
+    scene = renderWind(uv, aspect, time, uDensity, uDark);
+  } else if (uPreset == PRESET_DUST) {
+    scene = renderDust(uv, aspect, time, uDensity, uDark);
+  } else if (uPreset == PRESET_SAKURA) {
+    scene = renderPetals(uv, aspect, time, uDensity, 0.0);
+  } else if (uPreset == PRESET_LEAVES) {
+    scene = renderPetals(uv, aspect, time, uDensity, 1.0);
+  } else if (uPreset == PRESET_FIREFLIES) {
+    scene = renderFireflies(uv, time, uDensity, uDark);
+  }
+
+  float vignette = smoothstep(1.1, 0.12, length((uv - 0.5) * vec2(aspect, 1.0)));
+  scene.rgb *= vignette * mix(0.82, 1.06, uNight);
+  scene.a *= vignette;
+  gl_FragColor = vec4(scene.rgb, scene.a);
+}
+`
+
 let instanceSeed = 0
 
 export function createWeatherEngine(host: HTMLElement) {
@@ -20,125 +385,205 @@ export function createWeatherEngine(host: HTMLElement) {
 
 class WeatherDecorEngine {
   host: HTMLElement
-  container: Awaited<ReturnType<typeof tsParticles.load>> | null
+  renderer: Renderer | null
+  program: Program | null
+  mesh: Mesh | null
   scene: WeatherScene | null
   sceneKey: string
   isPaused: boolean
   instanceId: string
-  requestId: number
+  frameHandle: number
+  startTime: number
 
   constructor(host: HTMLElement) {
     this.host = host
-    this.container = null
+    this.renderer = null
+    this.program = null
+    this.mesh = null
     this.scene = null
     this.sceneKey = ''
     this.isPaused = false
-    this.instanceId = `weather-decor-particles-${instanceSeed++}`
-    this.requestId = 0
-    this.host.id = this.instanceId
+    this.instanceId = `weather-decor-ogl-${instanceSeed++}`
+    this.frameHandle = 0
+    this.startTime = 0
   }
 
-  async start(scene: WeatherScene) {
+  start(scene: WeatherScene) {
     this.scene = scene
     const nextSceneKey = buildSceneKey(scene)
 
-    if (!scene || !scene.particleEnabled) {
-      await this.stop()
+    if (!scene?.particleEnabled || !scene.particlePreset) {
+      this.stop()
       return
     }
 
-    if (this.container && this.sceneKey === nextSceneKey) {
+    if (this.renderer && this.sceneKey === nextSceneKey) {
+      this.updateSceneUniforms(scene)
       if (this.isPaused) {
         this.resume()
       }
       return
     }
 
-    const activeRequestId = ++this.requestId
-    await ensureSlimLoaded()
-    if (activeRequestId !== this.requestId) {
-      return
-    }
+    this.ensureRenderer()
+    this.updateSceneUniforms(scene)
 
-    await this.destroyContainer()
-    if (activeRequestId !== this.requestId) {
-      return
+    if (!this.frameHandle || this.isPaused) {
+      this.isPaused = false
+      this.startLoop()
     }
 
     this.sceneKey = nextSceneKey
-    this.container = await tsParticles.load({
-      id: this.instanceId,
-      options: buildParticleOptions(scene)
-    })
-    this.isPaused = false
-
-    if (activeRequestId !== this.requestId) {
-      await this.destroyContainer()
-      return
-    }
-
-    if (typeof document !== 'undefined' && document.hidden) {
-      this.pause()
-    }
   }
 
   pause() {
-    if (!this.container || this.isPaused) {
+    if (this.isPaused) {
       return
     }
 
-    this.container.pause()
     this.isPaused = true
+    if (this.frameHandle) {
+      cancelAnimationFrame(this.frameHandle)
+      this.frameHandle = 0
+    }
   }
 
   resume() {
-    if (!this.container || !this.isPaused) {
+    if (!this.renderer || !this.program || !this.mesh) {
+      return
+    }
+    if (!this.isPaused && this.frameHandle) {
       return
     }
 
-    this.container.play()
     this.isPaused = false
+    this.startLoop()
   }
 
-  async stop() {
-    this.requestId++
+  stop() {
+    this.pause()
+    this.scene = null
     this.sceneKey = ''
-    this.isPaused = false
-    await this.destroyContainer()
+
+    if (this.renderer) {
+      this.renderer.gl.canvas.remove()
+      this.renderer = null
+      this.program = null
+      this.mesh = null
+    }
+
+    this.host.innerHTML = ''
   }
 
   resize() {
-    if (!this.container) {
+    if (!this.renderer || !this.program) {
       return
     }
 
-    Promise.resolve(this.container.refresh?.()).catch(() => {})
+    resizeRenderer(this.host, this.renderer, this.program)
+    this.renderFrame()
   }
 
   async destroy() {
-    await this.stop()
-    this.host.removeAttribute('id')
+    this.stop()
   }
 
-  private async destroyContainer() {
-    if (!this.container) {
-      this.host.innerHTML = ''
+  private ensureRenderer() {
+    if (this.renderer && this.program && this.mesh) {
+      this.resize()
       return
     }
 
-    const current = this.container
-    this.container = null
-    await Promise.resolve(current.destroy?.())
+    const renderer = new Renderer({
+      alpha: true,
+      antialias: true,
+      dpr: typeof window === 'undefined' ? 1 : Math.min(window.devicePixelRatio || 1, 2)
+    })
+
+    const gl = renderer.gl
+    gl.canvas.id = this.instanceId
+    gl.canvas.style.position = 'absolute'
+    gl.canvas.style.inset = '0'
+    gl.canvas.style.width = '100%'
+    gl.canvas.style.height = '100%'
+    gl.canvas.style.pointerEvents = 'none'
+    gl.canvas.style.display = 'block'
+    gl.canvas.setAttribute('aria-hidden', 'true')
+
+    const geometry = new Triangle(gl)
+    const program = new Program(gl, {
+      vertex: VERTEX_SHADER,
+      fragment: FRAGMENT_SHADER,
+      uniforms: {
+        uResolution: { value: [1, 1] },
+        uTime: { value: 0 },
+        uPreset: { value: 0 },
+        uDensity: { value: 1 },
+        uDark: { value: 0 },
+        uNight: { value: 0 },
+        uMobile: { value: 0 }
+      },
+      depthTest: false,
+      depthWrite: false
+    })
+
+    const mesh = new Mesh(gl, { geometry, program })
+
     this.host.innerHTML = ''
+    this.host.appendChild(gl.canvas)
+
+    this.renderer = renderer
+    this.program = program
+    this.mesh = mesh
+    this.startTime = typeof performance === 'undefined' ? 0 : performance.now()
+    this.resize()
+  }
+
+  private updateSceneUniforms(scene: WeatherScene) {
+    if (!this.program) {
+      return
+    }
+
+    this.program.uniforms.uPreset.value = presetToId(scene.particlePreset)
+    this.program.uniforms.uDensity.value = clampNumber(scene.densityScale ?? 1, 0.35, 1.5)
+    this.program.uniforms.uDark.value = scene.themeMode === 'dark' ? 1 : 0
+    this.program.uniforms.uNight.value = scene.isNight ? 1 : 0
+    this.program.uniforms.uMobile.value = scene.isMobile ? 1 : 0
+  }
+
+  private startLoop() {
+    if (!this.renderer || !this.mesh || !this.program) {
+      return
+    }
+
+    const loop = (now: number) => {
+      if (this.isPaused) {
+        this.frameHandle = 0
+        return
+      }
+
+      this.program.uniforms.uTime.value = (now - this.startTime) / 1000
+      this.renderFrame()
+      this.frameHandle = requestAnimationFrame(loop)
+    }
+
+    this.frameHandle = requestAnimationFrame(loop)
+  }
+
+  private renderFrame() {
+    if (!this.renderer || !this.mesh) {
+      return
+    }
+
+    this.renderer.render({ scene: this.mesh })
   }
 }
 
-function ensureSlimLoaded() {
-  if (!slimLoader) {
-    slimLoader = loadSlim(tsParticles)
-  }
-
-  return slimLoader
+function resizeRenderer(host: HTMLElement, renderer: Renderer, program: Program) {
+  const width = Math.max(host.clientWidth, 1)
+  const height = Math.max(host.clientHeight, 1)
+  renderer.setSize(width, height)
+  program.uniforms.uResolution.value = [width, height]
 }
 
 function buildSceneKey(scene: WeatherScene) {
@@ -151,442 +596,35 @@ function buildSceneKey(scene: WeatherScene) {
   })
 }
 
-function isParticlePresetKey(value: string): value is WeatherParticlePreset {
-  return value in PARTICLE_PRESETS
-}
-
-function buildParticleOptions(scene: WeatherScene) {
-  const preset = String(scene.particlePreset || '')
-  const darkTheme = scene.themeMode === 'dark'
-  const density = Number(scene.densityScale || 1)
-  const particlePreset = isParticlePresetKey(preset) ? PARTICLE_PRESETS[preset] : PARTICLE_PRESETS.sunny
-  const colors = particlePreset.colors(darkTheme)
-  const shape = typeof particlePreset.shape === 'function'
-    ? particlePreset.shape(darkTheme)
-    : particlePreset.shape
-
-  return {
-    fullScreen: {
-      enable: false,
-      zIndex: 0
-    },
-    background: {
-      color: {
-        value: 'transparent'
-      }
-    },
-    detectRetina: true,
-    fpsLimit: darkTheme ? 60 : 54,
-    pauseOnBlur: false,
-    pauseOnOutsideViewport: false,
-    particles: {
-      number: {
-        value: particlePreset.number(density, Boolean(scene.isMobile)),
-        density: {
-          enable: false
-        }
-      },
-      color: {
-        value: colors
-      },
-      shape,
-      opacity: particlePreset.opacity(density, darkTheme),
-      size: particlePreset.size(density, Boolean(scene.isMobile)),
-      move: particlePreset.move(density),
-      rotate: particlePreset.rotate,
-      tilt: particlePreset.tilt,
-      roll: particlePreset.roll,
-      wobble: particlePreset.wobble,
-      life: particlePreset.life,
-      zIndex: {
-        value: {
-          min: 0,
-          max: 100
-        },
-        opacityRate: 1,
-        sizeRate: 1,
-        velocityRate: 1
-      }
-    }
+function presetToId(preset?: WeatherParticlePreset | null) {
+  switch (preset) {
+    case 'sunny':
+      return 1
+    case 'light_rain':
+      return 2
+    case 'heavy_rain':
+      return 3
+    case 'thunderstorm':
+      return 4
+    case 'snow':
+      return 5
+    case 'windy':
+      return 6
+    case 'dust':
+      return 7
+    case 'aurora':
+      return 8
+    case 'sakura':
+      return 9
+    case 'leaves':
+      return 10
+    case 'fireflies':
+      return 11
+    default:
+      return 0
   }
 }
 
-interface ParticlePresetDefinition {
-  colors: (darkTheme: boolean) => string[]
-  number: (density: number, isMobile: boolean) => number
-  shape: Record<string, unknown> | ((darkTheme: boolean) => Record<string, unknown>)
-  opacity: (density: number, darkTheme: boolean) => Record<string, unknown>
-  size: (density: number, isMobile?: boolean) => Record<string, unknown>
-  move: (density: number) => Record<string, unknown>
-  rotate?: Record<string, unknown>
-  tilt?: Record<string, unknown>
-  roll?: Record<string, unknown>
-  wobble?: Record<string, unknown>
-  life?: Record<string, unknown>
-}
-
-const PARTICLE_PRESETS: Record<WeatherParticlePreset, ParticlePresetDefinition> = {
-  sunny: {
-    colors: (darkTheme: boolean) => darkTheme ? ['#ffe6a8', '#fff4d0', '#ffd488'] : ['#ffd15c', '#ffc46b', '#ffe1a5'],
-    number: (density: number, isMobile: boolean) => Math.round((isMobile ? 14 : 22) * density),
-    shape: {
-      type: 'circle'
-    },
-    opacity: (density: number, darkTheme: boolean) => ({
-      value: { min: darkTheme ? 0.16 : 0.18, max: darkTheme ? 0.42 : 0.32 },
-      animation: {
-        enable: true,
-        speed: 0.7 * density,
-        sync: false
-      }
-    }),
-    size: (density: number) => ({
-      value: { min: 1.2, max: 4.2 * density }
-    }),
-    move: (density: number) => ({
-      enable: true,
-      direction: 'top-right',
-      drift: 1.4,
-      random: true,
-      outModes: {
-        default: 'out'
-      },
-      speed: { min: 0.18, max: 0.8 * density },
-      straight: false
-    }),
-    wobble: {
-      enable: true,
-      distance: 8,
-      speed: { min: -4, max: 4 }
-    }
-  },
-  light_rain: createRainPreset(false),
-  heavy_rain: createRainPreset(true),
-  thunderstorm: createRainPreset(true),
-  snow: {
-    colors: (darkTheme: boolean) => darkTheme ? ['#ffffff', '#dfe9ff'] : ['#f6fbff', '#deecff'],
-    number: (density: number, isMobile: boolean) => Math.round((isMobile ? 28 : 46) * density),
-    shape: {
-      type: 'circle'
-    },
-    opacity: (density: number, darkTheme: boolean) => ({
-      value: { min: darkTheme ? 0.3 : 0.54, max: darkTheme ? 0.86 : 0.98 },
-      animation: {
-        enable: true,
-        speed: 0.28 * density,
-        sync: false
-      }
-    }),
-    size: (density: number) => ({
-      value: { min: 1.6, max: 5.2 * density }
-    }),
-    move: (density: number) => ({
-      enable: true,
-      direction: 'bottom',
-      drift: 0.18,
-      gravity: {
-        enable: true,
-        acceleration: 0.008,
-        maxSpeed: 0.9
-      },
-      outModes: {
-        default: 'out'
-      },
-      random: true,
-      speed: { min: 0.24, max: 0.72 * density },
-      straight: false
-    }),
-    wobble: {
-      enable: true,
-      distance: 14,
-      speed: { min: -5, max: 5 }
-    }
-  },
-  windy: {
-    colors: (darkTheme: boolean) => darkTheme ? ['#d7ebff', '#f0f7ff'] : ['#82b4f3', '#b7d2f7'],
-    number: (density: number, isMobile: boolean) => Math.round((isMobile ? 14 : 24) * density),
-    shape: {
-      type: 'image',
-      options: {
-        image: [
-          createImageShape(buildWindSvg(), 84, 18)
-        ]
-      }
-    },
-    opacity: (_density: number, darkTheme: boolean) => ({
-      value: { min: darkTheme ? 0.24 : 0.34, max: darkTheme ? 0.56 : 0.64 }
-    }),
-    size: () => ({
-      value: { min: 22, max: 34 }
-    }),
-    move: (density: number) => ({
-      enable: true,
-      direction: 'right',
-      drift: 2.8,
-      outModes: {
-        default: 'out'
-      },
-      speed: { min: 1.8, max: 3.8 * density },
-      straight: false
-    }),
-    rotate: {
-      value: { min: -4, max: 4 }
-    }
-  },
-  dust: {
-    colors: (darkTheme: boolean) => darkTheme ? ['#e3a95f', '#f2c57a'] : ['#b9783f', '#d9a164'],
-    number: (density: number, isMobile: boolean) => Math.round((isMobile ? 24 : 38) * density),
-    shape: {
-      type: 'circle'
-    },
-    opacity: (density: number, darkTheme: boolean) => ({
-      value: { min: darkTheme ? 0.18 : 0.16, max: darkTheme ? 0.38 : 0.28 },
-      animation: {
-        enable: true,
-        speed: 0.35 * density,
-        sync: false
-      }
-    }),
-    size: (density: number) => ({
-      value: { min: 1.2, max: 4.8 * density }
-    }),
-    move: (density: number) => ({
-      enable: true,
-      direction: 'right',
-      drift: 1.8,
-      outModes: {
-        default: 'out'
-      },
-      speed: { min: 0.3, max: 1.2 * density },
-      straight: false
-    }),
-    wobble: {
-      enable: true,
-      distance: 10,
-      speed: { min: -3, max: 3 }
-    }
-  },
-  sakura: {
-    colors: (darkTheme: boolean) => darkTheme ? ['#ffd7ec', '#f7bfdc', '#ffe7f3'] : ['#f6a7c6', '#f8bfd3', '#ffd7e6'],
-    number: (density: number, isMobile: boolean) => Math.round((isMobile ? 16 : 26) * density),
-    shape: {
-      type: 'image',
-      options: {
-        image: [
-          createImageShape(buildSakuraSvg(), 32, 32)
-        ]
-      }
-    },
-    opacity: (_density: number, darkTheme: boolean) => ({
-      value: { min: darkTheme ? 0.22 : 0.32, max: darkTheme ? 0.72 : 0.82 }
-    }),
-    size: (density: number) => ({
-      value: { min: 10, max: 18 * density }
-    }),
-    move: (density: number) => ({
-      enable: true,
-      direction: 'bottom',
-      angle: {
-        value: 104,
-        offset: { min: -10, max: 12 }
-      },
-      drift: 0,
-      gravity: {
-        enable: false
-      },
-      outModes: {
-        default: 'out'
-      },
-      speed: { min: 0.3, max: 0.68 * density },
-      straight: false
-    }),
-    rotate: {
-      value: { min: 0, max: 360 },
-      animation: {
-        enable: true,
-        speed: 8,
-        sync: false
-      }
-    },
-    wobble: {
-      enable: true,
-      distance: 30,
-      speed: { min: -4.2, max: 4.2 }
-    }
-  },
-  leaves: {
-    colors: (darkTheme: boolean) => darkTheme ? ['#e9b064', '#cf7e34', '#9e5925'] : ['#cb6c2b', '#da8e3a', '#e6b35f'],
-    number: (density: number, isMobile: boolean) => Math.round((isMobile ? 12 : 20) * density),
-    shape: {
-      type: 'image',
-      options: {
-        image: [
-          createImageShape(buildLeafSvgPrimary(), 36, 36),
-          createImageShape(buildLeafSvgSecondary(), 36, 36)
-        ]
-      }
-    },
-    opacity: (_density: number, darkTheme: boolean) => ({
-      value: { min: darkTheme ? 0.24 : 0.34, max: darkTheme ? 0.76 : 0.82 }
-    }),
-    size: (density: number) => ({
-      value: { min: 12, max: 22 * density }
-    }),
-    move: (density: number) => ({
-      enable: true,
-      direction: 'bottom',
-      angle: {
-        value: 100,
-        offset: { min: -12, max: 14 }
-      },
-      drift: 0,
-      gravity: {
-        enable: false
-      },
-      outModes: {
-        default: 'out'
-      },
-      speed: { min: 0.78, max: 1.58 * density },
-      straight: false
-    }),
-    rotate: {
-      value: { min: 0, max: 360 },
-      animation: {
-        enable: true,
-        speed: 12,
-        sync: false
-      }
-    },
-    wobble: {
-      enable: true,
-      distance: 24,
-      speed: { min: -7, max: 7 }
-    }
-  },
-  fireflies: {
-    colors: (darkTheme: boolean) => darkTheme ? ['#ffed8f', '#c9ff9d', '#ffe17a'] : ['#f6cb59', '#d8e962', '#f9d574'],
-    number: (density: number, isMobile: boolean) => Math.round((isMobile ? 10 : 18) * density),
-    shape: {
-      type: 'circle'
-    },
-    opacity: (density: number, darkTheme: boolean) => ({
-      value: { min: darkTheme ? 0.12 : 0.08, max: darkTheme ? 0.82 : 0.56 },
-      animation: {
-        enable: true,
-        speed: 1.4 * density,
-        sync: false
-      }
-    }),
-    size: (density: number) => ({
-      value: { min: 2, max: 5.5 * density },
-      animation: {
-        enable: true,
-        speed: 1.2,
-        sync: false,
-        minimumValue: 1.2
-      }
-    }),
-    move: (density: number) => ({
-      enable: true,
-      direction: 'none',
-      drift: 0.8,
-      outModes: {
-        default: 'bounce'
-      },
-      random: true,
-      speed: { min: 0.18, max: 0.65 * density },
-      straight: false
-    }),
-    life: {
-      count: 0,
-      duration: {
-        sync: false,
-        value: { min: 1.6, max: 4.2 }
-      }
-    }
-  }
-}
-
-function createRainPreset(isHeavy: boolean): ParticlePresetDefinition {
-  return {
-    colors: (darkTheme: boolean) => darkTheme ? ['#c7e0ff', '#e2f1ff'] : ['#4d82c7', '#76aee8'],
-    number: (density: number, isMobile: boolean) => Math.round((isMobile ? (isHeavy ? 48 : 34) : (isHeavy ? 92 : 70)) * density),
-    shape: (darkTheme: boolean) => ({
-      type: 'image',
-      options: {
-        image: [
-          createImageShape(buildRainDropSvg(darkTheme), 16, 58)
-        ]
-      }
-    }),
-    opacity: (_density: number, darkTheme: boolean) => ({
-      value: { min: darkTheme ? 0.24 : 0.42, max: darkTheme ? 0.74 : 0.94 }
-    }),
-    size: () => ({
-      value: { min: isHeavy ? 18 : 14, max: isHeavy ? 24 : 20 }
-    }),
-    move: (density: number) => ({
-      enable: true,
-      direction: 'bottom',
-      drift: isHeavy ? 0.14 : 0.08,
-      outModes: {
-        default: 'out'
-      },
-      speed: { min: isHeavy ? 6 : 4.2, max: (isHeavy ? 10 : 7.5) * density },
-      straight: true
-    })
-  }
-}
-
-function buildWindSvg() {
-  return '<svg xmlns="http://www.w3.org/2000/svg" width="84" height="18" viewBox="0 0 84 18"><path d="M2 9c8-8 18-8 28 0 10 8 20 8 30 0 6-5 13-6 22-3" fill="none" stroke="#d8ecff" stroke-linecap="round" stroke-width="2.4"/></svg>'
-}
-
-function buildRainDropSvg(darkTheme: boolean) {
-  if (darkTheme) {
-    return `
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="58" viewBox="0 0 16 58">
-        <path d="M8.2 2.5 6.5 55.5" fill="none" stroke="#cfe4ff" stroke-linecap="round" stroke-width="2.4" opacity="0.94"/>
-        <path d="M8 3.5 6.9 53.5" fill="none" stroke="#ffffff" stroke-linecap="round" stroke-width="1.05" opacity="0.28"/>
-      </svg>
-    `
-  }
-
-  return `
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="58" viewBox="0 0 16 58">
-      <path d="M8.2 2.5 6.5 55.5" fill="none" stroke="#5e87bc" stroke-linecap="round" stroke-width="2.7" opacity="0.98"/>
-      <path d="M8 3.5 6.9 53.5" fill="none" stroke="#dcebff" stroke-linecap="round" stroke-width="1.15" opacity="0.52"/>
-    </svg>
-  `
-}
-
-function buildSakuraSvg() {
-  // noinspection HtmlDeprecatedAttribute
-  return '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><g fill="none"><path fill="#F4B6D2" d="M16 4.7c1.7 0 3.4 2.2 3.6 5.1.2 1.8-.4 3-1.3 4 .8-.1 1.6-.1 2.6.1 2.8.6 4.7 2.5 4.7 4.2 0 1.8-2.2 3.5-5.1 3.6-1.8.2-3-.4-4-1.2.1.8.1 1.6-.1 2.6-.6 2.8-2.5 4.7-4.2 4.7-1.8 0-3.5-2.2-3.6-5.1-.2-1.8.4-3 1.2-4-.8.1-1.6.1-2.6-.1-2.8-.6-4.7-2.5-4.7-4.2 0-1.8 2.2-3.5 5.1-3.6 1.8-.2 3 .4 4 1.2-.1-.8-.1-1.6.1-2.6.6-2.8 2.5-4.7 4.3-4.7Z"/><path fill="#FFDCEB" d="M16 7.2c1.2 0 2.3 1.6 2.4 3.5.2 1.9-.7 2.9-1.8 3.8-.4.3-.3 1 .2 1.1 1.4.3 2.7-.1 4.5.3 2 .4 3.4 1.6 3.4 2.6 0 1.1-1.5 2.2-3.5 2.4-1.9.2-2.9-.7-3.8-1.8-.3-.4-1-.3-1.1.2-.3 1.4.1 2.7-.3 4.5-.4 2-1.6 3.4-2.6 3.4-1.1 0-2.2-1.5-2.4-3.5-.2-1.9.7-2.9 1.8-3.8.4-.3.3-1-.2-1.1-1.4-.3-2.7.1-4.5-.3-2-.4-3.4-1.6-3.4-2.6 0-1.1 1.5-2.2 3.5-2.4 1.9-.2 2.9.7 3.8 1.8.3.4 1 .3 1.1-.2.3-1.4-.1-2.7.3-4.5.4-2 1.6-3.4 2.6-3.4Z"/><path fill="#EA5D95" d="M16 13.4c1 0 1.8.8 1.8 1.8S17 17 16 17s-1.8-.8-1.8-1.8.8-1.8 1.8-1.8Z"/><path stroke="#EA5D95" stroke-linecap="round" stroke-width="1.1" d="M16 12.1v-2M13.2 13.2l-1.6-1.5M18.8 13.2l1.6-1.5M12.9 16.2l-2 .5M19.1 16.2l2 .5M14.3 18l-.8 1.8M17.7 18l.8 1.8"/><circle cx="16" cy="10.1" r=".9" fill="#F7D154"/><circle cx="11.7" cy="11.8" r=".9" fill="#F7D154"/><circle cx="20.3" cy="11.8" r=".9" fill="#F7D154"/><circle cx="10.8" cy="16.7" r=".9" fill="#F7D154"/><circle cx="21.2" cy="16.7" r=".9" fill="#F7D154"/><circle cx="13.5" cy="19.8" r=".9" fill="#F7D154"/><circle cx="18.5" cy="19.8" r=".9" fill="#F7D154"/></g></svg>'
-}
-
-function buildLeafSvgPrimary() {
-  // noinspection HtmlDeprecatedAttribute
-  return '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36"><g fill="none"><path fill="#F28E46" d="M18 4.5c1.4 2.2 2.7 3.4 4.9 4.1 2.2.7 3.7.7 5.5 2.4-1 2.4-2.7 3.2-4.2 4.1 1.9.1 3.5.5 5.1 1.9-.8 2.4-2.3 3.4-4.1 4.1 1.8.5 3.1 1.4 4 3.2-1.6 1.7-3.1 2.2-5.3 2.1-1.7-.1-2.8-.8-4.6-2 .1 1.9-.2 3.5-1.7 5.4-2.5-.3-3.8-1.5-4.7-3.2-.9 1.7-2.2 2.9-4.7 3.2-1.5-1.9-1.8-3.5-1.7-5.4-1.8 1.2-2.9 1.9-4.6 2-2.2.1-3.7-.4-5.3-2.1.9-1.8 2.2-2.7 4-3.2-1.8-.7-3.3-1.7-4.1-4.1 1.6-1.4 3.2-1.8 5.1-1.9-1.5-.9-3.2-1.7-4.2-4.1 1.8-1.7 3.3-1.7 5.5-2.4 2.2-.7 3.5-1.9 4.9-4.1Z"/><path fill="#F8B15E" d="M18 7.2c1 1.5 1.7 2.4 3 2.9 1.4.5 2.5.6 3.8 1.6-.8 1.5-1.8 2.2-2.9 2.9-1 .6-.7 2 .5 2 1.6.1 2.8.3 4 1-.7 1.6-1.8 2.3-3.2 2.8-1 .4-.9 1.8.2 2.1 1.4.5 2.4 1.1 3.1 2.3-1.2.9-2.2 1.2-3.8 1.1-1.5-.1-2.4-.8-4-1.9-.9-.7-2.2.1-2 1.2.2 1.7 0 2.8-.9 4.2-1.6-.4-2.4-1.3-2.9-2.8-.4-1-1.8-1-2.2 0-.5 1.5-1.3 2.4-2.9 2.8-.9-1.4-1.1-2.5-.9-4.2.2-1.1-1.1-1.9-2-1.2-1.6 1.1-2.5 1.8-4 1.9-1.6.1-2.6-.2-3.8-1.1.7-1.2 1.7-1.8 3.1-2.3 1.1-.3 1.2-1.7.2-2.1-1.4-.5-2.5-1.2-3.2-2.8 1.2-.7 2.4-.9 4-1 1.2 0 1.5-1.4.5-2-1.1-.7-2.1-1.4-2.9-2.9 1.3-1 2.4-1.1 3.8-1.6 1.3-.5 2-1.4 3-2.9Z"/><path stroke="#A94E25" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.4" d="M18 7.6v20.8M18 14.4l-5-4.2M18 16.4l6.3-4.5M18 19l-7 0M18 19l7 0M18 21.8l-6.3 4.5M18 23l5 4.2"/></g></svg>'
-}
-
-function buildLeafSvgSecondary() {
-  // noinspection HtmlDeprecatedAttribute
-  return '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36"><g fill="none"><path fill="#D79552" d="M12.7 8.6c2.3-.1 4.4.6 6.1 2.1 1-.6 2.1-1.1 3.6-1.4 2.2-.4 4.1-.1 6 .9-.2 2.4-1 4.2-2.4 5.7 1.6.7 2.8 1.8 3.8 3.6-1.2 1.9-2.8 3-4.7 3.6.8 1.6 1 3.1.8 5.3-2.3.7-4.3.5-6-.2-1 1.1-2.3 2.1-4.2 2.9-2-.9-3.3-1.8-4.2-2.9-1.7.7-3.7.9-6 .2-.2-2.2 0-3.7.8-5.3-1.9-.6-3.5-1.7-4.7-3.6 1-1.8 2.2-2.9 3.8-3.6-1.4-1.5-2.2-3.3-2.4-5.7 1.9-1 3.8-1.3 6-.9 1.5.3 2.7.8 3.7 1.4 1.6-1.5 3.7-2.2 6-2.1Z"/><path fill="#E6B26F" d="M13.4 10.8c1.9 0 3.6.7 4.9 2.1.6.6 1.5.6 2.1 0 1.4-1.4 3-2.1 5-2.1.4 1.8.1 3.2-.8 4.6-.5.7-.1 1.7.8 1.9 1.7.5 3 1.3 4.1 2.9-.9 1.3-2 2-3.6 2.4-.9.2-1.3 1.2-.8 2 .8 1.4 1 2.5.8 4.2-1.8.3-3.2.1-4.7-.7-.7-.4-1.7-.1-1.9.7-.5 1.4-1.4 2.6-3 3.8-1.6-1.2-2.5-2.4-3-3.8-.2-.8-1.2-1.1-1.9-.7-1.5.8-2.9 1-4.7.7-.2-1.7 0-2.8.8-4.2.5-.8.1-1.8-.8-2-1.6-.4-2.8-1.1-3.6-2.4 1.1-1.6 2.4-2.4 4.1-2.9.9-.2 1.3-1.2.8-1.9-.9-1.4-1.2-2.8-.8-4.6Z"/><path stroke="#8E5A32" stroke-linecap="round" stroke-width="1.4" d="M17.8 10.9c1.5 4.8.7 10.8-2.6 15.8M17.1 16.3c-3.3-.8-5.8-2.7-8-5.4M17.8 19c3.3-.2 6.2-1.5 9-3.7"/></g></svg>'
-}
-
-function createImageShape(svg: string, width: number, height: number) {
-  return {
-    src: svgToDataUri(svg),
-    width,
-    height
-  }
-}
-
-function svgToDataUri(svg: string) {
-  return `data:image/svg+xml,${encodeURIComponent(minifySvg(svg))}`
-}
-
-function minifySvg(svg: string) {
-  return svg.replace(/\s+/g, ' ').trim()
+function clampNumber(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max)
 }

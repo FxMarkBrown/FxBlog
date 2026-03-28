@@ -22,6 +22,7 @@ export const WEATHER_PARTICLE_PRESETS = [
   'snow',
   'windy',
   'dust',
+  'aurora',
   'sakura',
   'leaves',
   'fireflies'
@@ -31,7 +32,7 @@ export type WeatherType = typeof WEATHER_TYPES[number]
 export type WeatherSeason = typeof WEATHER_SEASONS[number]
 export type WeatherIntensity = typeof WEATHER_INTENSITIES[number]
 export type WeatherParticlePreset = typeof WEATHER_PARTICLE_PRESETS[number]
-export type WeatherAccentEffect = 'none' | 'sakura' | 'leaves' | 'fireflies'
+export type WeatherAccentEffect = 'none' | 'aurora' | 'sakura' | 'leaves' | 'fireflies'
 type WeatherParticleWeather = Extract<WeatherType, WeatherParticlePreset>
 
 export interface WeatherEffect {
@@ -279,6 +280,10 @@ function resolveAccentEffect(effect: WeatherEffect): WeatherAccentEffect {
   }
 
   const weather = effect.weather
+  if (effect.isNight && weather === 'sunny') {
+    return 'aurora'
+  }
+
   if (STORMY_WEATHER_TYPES.has(weather)) {
     return 'none'
   }

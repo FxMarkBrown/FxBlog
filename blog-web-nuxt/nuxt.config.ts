@@ -109,8 +109,7 @@ export default defineNuxtConfig({
         'vue-danmaku',
         'vue-cropper',
         'element-plus',
-        '@tsparticles/engine',
-        '@tsparticles/slim'
+        'ogl'
       ]
     },
     css: {

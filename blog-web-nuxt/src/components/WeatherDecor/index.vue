@@ -277,7 +277,7 @@ onBeforeUnmount(() => {
         <span class="weather-sun-core"></span>
         <span class="weather-sun-ring"></span>
       </div>
-      <div v-if="effect.enabled && ['sunny', 'cloudy', 'overcast'].includes(effect.weather) && effect.isNight" class="weather-moon">
+      <div v-if="effect.enabled && ['cloudy', 'overcast'].includes(effect.weather) && effect.isNight" class="weather-moon">
         <span class="weather-moon-core"></span>
         <span class="weather-moon-halo"></span>
       </div>
@@ -732,6 +732,10 @@ onBeforeUnmount(() => {
   opacity: 0.48;
 }
 
+.weather-particle-layer.weather-preset--aurora .weather-canvas {
+  opacity: 0.82;
+}
+
 .weather-particle-layer.weather-preset--sakura .weather-canvas {
   opacity: 0.76;
 }
@@ -758,6 +762,10 @@ onBeforeUnmount(() => {
 
 :root:not([data-theme='dark']) .weather-particle-layer.weather-decor--sunny .weather-canvas {
   opacity: 0.62;
+}
+
+:root:not([data-theme='dark']) .weather-particle-layer.weather-preset--aurora .weather-canvas {
+  opacity: 0.68;
 }
 
 :root:not([data-theme='dark']) .weather-particle-layer.weather-preset--sakura .weather-canvas {
