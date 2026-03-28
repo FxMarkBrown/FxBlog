@@ -87,20 +87,49 @@ public interface SysArticleMapper extends BaseMapper<SysArticle> {
      */
     void favorite(@Param("articleId") Long articleId, @Param("userId") Long userId);
 
+    /**
+     * 统计各分类下的文章数量
+     */
     @MapKey("name")
     List<Map<String, Integer>> selectCountByCategory();
 
+    /**
+     * 分页查询当前用户点赞过的文章
+     */
     IPage<ArticleListVo> selectMyLike(@Param("page") Page<Object> page, @Param("userId") long userId);
 
+    /**
+     * 分页查询当前用户收藏的文章
+     */
     IPage<ArticleListVo> selectMyFavorite(@Param("page") Page<Object> page, @Param("userId") long userId);
 
+    /**
+     * 分页查询当前用户发布的文章
+     */
     IPage<ArticleListVo> selectMyArticle(@Param("page") Page<Object> page, @Param("article") SysArticle article);
 
+    /**
+     * 统计用户收到的点赞数
+     */
     Long selectReceivedLikeCount(@Param("userId") long userId);
 
+    /**
+     * 统计用户发出的点赞数
+     */
     Long selectGivenLikeCount(@Param("userId") long userId);
 
+    /**
+     * 统计用户发出的收藏数
+     */
     Long selectGivenFavoriteCount(@Param("userId") long userId);
 
+    /**
+     * 增加文章阅读量
+     */
+    void incrementQuantity(@Param("articleId") Long articleId);
+
+    /**
+     * 批量同步文章阅读量
+     */
     void updateBatchQuantity(@Param("articles") List<SysArticle> articles);
 }

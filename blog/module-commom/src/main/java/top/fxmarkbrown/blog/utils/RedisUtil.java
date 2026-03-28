@@ -175,10 +175,10 @@ public class RedisUtil {
     }
 
     /**
-     * Set结构添加属性
+     * Set结构添加属性，并返回实际新增数量
      */
-    public void sAdd(String key, Object... values) {
-        redisTemplate.opsForSet().add(key, values);
+    public Long sAdd(String key, Object... values) {
+        return redisTemplate.opsForSet().add(key, values);
     }
 
     public Boolean sIsMember(String key, Object value) {

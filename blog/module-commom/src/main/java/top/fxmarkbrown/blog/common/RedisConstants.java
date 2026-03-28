@@ -66,6 +66,11 @@ public class RedisConstants {
     public static final String ARTICLE_QUANTITY = "article_quantity";
 
     /**
+     * 文章阅读去重 IP 集合前缀
+     */
+    public static final String ARTICLE_VIEW_IP_SET = "article:viewed:";
+
+    /**
      * AI 点赞每日统计
      */
     public static final String AI_LIKE_DAILY_COUNT = "ai:like:daily:";

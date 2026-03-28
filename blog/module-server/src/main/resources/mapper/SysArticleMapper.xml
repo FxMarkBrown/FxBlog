@@ -56,6 +56,12 @@
         INSERT INTO sys_article_favorite(user_id, article_id) VALUES (#{userId}, #{articleId})
     </insert>
 
+    <update id="incrementQuantity">
+        UPDATE sys_article
+        SET quantity = COALESCE(quantity, 0) + 1
+        WHERE id = #{articleId}
+    </update>
+
     <update id="updateBatchQuantity">
         UPDATE sys_article
         SET

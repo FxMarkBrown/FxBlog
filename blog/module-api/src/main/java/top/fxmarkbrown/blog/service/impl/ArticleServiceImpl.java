@@ -74,7 +74,11 @@ public class ArticleServiceImpl implements ArticleService {
 
         //添加阅读量
         String ip = IpUtil.getIp();
-        sysAsyncServiceImpl.recordArticleView(id, ip);
+        boolean firstView = sysAsyncServiceImpl.recordArticleView(id, ip);
+        if (firstView) {
+            int currentQuantity = detailVo.getQuantity() == null ? 0 : detailVo.getQuantity();
+            detailVo.setQuantity(currentQuantity + 1);
+        }
         return detailVo;
     }
 
