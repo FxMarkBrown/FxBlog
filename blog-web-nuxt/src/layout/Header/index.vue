@@ -85,12 +85,17 @@ function handleScroll() {
 
   const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop
   if (currentScrollTop < 100) {
-    isHeaderVisible.value = true
+    if (!isHeaderVisible.value) {
+      isHeaderVisible.value = true
+    }
     lastScrollTop.value = currentScrollTop
     return
   }
 
-  isHeaderVisible.value = currentScrollTop <= lastScrollTop.value
+  const nextVisible = currentScrollTop <= lastScrollTop.value
+  if (nextVisible !== isHeaderVisible.value) {
+    isHeaderVisible.value = nextVisible
+  }
   lastScrollTop.value = currentScrollTop
 }
 

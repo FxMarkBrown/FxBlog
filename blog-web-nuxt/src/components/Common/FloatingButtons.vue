@@ -55,7 +55,10 @@ function scrollToTop() {
  * 处理滚动
  */
 function handleScroll() {
-  showBackToTop.value = window.pageYOffset > 300
+  const nextVisible = window.pageYOffset > 300
+  if (nextVisible !== showBackToTop.value) {
+    showBackToTop.value = nextVisible
+  }
 }
 
 /**

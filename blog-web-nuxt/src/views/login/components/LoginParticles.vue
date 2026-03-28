@@ -7,7 +7,11 @@ let program: Program | null = null
 let mesh: Mesh | null = null
 let frameHandle = 0
 let startTime = 0
+let lastRenderAt = 0
 let paused = false
+
+const TARGET_FPS = 16
+const FRAME_INTERVAL = 1000 / TARGET_FPS
 
 const vertexShader = /* glsl */ `
 attribute vec2 position;
@@ -51,7 +55,7 @@ float noise(vec2 p) {
 float fbm(vec2 p) {
   float value = 0.0;
   float amplitude = 0.5;
-  for (int i = 0; i < 6; i++) {
+  for (int i = 0; i < 3; i++) {
     value += amplitude * noise(p);
     p = p * 2.03 + vec2(7.1, 11.4);
     amplitude *= 0.53;
@@ -71,11 +75,11 @@ float ribbon(vec2 uv, float seed, float width, float speed) {
   p *= rotate2d(seed * 0.65 - 0.35);
   p += 0.5;
 
-  float center = 0.28 + seed * 0.16
-    + 0.12 * sin(p.x * (2.0 + seed * 1.3) - uTime * speed + seed * 4.0)
-    + 0.05 * fbm(vec2(p.x * 2.4 + seed * 6.0, uTime * 0.05 + seed * 2.0));
+  float center = 0.32 + seed * 0.12
+    + 0.06 * sin(p.x * (1.1 + seed * 0.8) - uTime * speed + seed * 4.0)
+    + 0.03 * fbm(vec2(p.x * 1.4 + seed * 4.0, seed * 2.0));
 
-  return smoothstep(width, width * 0.18, abs(p.y - center));
+  return smoothstep(width, width * 0.36, abs(p.y - center));
 }
 
 float softCircle(vec2 uv, vec2 center, float radius, float blur) {
@@ -83,22 +87,22 @@ float softCircle(vec2 uv, vec2 center, float radius, float blur) {
 }
 
 vec3 lightPalette(float t) {
-  vec3 cream = vec3(0.98, 0.95, 0.9);
-  vec3 mist = vec3(0.82, 0.9, 0.96);
-  vec3 mint = vec3(0.73, 0.86, 0.82);
-  vec3 peach = vec3(0.98, 0.83, 0.68);
-  vec3 base = mix(cream, mist, smoothstep(0.12, 0.62, t));
-  base = mix(base, mint, smoothstep(0.44, 0.82, t));
-  return mix(base, peach, smoothstep(0.7, 1.0, t));
+  vec3 milk = vec3(0.97, 0.97, 0.995);
+  vec3 sky = vec3(0.86, 0.9, 0.98);
+  vec3 lavender = vec3(0.89, 0.87, 0.98);
+  vec3 lilac = vec3(0.82, 0.84, 0.98);
+  vec3 base = mix(milk, sky, smoothstep(0.12, 0.58, t));
+  base = mix(base, lavender, smoothstep(0.4, 0.82, t));
+  return mix(base, lilac, smoothstep(0.72, 1.0, t));
 }
 
 vec3 darkPalette(float t) {
-  vec3 ink = vec3(0.05, 0.09, 0.16);
-  vec3 blue = vec3(0.13, 0.23, 0.38);
-  vec3 teal = vec3(0.16, 0.34, 0.35);
-  vec3 glow = vec3(0.35, 0.62, 0.72);
-  vec3 base = mix(ink, blue, smoothstep(0.08, 0.58, t));
-  base = mix(base, teal, smoothstep(0.36, 0.82, t));
+  vec3 ink = vec3(0.05, 0.07, 0.14);
+  vec3 indigo = vec3(0.12, 0.18, 0.34);
+  vec3 violet = vec3(0.22, 0.24, 0.46);
+  vec3 glow = vec3(0.38, 0.46, 0.82);
+  vec3 base = mix(ink, indigo, smoothstep(0.08, 0.58, t));
+  base = mix(base, violet, smoothstep(0.36, 0.82, t));
   return mix(base, glow, smoothstep(0.76, 1.0, t));
 }
 
@@ -108,46 +112,34 @@ void main() {
   vec2 p = uv - 0.5;
   p.x *= aspect;
 
-  float flowA = fbm(vec2(p.x * 0.9 + 2.3, p.y * 1.1 - uTime * 0.02));
-  float flowB = fbm(vec2(p.x * 1.7 - 1.8, p.y * 1.4 + uTime * 0.03));
-  float blend = smoothstep(0.08, 0.92, flowA * 0.55 + flowB * 0.45);
+  float flowA = fbm(vec2(p.x * 0.48 + 2.3, p.y * 0.62));
+  float flowB = fbm(vec2(p.x * 0.74 - 1.8, p.y * 0.86));
+  float blend = smoothstep(0.1, 0.9, flowA * 0.62 + flowB * 0.38);
 
   vec3 color = mix(lightPalette(blend), darkPalette(blend), uDark);
 
   float paper = fbm(vec2(uv.x * 8.0, uv.y * 10.0));
-  float fibers = fbm(vec2(uv.x * 22.0 + uTime * 0.004, uv.y * 38.0));
-  color += mix(vec3(0.06, 0.08, 0.1), vec3(0.02, 0.03, 0.05), uDark) * (paper - 0.5) * 0.09;
-  color += mix(vec3(0.05, 0.06, 0.07), vec3(0.02, 0.03, 0.04), uDark) * (fibers - 0.5) * 0.05;
+  float fibers = fbm(vec2(uv.x * 18.0, uv.y * 30.0));
+  color += mix(vec3(0.06, 0.08, 0.1), vec3(0.02, 0.03, 0.05), uDark) * (paper - 0.5) * 0.06;
+  color += mix(vec3(0.05, 0.06, 0.07), vec3(0.02, 0.03, 0.04), uDark) * (fibers - 0.5) * 0.02;
 
-  float ribbonA = ribbon(uv, 0.25, 0.23, 0.06);
-  float ribbonB = ribbon(uv, 0.62, 0.19, 0.08);
-  float ribbonC = ribbon(uv, 0.88, 0.16, 0.1);
-  vec3 ribbonColorA = mix(vec3(0.98, 0.92, 0.84), vec3(0.28, 0.54, 0.66), uDark);
-  vec3 ribbonColorB = mix(vec3(0.84, 0.92, 0.94), vec3(0.18, 0.36, 0.52), uDark);
-  vec3 ribbonColorC = mix(vec3(0.95, 0.84, 0.78), vec3(0.2, 0.42, 0.36), uDark);
-  color += ribbonColorA * ribbonA * 0.22;
-  color += ribbonColorB * ribbonB * 0.16;
-  color += ribbonColorC * ribbonC * 0.12;
+  float ribbonA = ribbon(uv, 0.24, 0.26, 0.024);
+  float ribbonB = ribbon(uv, 0.58, 0.22, 0.03);
+  float ribbonC = ribbon(uv, 0.88, 0.18, 0.034);
+  vec3 ribbonColorA = mix(vec3(0.92, 0.93, 0.99), vec3(0.24, 0.34, 0.68), uDark);
+  vec3 ribbonColorB = mix(vec3(0.85, 0.9, 0.99), vec3(0.2, 0.28, 0.56), uDark);
+  vec3 ribbonColorC = mix(vec3(0.91, 0.88, 0.99), vec3(0.28, 0.26, 0.58), uDark);
+  color = mix(color, ribbonColorA, ribbonA * 0.08);
+  color = mix(color, ribbonColorB, ribbonB * 0.07);
+  color = mix(color, ribbonColorC, ribbonC * 0.05);
 
-  float glowMain = softCircle(uv, vec2(0.74, 0.24), mix(0.34, 0.26, uMobile), 0.42);
-  float glowSecondary = softCircle(uv, vec2(0.18, 0.78), mix(0.24, 0.2, uMobile), 0.32);
-  color += mix(vec3(0.96, 0.84, 0.62), vec3(0.18, 0.44, 0.56), uDark) * glowMain * 0.24;
-  color += mix(vec3(0.8, 0.9, 0.92), vec3(0.12, 0.24, 0.42), uDark) * glowSecondary * 0.18;
-
-  for (int i = 0; i < 12; i++) {
-    float fi = float(i);
-    vec2 seed = vec2(fi * 7.7, fi * 13.1);
-    vec2 pos = vec2(
-      fract(hash21(seed) + sin(uTime * (0.03 + fi * 0.002)) * 0.04),
-      fract(hash21(seed + 4.2) + cos(uTime * (0.026 + fi * 0.003)) * 0.05)
-    );
-    float mote = softCircle(uv, pos, 0.004 + hash21(seed + 8.1) * 0.01, 0.024);
-    vec3 moteColor = mix(vec3(1.0, 0.96, 0.86), vec3(0.74, 0.9, 0.98), hash21(seed + 1.7));
-    color += moteColor * mote * mix(0.18, 0.12, uDark);
-  }
+  float washA = softCircle(uv, vec2(0.78, 0.18), mix(0.3, 0.24, uMobile), 0.52);
+  float washB = softCircle(uv, vec2(0.14, 0.82), mix(0.22, 0.18, uMobile), 0.44);
+  color += mix(vec3(0.94, 0.92, 1.0), vec3(0.14, 0.18, 0.36), uDark) * washA * 0.05;
+  color += mix(vec3(0.88, 0.91, 1.0), vec3(0.1, 0.14, 0.3), uDark) * washB * 0.04;
 
   float vignette = smoothstep(1.18, 0.12, length(p));
-  color *= vignette;
+  color *= mix(0.94, 1.0, vignette);
 
   gl_FragColor = vec4(color, 1.0);
 }
@@ -184,7 +176,14 @@ function resizeScene() {
 
   const width = Math.max(hostRef.value.clientWidth, 1)
   const height = Math.max(hostRef.value.clientHeight, 1)
-  renderer.setSize(width, height)
+  const isMobile = window.innerWidth < 768
+  const deviceMemory = Number((navigator as Navigator & { deviceMemory?: number }).deviceMemory || 8)
+  const renderScale = isMobile ? 0.42 : deviceMemory <= 4 ? 0.5 : 0.58
+  const internalWidth = Math.max(Math.round(width * renderScale), 1)
+  const internalHeight = Math.max(Math.round(height * renderScale), 1)
+  renderer.setSize(internalWidth, internalHeight)
+  renderer.gl.canvas.style.width = `${width}px`
+  renderer.gl.canvas.style.height = `${height}px`
   program.uniforms.uResolution.value = [width, height]
 }
 
@@ -194,6 +193,12 @@ function renderFrame(now: number) {
     return
   }
 
+  if (lastRenderAt && now - lastRenderAt < FRAME_INTERVAL) {
+    frameHandle = requestAnimationFrame(renderFrame)
+    return
+  }
+
+  lastRenderAt = now
   program.uniforms.uTime.value = (now - startTime) / 1000
   renderer.render({ scene: mesh })
   frameHandle = requestAnimationFrame(renderFrame)
@@ -206,8 +211,8 @@ function initScene() {
 
   renderer = new Renderer({
     alpha: false,
-    antialias: true,
-    dpr: typeof window === 'undefined' ? 1 : Math.min(window.devicePixelRatio || 1, 2)
+    antialias: false,
+    dpr: 1
   })
 
   const gl = renderer.gl
@@ -249,6 +254,7 @@ function startScene() {
 
   paused = false
   startTime = typeof performance === 'undefined' ? 0 : performance.now()
+  lastRenderAt = 0
   frameHandle = requestAnimationFrame(renderFrame)
 }
 
@@ -281,15 +287,34 @@ function handleResize() {
   resizeScene()
 }
 
+function handleVisibilityChange() {
+  if (document.hidden) {
+    paused = true
+    if (frameHandle) {
+      cancelAnimationFrame(frameHandle)
+      frameHandle = 0
+    }
+    return
+  }
+
+  if (!frameHandle) {
+    paused = false
+    lastRenderAt = 0
+    frameHandle = requestAnimationFrame(renderFrame)
+  }
+}
+
 onMounted(() => {
   startScene()
   window.addEventListener('theme-change', handleThemeChange)
   window.addEventListener('resize', handleResize, { passive: true })
+  document.addEventListener('visibilitychange', handleVisibilityChange)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('theme-change', handleThemeChange)
   window.removeEventListener('resize', handleResize)
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
   destroyScene()
 })
 </script>

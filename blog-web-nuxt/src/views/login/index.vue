@@ -51,6 +51,7 @@ const rememberMe = ref(false)
 const isShowSliderVerify = ref(false)
 const isDarkMode = ref(false)
 const previousBodyOverflow = ref('')
+const previousNuxtPaddingTop = ref('')
 const codeTimer = ref<ReturnType<typeof setInterval> | null>(null)
 const pollingTimer = ref<ReturnType<typeof setInterval> | null>(null)
 const wechatQrPlaceholder = WECHAT_QR_PLACEHOLDER
@@ -154,7 +155,12 @@ watch(
 onMounted(async () => {
   isDarkMode.value = initTheme()
   previousBodyOverflow.value = document.body.style.overflow
+  previousNuxtPaddingTop.value = (document.getElementById('__nuxt') as HTMLElement | null)?.style.paddingTop || ''
   document.body.style.overflow = 'hidden'
+  const nuxtRoot = document.getElementById('__nuxt') as HTMLElement | null
+  if (nuxtRoot) {
+    nuxtRoot.style.paddingTop = '0'
+  }
   window.addEventListener('theme-change', syncThemeState)
 
   if (!siteStore.loaded) {
@@ -169,6 +175,10 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   window.removeEventListener('theme-change', syncThemeState)
   document.body.style.overflow = previousBodyOverflow.value
+  const nuxtRoot = document.getElementById('__nuxt') as HTMLElement | null
+  if (nuxtRoot) {
+    nuxtRoot.style.paddingTop = previousNuxtPaddingTop.value
+  }
   clearTimer()
 })
 
@@ -732,7 +742,7 @@ function backToHome() {
                 <i class="fas fa-key"></i>
               </template>
               <template #append>
-                <ElButton :disabled="codeSending" @click="sendRegisterCode">
+                <ElButton class="code-btn" type="primary" :disabled="codeSending" @click="sendRegisterCode">
                   {{ codeButtonText }}
                 </ElButton>
               </template>
@@ -748,7 +758,7 @@ function backToHome() {
           </ElFormItem>
 
           <ElFormItem class="form-item">
-            <ElButton class="submit-btn" :loading="loading" @click="handleRegister">
+            <ElButton class="submit-btn" type="primary" :loading="loading" @click="handleRegister">
               注 册
             </ElButton>
           </ElFormItem>
@@ -780,7 +790,7 @@ function backToHome() {
                 <i class="fas fa-key"></i>
               </template>
               <template #append>
-                <ElButton :disabled="codeSending" @click="sendVerificationCode">
+                <ElButton class="code-btn" type="primary" :disabled="codeSending" @click="sendVerificationCode">
                   {{ codeButtonText }}
                 </ElButton>
               </template>
@@ -796,7 +806,7 @@ function backToHome() {
           </ElFormItem>
 
           <ElFormItem class="form-item">
-            <ElButton class="submit-btn" :loading="loading" @click="handleResetPassword">
+            <ElButton class="submit-btn" type="primary" :loading="loading" @click="handleResetPassword">
               重置密码
             </ElButton>
           </ElFormItem>
@@ -831,29 +841,29 @@ function backToHome() {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: calc(100vh + 70px);
-  margin-top: -70px;
-  padding: 24px;
+  min-height: 100vh;
+  padding: 40px 24px 24px;
   overflow: hidden;
   isolation: isolate;
   background:
-    radial-gradient(circle at top left, rgba(56, 189, 248, 0.22), transparent 30%),
-    radial-gradient(circle at bottom right, rgba(139, 92, 246, 0.2), transparent 28%),
+    radial-gradient(circle at top left, rgba(56, 189, 248, 0.16), transparent 32%),
+    radial-gradient(circle at bottom right, rgba(139, 92, 246, 0.16), transparent 30%),
     linear-gradient(135deg, #dbeafe 0%, #e0e7ff 38%, #f8fafc 100%);
 }
 
 .login-body {
   position: relative;
   width: min(420px, 100%);
+  margin-top: 20px;
   padding: 32px;
   z-index: 2;
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.72);
   border-radius: 28px;
-  background: rgba(255, 255, 255, 0.94);
+  background: rgba(255, 255, 255, 0.9);
   box-shadow:
-    0 30px 70px rgba(15, 23, 42, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(12px) saturate(132%);
+    0 26px 56px rgba(79, 70, 229, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.52);
+  backdrop-filter: blur(14px) saturate(118%);
 }
 
 .form-container {
@@ -870,8 +880,12 @@ function backToHome() {
 }
 
 .form-item :deep(.el-input__wrapper) {
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.16) inset;
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: 0 0 0 1px rgba(124, 139, 150, 0.14) inset;
+}
+
+.form-item :deep(.el-input-group--append .el-input__wrapper) {
+  border-radius: 12px 0 0 12px;
 }
 
 .form-item :deep(.el-input__inner)::placeholder {
@@ -883,9 +897,19 @@ function backToHome() {
   color: #6b7280;
 }
 
-.submit-btn {
+:deep(.submit-btn.el-button) {
+  --el-button-bg-color: #6677ff;
+  --el-button-border-color: transparent;
+  --el-button-text-color: #ffffff;
+  --el-button-hover-bg-color: #7180ff;
+  --el-button-hover-border-color: transparent;
+  --el-button-active-bg-color: #5668f0;
+  --el-button-active-border-color: transparent;
   width: 100%;
   height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   border-radius: 14px;
   background: linear-gradient(135deg, #5b67f1 0%, #6677ff 100%);
@@ -893,18 +917,17 @@ function backToHome() {
   font-size: 18px;
   font-weight: 600;
   letter-spacing: 0.22em;
-  cursor: pointer;
   box-shadow: 0 14px 30px rgba(99, 102, 241, 0.26);
   transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
 }
 
-.submit-btn:hover {
+:deep(.submit-btn.el-button:hover) {
   transform: translateY(-1px);
   filter: brightness(1.03);
   box-shadow: 0 18px 36px rgba(99, 102, 241, 0.3);
 }
 
-.submit-btn:active {
+:deep(.submit-btn.el-button:active) {
   transform: translateY(0);
   box-shadow: 0 10px 22px rgba(99, 102, 241, 0.22);
 }
@@ -912,11 +935,20 @@ function backToHome() {
 .form-item :deep(.el-input-group__append) {
   padding: 0;
   border: 0;
-  background: transparent;
-  box-shadow: none;
+  border-radius: 0 12px 12px 0;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 0 0 1px rgba(124, 139, 150, 0.14) inset;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.form-item :deep(.el-input-group:focus-within .el-input-group__append) {
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 1px var(--el-color-primary) inset;
 }
 
 .form-item :deep(.el-input-group__append .el-button) {
+  min-width: 112px;
   height: 100%;
   padding: 0 18px;
   border: none;
@@ -931,6 +963,23 @@ function backToHome() {
 .form-item :deep(.el-input-group__append .el-button:hover) {
   background: rgba(99, 102, 241, 0.14);
   color: #4338ca;
+}
+
+:deep(.code-btn.el-button) {
+  --el-button-bg-color: linear-gradient(135deg, #5b67f1 0%, #6677ff 100%);
+  --el-button-border-color: transparent;
+  --el-button-text-color: #ffffff;
+  --el-button-hover-bg-color: #7180ff;
+  --el-button-hover-border-color: transparent;
+  --el-button-active-bg-color: #5668f0;
+  --el-button-active-border-color: transparent;
+  background: linear-gradient(135deg, #5b67f1 0%, #6677ff 100%);
+  color: #fff;
+  box-shadow: none;
+}
+
+:deep(.code-btn.el-button:hover) {
+  filter: brightness(1.03);
 }
 
 .divider {
@@ -1150,16 +1199,16 @@ function backToHome() {
 
 .login-container.is-dark {
   background:
-    radial-gradient(circle at top left, rgba(14, 165, 233, 0.2), transparent 34%),
-    radial-gradient(circle at bottom right, rgba(129, 140, 248, 0.18), transparent 30%),
+    radial-gradient(circle at top left, rgba(14, 165, 233, 0.14), transparent 34%),
+    radial-gradient(circle at bottom right, rgba(129, 140, 248, 0.16), transparent 30%),
     linear-gradient(135deg, #020617 0%, #0f172a 45%, #111827 100%);
 }
 
 .login-container.is-dark .login-body {
   border-color: rgba(148, 163, 184, 0.2);
-  background: rgba(15, 23, 42, 0.9);
+  background: rgba(15, 23, 42, 0.86);
   box-shadow:
-    0 30px 80px rgba(2, 6, 23, 0.48),
+    0 30px 80px rgba(2, 6, 23, 0.44),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
@@ -1202,6 +1251,16 @@ function backToHome() {
   box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.16) inset;
 }
 
+.login-container.is-dark .form-item :deep(.el-input-group__append) {
+  background: rgba(15, 23, 42, 0.76);
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.16) inset;
+}
+
+.login-container.is-dark .form-item :deep(.el-input-group:focus-within .el-input-group__append) {
+  background: rgba(15, 23, 42, 0.92);
+  box-shadow: 0 0 0 1px var(--el-color-primary) inset;
+}
+
 .login-container.is-dark .form-item :deep(.el-input__inner) {
   color: #e2e8f0;
 }
@@ -1218,7 +1277,14 @@ function backToHome() {
   color: #cbd5e1;
 }
 
-.login-container.is-dark .submit-btn {
+.login-container.is-dark :deep(.submit-btn.el-button) {
+  --el-button-bg-color: #6d63f4;
+  --el-button-border-color: transparent;
+  --el-button-text-color: #ffffff;
+  --el-button-hover-bg-color: #776ef8;
+  --el-button-hover-border-color: transparent;
+  --el-button-active-bg-color: #5d56df;
+  --el-button-active-border-color: transparent;
   background: linear-gradient(135deg, #6466f1 0%, #6d63f4 100%);
   box-shadow: 0 16px 34px rgba(79, 70, 229, 0.28);
 }
@@ -1234,12 +1300,23 @@ function backToHome() {
   color: #e0e7ff;
 }
 
+.login-container.is-dark :deep(.code-btn.el-button) {
+  --el-button-bg-color: linear-gradient(135deg, #6466f1 0%, #6d63f4 100%);
+  --el-button-border-color: transparent;
+  --el-button-text-color: #ffffff;
+  --el-button-hover-bg-color: #776ef8;
+  --el-button-hover-border-color: transparent;
+  --el-button-active-bg-color: #5d56df;
+  --el-button-active-border-color: transparent;
+  background: linear-gradient(135deg, #6466f1 0%, #6d63f4 100%);
+  color: #fff;
+}
+
 @media (max-width: 768px) {
   .login-container {
-    align-items: flex-start;
+    align-items: center;
     min-height: 100vh;
-    margin-top: 0;
-    padding: calc(env(safe-area-inset-top, 0px) + 18px) 20px 24px;
+    padding: calc(env(safe-area-inset-top, 0px) + 20px) 20px calc(env(safe-area-inset-bottom, 0px) + 20px);
   }
 
   .login-body {

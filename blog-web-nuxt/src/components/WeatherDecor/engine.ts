@@ -33,7 +33,6 @@ uniform float uPreset;
 uniform float uDensity;
 uniform float uDark;
 uniform float uNight;
-uniform float uMobile;
 
 const float PRESET_SUNNY = 1.0;
 const float PRESET_LIGHT_RAIN = 2.0;
@@ -43,9 +42,6 @@ const float PRESET_SNOW = 5.0;
 const float PRESET_WINDY = 6.0;
 const float PRESET_DUST = 7.0;
 const float PRESET_AURORA = 8.0;
-const float PRESET_SAKURA = 9.0;
-const float PRESET_LEAVES = 10.0;
-const float PRESET_FIREFLIES = 11.0;
 
 float hash11(float p) {
   p = fract(p * 0.1031);
@@ -63,12 +59,6 @@ float hash21(vec2 p) {
 vec2 hash22(vec2 p) {
   float n = hash21(p);
   return vec2(n, hash21(p + n + 17.19));
-}
-
-mat2 rotate2d(float angle) {
-  float s = sin(angle);
-  float c = cos(angle);
-  return mat2(c, -s, s, c);
 }
 
 float noise(vec2 p) {
@@ -102,32 +92,12 @@ float softCircle(vec2 p, vec2 center, float radius, float blur) {
   return smoothstep(radius + blur, radius - blur, distance(p, center));
 }
 
-float ellipseMask(vec2 p, vec2 center, vec2 radius, float rotation, float blur) {
-  vec2 q = (p - center) * rotate2d(rotation);
-  float d = length(q / radius);
-  return smoothstep(1.0 + blur, 1.0 - blur, d);
-}
-
 float lineMask(vec2 p, vec2 a, vec2 b, float thickness, float blur) {
   vec2 pa = p - a;
   vec2 ba = b - a;
   float h = clamp(dot(pa, ba) / max(dot(ba, ba), 0.0001), 0.0, 1.0);
   float d = length(pa - ba * h);
   return smoothstep(thickness + blur, thickness - blur, d);
-}
-
-vec3 nightPalette(float t) {
-  vec3 a = vec3(0.09, 0.22, 0.36);
-  vec3 b = vec3(0.24, 0.72, 0.66);
-  vec3 c = vec3(0.47, 0.63, 0.95);
-  return mix(mix(a, b, smoothstep(0.12, 0.68, t)), c, smoothstep(0.58, 1.0, t));
-}
-
-vec3 dayPalette(float t) {
-  vec3 a = vec3(0.95, 0.91, 0.82);
-  vec3 b = vec3(0.74, 0.86, 0.95);
-  vec3 c = vec3(0.98, 0.82, 0.56);
-  return mix(mix(a, b, smoothstep(0.1, 0.72, t)), c, smoothstep(0.62, 1.0, t));
 }
 
 vec4 renderAurora(vec2 uv, float aspect, float time) {
@@ -267,6 +237,7 @@ vec4 renderWind(vec2 uv, float aspect, float time, float density, float darkMode
   float field = fbm(vec2(p.x * 1.7 - time * 0.12, uv.y * 4.0 + time * 0.04));
   color += vec3(0.2, 0.35, 0.52) * field * 0.12;
   alpha += field * 0.05;
+
   return vec4(color, clamp(alpha, 0.0, darkMode > 0.5 ? 0.34 : 0.42));
 }
 
@@ -292,54 +263,6 @@ vec4 renderDust(vec2 uv, float aspect, float time, float density, float darkMode
   return vec4(color, clamp(alpha, 0.0, darkMode > 0.5 ? 0.46 : 0.52));
 }
 
-vec4 renderPetals(vec2 uv, float aspect, float time, float density, float leaves) {
-  vec2 p = uv;
-  p.x *= aspect;
-  vec3 warm = mix(vec3(0.98, 0.72, 0.83), vec3(0.86, 0.55, 0.22), leaves);
-  vec3 deep = mix(vec3(0.92, 0.52, 0.73), vec3(0.66, 0.32, 0.12), leaves);
-  vec3 color = vec3(0.0);
-  float alpha = 0.0;
-
-  for (int i = 0; i < 14; i++) {
-    float fi = float(i);
-    vec2 seed = hash22(vec2(fi * 13.7, fi * 5.9));
-    float speed = mix(0.028, 0.05, leaves) + hash11(fi + 4.0) * 0.01;
-    float drift = sin(time * (0.3 + hash11(fi + 9.0) * 0.25) + fi) * (leaves > 0.5 ? 0.12 : 0.08);
-    vec2 center = vec2(fract(seed.x + drift + time * 0.015), fract(seed.y - time * speed));
-    float rotation = time * (0.24 + hash11(fi + 2.0)) + fi;
-    vec2 radiusA = vec2(mix(0.014, 0.022, leaves), mix(0.028, 0.036, leaves)) * density;
-    vec2 radiusB = vec2(mix(0.013, 0.018, leaves), mix(0.022, 0.028, leaves)) * density;
-    float shape = ellipseMask(uv, center + vec2(-radiusA.x * 0.35, 0.0) * rotate2d(rotation), radiusA, rotation, 0.12);
-    shape += ellipseMask(uv, center + vec2(radiusA.x * 0.35, 0.0) * rotate2d(rotation), radiusB, rotation + 0.8, 0.12);
-    shape = clamp(shape, 0.0, 1.0);
-    color += mix(warm, deep, hash11(fi + 12.0)) * shape * 0.34;
-    alpha += shape * 0.08;
-  }
-
-  return vec4(color, clamp(alpha, 0.0, 0.56));
-}
-
-vec4 renderFireflies(vec2 uv, float time, float density, float darkMode) {
-  vec3 color = vec3(0.0);
-  float alpha = 0.0;
-
-  for (int i = 0; i < 12; i++) {
-    float fi = float(i);
-    vec2 seed = hash22(vec2(fi * 6.1, fi * 14.4));
-    vec2 pos = vec2(
-      fract(seed.x + sin(time * (0.21 + hash11(fi + 2.0) * 0.2) + fi) * 0.08),
-      fract(seed.y + cos(time * (0.14 + hash11(fi + 7.0) * 0.18) + fi * 1.7) * 0.06)
-    );
-    float blink = 0.5 + 0.5 * sin(time * (1.2 + hash11(fi + 12.0) * 1.6) + fi * 2.4);
-    float glow = softCircle(uv, pos, (0.005 + hash11(fi + 8.0) * 0.01) * density, 0.03);
-    vec3 glowColor = mix(vec3(0.98, 0.84, 0.42), vec3(0.78, 1.0, 0.62), hash11(fi + 5.0));
-    color += glowColor * glow * blink * (darkMode > 0.5 ? 0.7 : 0.52);
-    alpha += glow * blink * 0.12;
-  }
-
-  return vec4(color, clamp(alpha, 0.0, darkMode > 0.5 ? 0.62 : 0.5));
-}
-
 void main() {
   vec2 uv = vUv;
   float aspect = uResolution.x / max(uResolution.y, 1.0);
@@ -362,12 +285,6 @@ void main() {
     scene = renderWind(uv, aspect, time, uDensity, uDark);
   } else if (uPreset == PRESET_DUST) {
     scene = renderDust(uv, aspect, time, uDensity, uDark);
-  } else if (uPreset == PRESET_SAKURA) {
-    scene = renderPetals(uv, aspect, time, uDensity, 0.0);
-  } else if (uPreset == PRESET_LEAVES) {
-    scene = renderPetals(uv, aspect, time, uDensity, 1.0);
-  } else if (uPreset == PRESET_FIREFLIES) {
-    scene = renderFireflies(uv, time, uDensity, uDark);
   }
 
   float vignette = smoothstep(1.1, 0.12, length((uv - 0.5) * vec2(aspect, 1.0)));
@@ -394,6 +311,7 @@ class WeatherDecorEngine {
   instanceId: string
   frameHandle: number
   startTime: number
+  renderScale: number
 
   constructor(host: HTMLElement) {
     this.host = host
@@ -406,6 +324,7 @@ class WeatherDecorEngine {
     this.instanceId = `weather-decor-ogl-${instanceSeed++}`
     this.frameHandle = 0
     this.startTime = 0
+    this.renderScale = 1
   }
 
   start(scene: WeatherScene) {
@@ -480,7 +399,7 @@ class WeatherDecorEngine {
       return
     }
 
-    resizeRenderer(this.host, this.renderer, this.program)
+    resizeRenderer(this.host, this.renderer, this.program, this.renderScale)
     this.renderFrame()
   }
 
@@ -497,7 +416,7 @@ class WeatherDecorEngine {
     const renderer = new Renderer({
       alpha: true,
       antialias: true,
-      dpr: typeof window === 'undefined' ? 1 : Math.min(window.devicePixelRatio || 1, 2)
+      dpr: typeof window === 'undefined' ? 1 : Math.min(window.devicePixelRatio || 1, 1.2)
     })
 
     const gl = renderer.gl
@@ -520,8 +439,7 @@ class WeatherDecorEngine {
         uPreset: { value: 0 },
         uDensity: { value: 1 },
         uDark: { value: 0 },
-        uNight: { value: 0 },
-        uMobile: { value: 0 }
+        uNight: { value: 0 }
       },
       depthTest: false,
       depthWrite: false
@@ -548,7 +466,11 @@ class WeatherDecorEngine {
     this.program.uniforms.uDensity.value = clampNumber(scene.densityScale ?? 1, 0.35, 1.5)
     this.program.uniforms.uDark.value = scene.themeMode === 'dark' ? 1 : 0
     this.program.uniforms.uNight.value = scene.isNight ? 1 : 0
-    this.program.uniforms.uMobile.value = scene.isMobile ? 1 : 0
+    this.renderScale = resolveRenderScale(scene)
+
+    if (this.renderer) {
+      resizeRenderer(this.host, this.renderer, this.program, this.renderScale)
+    }
   }
 
   private startLoop() {
@@ -579,10 +501,14 @@ class WeatherDecorEngine {
   }
 }
 
-function resizeRenderer(host: HTMLElement, renderer: Renderer, program: Program) {
+function resizeRenderer(host: HTMLElement, renderer: Renderer, program: Program, renderScale: number) {
   const width = Math.max(host.clientWidth, 1)
   const height = Math.max(host.clientHeight, 1)
-  renderer.setSize(width, height)
+  const internalWidth = Math.max(Math.round(width * renderScale), 1)
+  const internalHeight = Math.max(Math.round(height * renderScale), 1)
+  renderer.setSize(internalWidth, internalHeight)
+  renderer.gl.canvas.style.width = `${width}px`
+  renderer.gl.canvas.style.height = `${height}px`
   program.uniforms.uResolution.value = [width, height]
 }
 
@@ -614,12 +540,6 @@ function presetToId(preset?: WeatherParticlePreset | null) {
       return 7
     case 'aurora':
       return 8
-    case 'sakura':
-      return 9
-    case 'leaves':
-      return 10
-    case 'fireflies':
-      return 11
     default:
       return 0
   }
@@ -627,4 +547,29 @@ function presetToId(preset?: WeatherParticlePreset | null) {
 
 function clampNumber(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
+}
+
+function resolveRenderScale(scene: WeatherScene) {
+  const density = clampNumber(scene.densityScale ?? 1, 0.35, 1.5)
+  const preset = scene.particlePreset
+
+  if (scene.isMobile) {
+    if (preset === 'aurora') {
+      return 0.38
+    }
+    if (preset === 'heavy_rain' || preset === 'thunderstorm' || preset === 'snow') {
+      return 0.44
+    }
+    return 0.5
+  }
+
+  if (preset === 'aurora') {
+    return density > 1 ? 0.46 : 0.52
+  }
+
+  if (preset === 'heavy_rain' || preset === 'thunderstorm' || preset === 'snow') {
+    return density > 1 ? 0.5 : 0.56
+  }
+
+  return 0.68
 }

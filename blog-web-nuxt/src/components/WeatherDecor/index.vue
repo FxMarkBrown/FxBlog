@@ -6,18 +6,15 @@ import {
   DEFAULT_WEATHER_EFFECT,
   type WeatherEffect,
   type WeatherRenderProfile,
-  buildCloudLayers,
   normalizeWeatherEffect,
   resolveRefreshMinutes,
-  resolveRenderProfile,
-  shouldShowCloudLayer
+  resolveRenderProfile
 } from '@/components/WeatherDecor/useWeatherDecor'
 
 const route = useRoute()
 const siteStore = useSiteStore()
 const canvasRef = ref<HTMLElement | null>(null)
 const effect = ref<WeatherEffect>({ ...DEFAULT_WEATHER_EFFECT })
-const cloudLayers = ref<Array<{ id: string; style: Record<string, string> }>>([])
 const loading = ref(false)
 const lastFetchAt = ref(0)
 const reducedMotion = ref(false)
@@ -63,8 +60,6 @@ const particleClasses = computed(() => [
   `weather-decor--${effect.value.weather}`,
   `weather-preset--${renderProfile.value.particlePreset || 'none'}`
 ])
-
-const showClouds = computed(() => effect.value.enabled && shouldShowCloudLayer(effect.value.weather))
 const refreshMinutes = computed(() => resolveRefreshMinutes(siteStore.websiteInfo as Record<string, unknown>))
 const sceneSignature = computed(() => {
   const profile = renderProfile.value
@@ -86,7 +81,6 @@ const sceneSignature = computed(() => {
 watch(
   sceneSignature,
   () => {
-    cloudLayers.value = buildCloudLayers(renderProfile.value)
     syncEngine()
   },
   { immediate: true }
@@ -286,9 +280,6 @@ onBeforeUnmount(() => {
         <span class="weather-mist-layer weather-mist-layer--b"></span>
         <span class="weather-mist-layer weather-mist-layer--c"></span>
       </div>
-      <div v-if="showClouds" class="weather-clouds">
-        <span v-for="cloud in cloudLayers" :key="cloud.id" class="weather-cloud" :style="cloud.style"></span>
-      </div>
       <div v-if="renderProfile.showLightning" class="weather-lightning">
         <span class="weather-lightning-flash weather-lightning-flash--a"></span>
         <span class="weather-lightning-flash weather-lightning-flash--b"></span>
@@ -317,6 +308,8 @@ onBeforeUnmount(() => {
   inset: 0;
   z-index: 1;
   pointer-events: none;
+  isolation: isolate;
+  contain: layout paint style;
 }
 
 .weather-decor-root {
@@ -327,6 +320,7 @@ onBeforeUnmount(() => {
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.6s ease, filter 0.6s ease;
+  contain: layout paint style;
 }
 
 .weather-decor-root.is-active {
@@ -336,7 +330,7 @@ onBeforeUnmount(() => {
 .weather-decor-root.is-active.weather-decor--sunny,
 .weather-decor-root.is-active.weather-decor--cloudy,
 .weather-decor-root.is-active.weather-decor--overcast {
-  opacity: 0.3;
+  opacity: 0.24;
 }
 
 .weather-decor-root.is-active.weather-decor--light_rain,
@@ -349,7 +343,7 @@ onBeforeUnmount(() => {
 .weather-decor-root.is-active.weather-decor--thunderstorm,
 .weather-decor-root.is-active.weather-decor--fog,
 .weather-decor-root.is-active.weather-decor--dust {
-  opacity: 0.46;
+  opacity: 0.38;
 }
 
 .weather-particle-layer {
@@ -359,6 +353,7 @@ onBeforeUnmount(() => {
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.4s ease;
+  contain: layout paint style;
 }
 
 .weather-particle-layer.is-active {
@@ -383,7 +378,6 @@ onBeforeUnmount(() => {
 .weather-sun,
 .weather-moon,
 .weather-mist,
-.weather-clouds,
 .weather-lightning,
 .weather-rain-veil,
 .weather-wind-lines,
@@ -392,6 +386,10 @@ onBeforeUnmount(() => {
 .weather-vignette {
   position: absolute;
   inset: 0;
+}
+
+.weather-canvas {
+  contain: layout paint style;
 }
 
 .weather-atmosphere,
@@ -535,43 +533,6 @@ onBeforeUnmount(() => {
   animation-delay: -16s;
 }
 
-.weather-cloud {
-  position: absolute;
-  top: var(--cloud-top);
-  left: var(--cloud-left);
-  width: var(--cloud-width);
-  height: var(--cloud-height);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, var(--cloud-opacity));
-  filter: blur(var(--cloud-blur));
-  opacity: 0.82;
-  transform: scale(var(--cloud-scale));
-  animation: cloudDrift var(--cloud-duration) linear infinite;
-  animation-delay: var(--cloud-delay);
-}
-
-.weather-cloud::before,
-.weather-cloud::after {
-  content: '';
-  position: absolute;
-  border-radius: inherit;
-  background: inherit;
-}
-
-.weather-cloud::before {
-  width: 56%;
-  height: 120%;
-  left: 12%;
-  top: -38%;
-}
-
-.weather-cloud::after {
-  width: 38%;
-  height: 92%;
-  right: 14%;
-  top: -20%;
-}
-
 .weather-lightning {
   opacity: 0.62;
   mix-blend-mode: screen;
@@ -691,16 +652,16 @@ onBeforeUnmount(() => {
 
 .weather-decor--cloudy .weather-atmosphere,
 .weather-decor--overcast .weather-atmosphere {
-  background: linear-gradient(180deg, rgba(188, 206, 226, 0.28), rgba(154, 170, 192, 0.2) 55%, transparent 100%);
+  background: linear-gradient(180deg, rgba(188, 206, 226, 0.18), rgba(154, 170, 192, 0.12) 55%, transparent 100%);
 }
 
 .weather-decor--cloudy .weather-glow {
-  background: radial-gradient(circle at 30% 10%, rgba(255, 255, 255, 0.18), transparent 28%);
+  background: radial-gradient(circle at 30% 10%, rgba(255, 255, 255, 0.08), transparent 30%);
 }
 
 .weather-decor--overcast .weather-glow {
-  background: radial-gradient(circle at 40% 0%, rgba(255, 255, 255, 0.08), transparent 30%);
-  opacity: 0.44;
+  background: radial-gradient(circle at 40% 0%, rgba(255, 255, 255, 0.04), transparent 32%);
+  opacity: 0.28;
 }
 
 .weather-decor--light_rain .weather-atmosphere,
@@ -736,18 +697,6 @@ onBeforeUnmount(() => {
   opacity: 0.82;
 }
 
-.weather-particle-layer.weather-preset--sakura .weather-canvas {
-  opacity: 0.76;
-}
-
-.weather-particle-layer.weather-preset--leaves .weather-canvas {
-  opacity: 0.8;
-}
-
-.weather-particle-layer.weather-preset--fireflies .weather-canvas {
-  opacity: 0.72;
-}
-
 .weather-particle-layer.weather-decor--light_rain .weather-canvas,
 .weather-particle-layer.weather-decor--snow .weather-canvas,
 .weather-particle-layer.weather-decor--windy .weather-canvas {
@@ -766,18 +715,6 @@ onBeforeUnmount(() => {
 
 :root:not([data-theme='dark']) .weather-particle-layer.weather-preset--aurora .weather-canvas {
   opacity: 0.68;
-}
-
-:root:not([data-theme='dark']) .weather-particle-layer.weather-preset--sakura .weather-canvas {
-  opacity: 0.84;
-}
-
-:root:not([data-theme='dark']) .weather-particle-layer.weather-preset--leaves .weather-canvas {
-  opacity: 0.88;
-}
-
-:root:not([data-theme='dark']) .weather-particle-layer.weather-preset--fireflies .weather-canvas {
-  opacity: 0.78;
 }
 
 :root:not([data-theme='dark']) .weather-particle-layer.weather-decor--light_rain .weather-canvas,
@@ -841,12 +778,12 @@ onBeforeUnmount(() => {
 }
 
 .weather-decor--fog .weather-atmosphere {
-  background: linear-gradient(180deg, rgba(205, 214, 224, 0.22), rgba(184, 193, 205, 0.18) 64%, rgba(242, 246, 250, 0.08) 100%);
+  background: linear-gradient(180deg, rgba(205, 214, 224, 0.16), rgba(184, 193, 205, 0.12) 64%, rgba(242, 246, 250, 0.05) 100%);
 }
 
 .weather-decor--fog .weather-glow {
-  background: radial-gradient(circle at 50% 12%, rgba(255, 255, 255, 0.16), transparent 30%);
-  opacity: 0.44;
+  background: radial-gradient(circle at 50% 12%, rgba(255, 255, 255, 0.08), transparent 32%);
+  opacity: 0.24;
 }
 
 .weather-decor--windy .weather-atmosphere {
@@ -939,7 +876,7 @@ onBeforeUnmount(() => {
 
 :root[data-theme='dark'] .weather-decor--cloudy .weather-atmosphere,
 :root[data-theme='dark'] .weather-decor--overcast .weather-atmosphere {
-  background: linear-gradient(180deg, rgba(58, 73, 102, 0.24), rgba(31, 41, 55, 0.16) 68%, transparent 100%);
+  background: linear-gradient(180deg, rgba(58, 73, 102, 0.16), rgba(31, 41, 55, 0.1) 68%, transparent 100%);
 }
 
 :root[data-theme='dark'] .weather-decor--light_rain .weather-atmosphere,
@@ -954,7 +891,7 @@ onBeforeUnmount(() => {
 
 :root[data-theme='dark'] .weather-decor--fog .weather-atmosphere,
 :root[data-theme='dark'] .weather-decor--windy .weather-atmosphere {
-  background: linear-gradient(180deg, rgba(55, 68, 92, 0.22), rgba(20, 30, 48, 0.16) 70%, transparent 100%);
+  background: linear-gradient(180deg, rgba(55, 68, 92, 0.14), rgba(20, 30, 48, 0.1) 70%, transparent 100%);
 }
 
 :root[data-theme='dark'] .weather-decor--dust .weather-atmosphere {
@@ -967,10 +904,6 @@ onBeforeUnmount(() => {
 
 :root[data-theme='dark'] .weather-rain-veil__layer--b {
   background-image: repeating-linear-gradient(-18deg, rgba(164, 193, 255, 0.06) 0 1px, transparent 1px 18px);
-}
-
-:root[data-theme='dark'] .weather-cloud {
-  background: rgba(201, 215, 255, calc(var(--cloud-opacity) * 0.75));
 }
 
 :root[data-theme='dark'] .weather-mist-layer {
@@ -987,15 +920,6 @@ onBeforeUnmount(() => {
 
 :root[data-theme='dark'] .weather-vignette {
   opacity: 0.24;
-}
-
-@keyframes cloudDrift {
-  from {
-    transform: translate3d(0, 0, 0) scale(var(--cloud-scale));
-  }
-  to {
-    transform: translate3d(22vw, 0, 0) scale(var(--cloud-scale));
-  }
 }
 
 @keyframes sunFloat {
@@ -1107,10 +1031,6 @@ onBeforeUnmount(() => {
 @media (max-width: 767px) {
   .weather-season-tint {
     opacity: 0.18;
-  }
-
-  .weather-cloud {
-    filter: blur(22px);
   }
 
   .weather-mist-layer {

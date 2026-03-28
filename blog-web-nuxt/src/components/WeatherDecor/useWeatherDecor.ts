@@ -22,17 +22,14 @@ export const WEATHER_PARTICLE_PRESETS = [
   'snow',
   'windy',
   'dust',
-  'aurora',
-  'sakura',
-  'leaves',
-  'fireflies'
+  'aurora'
 ] as const
 
 export type WeatherType = typeof WEATHER_TYPES[number]
 export type WeatherSeason = typeof WEATHER_SEASONS[number]
 export type WeatherIntensity = typeof WEATHER_INTENSITIES[number]
 export type WeatherParticlePreset = typeof WEATHER_PARTICLE_PRESETS[number]
-export type WeatherAccentEffect = 'none' | 'aurora' | 'sakura' | 'leaves' | 'fireflies'
+export type WeatherAccentEffect = 'none' | 'aurora'
 type WeatherParticleWeather = Extract<WeatherType, WeatherParticlePreset>
 
 export interface WeatherEffect {
@@ -67,7 +64,6 @@ export interface WeatherRenderProfile {
   particlePreset: WeatherParticlePreset | null
   particleEnabled: boolean
   densityScale: number
-  cloudCount: number
   reducedMotion: boolean
   isMobile: boolean
   pageFactor: number
@@ -87,20 +83,6 @@ const PARTICLE_WEATHER_TYPES = new Set<WeatherParticleWeather>([
   'windy',
   'dust'
 ])
-const CLOUD_WEATHER_TYPES = new Set<WeatherType>([
-  'sunny',
-  'cloudy',
-  'overcast',
-  'light_rain',
-  'heavy_rain',
-  'thunderstorm',
-  'snow',
-  'windy',
-  'fog',
-  'dust'
-])
-const CALM_WEATHER_TYPES = new Set<WeatherType>(['sunny', 'cloudy', 'overcast'])
-const STORMY_WEATHER_TYPES = new Set<WeatherType>(['light_rain', 'heavy_rain', 'thunderstorm', 'snow', 'fog', 'dust'])
 const INTENSITY_SCALE: Record<WeatherIntensity, number> = {
   light: 0.72,
   normal: 1,
@@ -202,18 +184,6 @@ export function resolveRenderProfile({
 
   densityScale = clamp(densityScale, 0.35, 1.35)
 
-  let cloudCount = 0
-  if (CLOUD_WEATHER_TYPES.has(weather)) {
-    cloudCount = isMobile ? 2 : densityScale > 1.02 ? 4 : 3
-    if (weather === 'sunny') {
-      cloudCount = isMobile ? 1 : 2
-    } else if (weather === 'thunderstorm' || weather === 'windy') {
-      cloudCount = isMobile ? 3 : 5
-    } else if (weather === 'fog') {
-      cloudCount = isMobile ? 2 : 4
-    }
-  }
-
   const accentEffect = resolveAccentEffect(normalizedEffect)
   const particlePreset = resolveParticlePreset(weather, accentEffect)
 
@@ -223,55 +193,14 @@ export function resolveRenderProfile({
     particlePreset,
     particleEnabled: normalizedEffect.enabled && !reducedMotion && Boolean(particlePreset),
     densityScale,
-    cloudCount,
     reducedMotion,
     isMobile,
     pageFactor: articleLikePage ? 0.76 : 1,
-    showMist: normalizedEffect.enabled && ['fog', 'dust', 'cloudy', 'overcast'].includes(weather),
+    showMist: normalizedEffect.enabled && ['fog', 'dust'].includes(weather),
     showLightning: normalizedEffect.enabled && weather === 'thunderstorm' && !reducedMotion,
     showDustGlow: normalizedEffect.enabled && weather === 'dust',
     showWindLines: normalizedEffect.enabled && weather === 'windy'
   } satisfies WeatherRenderProfile
-}
-
-export function buildCloudLayers(profile: {
-  cloudCount: number
-  isMobile: boolean
-  weather: string
-}) {
-  return Array.from({ length: profile.cloudCount }, (_, index) => {
-    const width = Math.round((profile.isMobile ? 150 : 210) + index * 68)
-    const height = Math.round(width * 0.34)
-    const top = 8 + index * 13
-    const left = -18 + index * 24
-    const opacityBase = profile.weather === 'sunny' ? 0.18 : profile.weather === 'fog' ? 0.16 : 0.24
-    const opacity = Math.min(opacityBase + index * 0.03, 0.36)
-    const duration =
-      profile.weather === 'heavy_rain' || profile.weather === 'thunderstorm'
-        ? 24 + index * 5
-        : profile.weather === 'windy'
-          ? 18 + index * 4
-          : 34 + index * 8
-
-    return {
-      id: `${profile.weather}-${index}`,
-      style: {
-        '--cloud-width': `${width}px`,
-        '--cloud-height': `${height}px`,
-        '--cloud-top': `${top}%`,
-        '--cloud-left': `${left}%`,
-        '--cloud-opacity': opacity.toFixed(2),
-        '--cloud-duration': `${duration}s`,
-        '--cloud-delay': `${index * -6}s`,
-        '--cloud-scale': (0.94 + index * 0.08).toFixed(2),
-        '--cloud-blur': `${profile.weather === 'fog' ? 38 : 28}px`
-      }
-    }
-  })
-}
-
-export function shouldShowCloudLayer(weather: string) {
-  return CLOUD_WEATHER_TYPES.has(weather as WeatherType)
 }
 
 function resolveAccentEffect(effect: WeatherEffect): WeatherAccentEffect {
@@ -279,25 +208,8 @@ function resolveAccentEffect(effect: WeatherEffect): WeatherAccentEffect {
     return 'none'
   }
 
-  const weather = effect.weather
-  if (effect.isNight && weather === 'sunny') {
+  if (effect.isNight && effect.weather === 'sunny') {
     return 'aurora'
-  }
-
-  if (STORMY_WEATHER_TYPES.has(weather)) {
-    return 'none'
-  }
-
-  if (effect.season === 'spring' && CALM_WEATHER_TYPES.has(weather)) {
-    return 'sakura'
-  }
-
-  if (effect.season === 'autumn' && (CALM_WEATHER_TYPES.has(weather) || weather === 'windy')) {
-    return 'leaves'
-  }
-
-  if (effect.season === 'summer' && effect.isNight && CALM_WEATHER_TYPES.has(weather)) {
-    return 'fireflies'
   }
 
   return 'none'

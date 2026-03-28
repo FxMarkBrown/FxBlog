@@ -11,6 +11,7 @@ const tagRefs = ref<HTMLElement[]>([])
 const rafId = ref<number | null>(null)
 const rotateAngleX = ref(Math.PI / 600)
 const rotateAngleY = ref(Math.PI / 600)
+const isDocumentHidden = ref(false)
 
 const option = {
   radius: 140,
@@ -20,6 +21,10 @@ const option = {
 const tagList = ref<Array<{ x: number; y: number; z: number; ele: HTMLElement }>>([])
 
 onMounted(async () => {
+  if (import.meta.client) {
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    isDocumentHidden.value = document.hidden
+  }
   const response = await getTagsApi().catch(() => null)
   data.value = unwrapResponseData<TagSummary[] | null>(response) || []
   await nextTick()
@@ -28,6 +33,9 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   stopRotate()
+  if (import.meta.client) {
+    document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }
 })
 
 watch(data, async () => {
@@ -59,7 +67,9 @@ function initTags() {
     }
 
     element.style.color = `rgb(${Math.round(255 * Math.random())},${Math.round(255 * Math.random())},${Math.round(255 * Math.random())})`
-    tagList.value.push({ x, y, z, ele: element })
+    const tag = { x, y, z, ele: element }
+    tagList.value.push(tag)
+    setPosition(tag)
   }
 
   startRotate()
@@ -70,14 +80,9 @@ function initTags() {
  * @param tag 标签
  */
 function setPosition(tag: { x: number; y: number; z: number; ele: HTMLElement }) {
-  if (!wrapper.value) {
-    return
-  }
-
   const scale = (tag.z / option.radius / 2 + 0.5) * (option.maxFont / 16)
   tag.ele.style.transform =
-    `translate3d(${tag.x + wrapper.value.offsetWidth / 2 - tag.ele.offsetWidth / 2}px,` +
-    `${tag.y + wrapper.value.offsetHeight / 2 - tag.ele.offsetHeight / 2}px,0) scale(${scale})`
+    `translate3d(${tag.x}px, ${tag.y}px, 0) translate3d(-50%, -50%, 0) scale(${scale})`
   tag.ele.style.opacity = String(tag.z / option.radius / 2 + 0.7)
 }
 
@@ -121,7 +126,7 @@ function stopRotate() {
  * 开始旋转
  */
 function startRotate() {
-  if (rafId.value || !tagList.value.length) {
+  if (rafId.value || !tagList.value.length || isDocumentHidden.value) {
     return
   }
 
@@ -136,6 +141,23 @@ function startRotate() {
   }
 
   rafId.value = requestAnimationFrame(tick)
+}
+
+/**
+ * 页面不可见时暂停动画，恢复可见时继续。
+ */
+function handleVisibilityChange() {
+  if (!import.meta.client) {
+    return
+  }
+
+  isDocumentHidden.value = document.hidden
+  if (isDocumentHidden.value) {
+    stopRotate()
+    return
+  }
+
+  startRotate()
 }
 
 /**
@@ -183,9 +205,9 @@ function clickTag(item: TagSummary) {
 
 .tag-cloud p {
   position: absolute;
-  top: 0;
-  left: 0;
-  margin: 0 10px 15px 0;
+  top: 50%;
+  left: 50%;
+  margin: 0;
   line-height: 18px;
   font-size: 16px;
   padding: 4px 9px;
@@ -193,6 +215,7 @@ function clickTag(item: TagSummary) {
   border-radius: 3px;
   transition: opacity 0.3s ease;
   will-change: transform, opacity;
+  transform-origin: center center;
 }
 
 .tag-cloud p:hover {
