@@ -367,6 +367,7 @@ function closeDialog() {
   z-index: 3;
   overflow: hidden;
   border-radius: 24px;
+  background: transparent;
   outline: 2px solid rgba(96, 165, 250, 0.96);
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.9),
@@ -376,6 +377,7 @@ function closeDialog() {
 .avatar-cropper-canvas :deep(.cropper-face) {
   z-index: 4;
   border-radius: 24px;
+  background-color: transparent !important;
   background-image:
     linear-gradient(rgba(96, 165, 250, 0.12), rgba(96, 165, 250, 0.12)),
     linear-gradient(
