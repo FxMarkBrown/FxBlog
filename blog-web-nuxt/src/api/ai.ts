@@ -3,12 +3,12 @@ import { getToken } from '@/utils/cookie'
 
 // 获取 AI 会话可用模型列表。
 export function getConversationModelOptionsApi() {
-  return useApiClient()<ApiResponse<Record<string, unknown>[]>>('/api/ai/conversation/models')
+  return useApiClient()<ApiResponse<Record<string, unknown>[]>>('/api/ai/chat/models')
 }
 
 // 创建新的全局 AI 会话。
 export function createGlobalConversationApi(data: Record<string, unknown> = {}) {
-  return useApiClient()<ApiResponse<Record<string, unknown>>>('/api/ai/conversation/global', {
+  return useApiClient()<ApiResponse<Record<string, unknown>>>('/api/ai/chat/conversations/global', {
     method: 'POST',
     body: data
   })
@@ -16,7 +16,7 @@ export function createGlobalConversationApi(data: Record<string, unknown> = {}) 
 
 // 创建绑定文章上下文的 AI 会话。
 export function createArticleConversationApi(articleId: number | string, data: Record<string, unknown> = {}) {
-  return useApiClient()<ApiResponse<Record<string, unknown>>>(`/api/ai/conversation/article/${articleId}`, {
+  return useApiClient()<ApiResponse<Record<string, unknown>>>(`/api/ai/chat/conversations/article/${articleId}`, {
     method: 'POST',
     body: data
   })
@@ -24,26 +24,26 @@ export function createArticleConversationApi(articleId: number | string, data: R
 
 // 获取单个会话的详情信息。
 export function getConversationDetailApi(conversationId: number | string) {
-  return useApiClient()<ApiResponse<Record<string, unknown>>>(`/api/ai/conversation/detail/${conversationId}`)
+  return useApiClient()<ApiResponse<Record<string, unknown>>>(`/api/ai/chat/conversations/${conversationId}`)
 }
 
 // 分页获取会话列表。
 export function getConversationPageApi(query: Record<string, unknown>) {
-  return useApiClient()<ApiResponse<Record<string, unknown>>>('/api/ai/conversation/page', {
+  return useApiClient()<ApiResponse<Record<string, unknown>>>('/api/ai/chat/conversations', {
     query
   })
 }
 
 // 获取指定会话的消息列表。
 export function getConversationMessagesApi(conversationId: number | string, query: Record<string, unknown>) {
-  return useApiClient()<ApiResponse<Record<string, unknown>>>(`/api/ai/conversation/messages/${conversationId}`, {
+  return useApiClient()<ApiResponse<Record<string, unknown>>>(`/api/ai/chat/conversations/${conversationId}/messages`, {
     query
   })
 }
 
 // 获取当前用户的 AI 额度概览。
 export function getConversationQuotaApi() {
-  return useApiClient()<ApiResponse<Record<string, unknown>>>('/api/ai/conversation/quota')
+  return useApiClient()<ApiResponse<Record<string, unknown>>>('/api/ai/chat/quota')
 }
 
 // 发送流式消息，并逐段消费服务端 SSE 事件。
@@ -133,7 +133,7 @@ export async function streamConversationMessageApi(
 
 // 根据当前运行环境拼接流式请求地址。
 function resolveStreamRequestUrl(conversationId: number | string, apiBaseServer: string) {
-  const normalizedPath = `/api/ai/conversation/stream/${conversationId}`
+  const normalizedPath = `/api/ai/chat/conversations/${conversationId}/stream`
   if (import.meta.client) {
     return normalizedPath
   }
@@ -172,7 +172,7 @@ function parseSseChunk(chunk: string) {
 
 // 重命名指定会话。
 export function renameConversationApi(conversationId: number | string, title: string) {
-  return useApiClient()<ApiResponse<unknown>>(`/api/ai/conversation/rename/${conversationId}`, {
+  return useApiClient()<ApiResponse<unknown>>(`/api/ai/chat/conversations/${conversationId}/title`, {
     method: 'PUT',
     query: { title }
   })
@@ -180,7 +180,7 @@ export function renameConversationApi(conversationId: number | string, title: st
 
 // 删除指定会话。
 export function deleteConversationApi(conversationId: number | string) {
-  return useApiClient()<ApiResponse<unknown>>(`/api/ai/conversation/delete/${conversationId}`, {
+  return useApiClient()<ApiResponse<unknown>>(`/api/ai/chat/conversations/${conversationId}`, {
     method: 'DELETE'
   })
 }

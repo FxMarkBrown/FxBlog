@@ -33,7 +33,7 @@ function openArticleAi() {
   }
 
   router.push({
-    path: '/ai',
+    path: '/ai/chat',
     query: {
       mode: 'article',
       articleId: String(route.params.id || '')

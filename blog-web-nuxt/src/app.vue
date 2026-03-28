@@ -15,7 +15,7 @@ const authStore = useAuthStore()
 const siteStore = useSiteStore()
 
 const disableGlobalOverlays = computed(() => Boolean(route.meta.minimalShell))
-const showFloatingButtons = computed(() => route.path !== '/ai')
+const showFloatingButtons = computed(() => !route.path.startsWith('/ai'))
 let clickEffectHandler: ((event: MouseEvent) => void) | null = null
 
 /**
@@ -24,7 +24,7 @@ let clickEffectHandler: ((event: MouseEvent) => void) | null = null
  * @returns 页面 key
  */
 function getPageKey(currentRoute: { path: string; fullPath: string }) {
-  return currentRoute.path === '/ai' ? currentRoute.path : currentRoute.fullPath
+  return currentRoute.path.startsWith('/ai') ? currentRoute.path : currentRoute.fullPath
 }
 
 /**

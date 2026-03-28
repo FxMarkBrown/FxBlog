@@ -23,7 +23,7 @@ const routes: MobileMenuEntry[] = [
   { path: '/photos', title: '相册', icon: 'fas fa-images' },
   { path: '/messages', title: '留言', icon: 'fas fa-envelope' },
   { path: '/friends', title: '友链', icon: 'fas fa-users' },
-  { path: '/ai', title: '对话', icon: 'fas fa-robot' }
+  { path: '/ai', title: 'AI工作台', icon: 'fas fa-robot' }
 ]
 
 const shortcutEntries = computed(() => {
@@ -80,6 +80,14 @@ const aboutEntry = computed<MobileMenuEntry>(() => {
   }
 })
 
+function isRouteActive(path: string) {
+  if (path === '/ai') {
+    return route.path === '/ai' || route.path.startsWith('/ai/')
+  }
+
+  return route.path === path
+}
+
 /**
  * 关闭菜单
  */
@@ -121,7 +129,7 @@ async function handleLogout() {
               :key="menu.path"
               :to="menu.path"
               class="menu-item"
-              :class="{ active: route.path === menu.path }"
+              :class="{ active: isRouteActive(menu.path) }"
               @click="closeMenu"
             >
               <i :class="menu.icon"></i>
@@ -133,7 +141,7 @@ async function handleLogout() {
               :key="entry.path"
               :to="entry.path"
               class="menu-item shortcut-item"
-              :class="{ active: route.path === entry.path }"
+              :class="{ active: isRouteActive(entry.path) }"
               @click="closeMenu"
             >
               <i :class="entry.icon"></i>
@@ -146,7 +154,7 @@ async function handleLogout() {
               :key="authEntry.path"
               :to="authEntry.path"
               class="menu-item shortcut-item"
-              :class="{ active: route.path === authEntry.path }"
+              :class="{ active: isRouteActive(authEntry.path) }"
               @click="closeMenu"
             >
               <i :class="authEntry.icon"></i>
@@ -170,7 +178,7 @@ async function handleLogout() {
               :key="`about-${aboutEntry.title}`"
               :to="aboutEntry.path"
               class="menu-item shortcut-item"
-              :class="{ active: route.path === aboutEntry.path }"
+              :class="{ active: isRouteActive(aboutEntry.path) }"
               @click="closeMenu"
             >
               <i :class="aboutEntry.icon"></i>

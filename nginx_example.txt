@@ -38,7 +38,7 @@ server
     }
 
     # AI SSE 流式接口单独关闭缓冲与延长超时
-    location ^~ /api/ai/conversation/stream/ {
+    location ~ ^/api/ai/chat/conversations/.+/stream$ {
         proxy_pass http://127.0.0.1:8800;
         proxy_http_version 1.1;
         proxy_set_header Host $host;

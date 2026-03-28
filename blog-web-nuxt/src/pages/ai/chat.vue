@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import AiView from '@/views/ai/index.vue'
+import AiChatView from '@/views/ai/index.vue'
 
 definePageMeta({
   hideAnnouncement: true
@@ -7,5 +7,5 @@ definePageMeta({
 </script>
 
 <template>
-  <AiView />
+  <AiChatView />
 </template>

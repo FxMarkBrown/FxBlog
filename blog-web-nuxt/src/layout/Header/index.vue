@@ -46,7 +46,7 @@ const menuItems: MenuEntry[] = [
   { name: '相册', path: '/photos', icon: 'fas fa-images', colorClass: 'photos-link' },
   { name: '留言', path: '/messages', icon: 'fas fa-envelope', colorClass: 'message-link' },
   { name: '友链', path: '/friends', icon: 'fas fa-users', colorClass: 'friend-link' },
-  { name: 'AI对话', path: '/ai', icon: 'fas fa-robot', colorClass: 'ai-link' },
+  { name: 'AI工作台', path: '/ai', icon: 'fas fa-robot', colorClass: 'ai-link' },
   { key: 'about', name: '关于', path: '/about', icon: 'fas fa-info-circle', colorClass: 'about-link' }
 ]
 
@@ -212,6 +212,10 @@ function isActive(item: MenuEntry) {
 
   if (item.children?.length) {
     return item.children.some((child) => isChildActive(child))
+  }
+
+  if (item.path === '/ai') {
+    return route.path === '/ai' || route.path.startsWith('/ai/')
   }
 
   return route.path === item.path

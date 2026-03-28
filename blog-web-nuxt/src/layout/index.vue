@@ -12,7 +12,7 @@ if (shouldPrefetchOnServer) {
   await siteStore.fetchWebsiteInfo().catch(() => null)
 }
 
-const routeViewKey = computed(() => (route.path === '/ai' ? route.path : route.fullPath))
+const routeViewKey = computed(() => (route.path.startsWith('/ai') ? route.path : route.fullPath))
 
 let unreadDebounce: ReturnType<typeof setTimeout> | undefined
 

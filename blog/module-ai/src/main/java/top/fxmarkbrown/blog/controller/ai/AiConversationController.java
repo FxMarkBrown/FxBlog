@@ -32,10 +32,10 @@ import top.fxmarkbrown.blog.vo.ai.AiQuotaSnapshotVo;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/ai/conversation")
+@RequestMapping("/api/ai/chat")
 @RequiredArgsConstructor
 @SaCheckLogin
-@Tag(name = "门户-AI 会话")
+@Tag(name = "门户-AI 一般对话任务")
 public class AiConversationController {
 
     private final AiConversationService aiConversationService;
@@ -47,33 +47,33 @@ public class AiConversationController {
         return Result.success(aiConversationService.listChatModels());
     }
 
-    @PostMapping("/global")
-    @Operation(summary = "创建全局 AI 会话")
+    @PostMapping("/conversations/global")
+    @Operation(summary = "创建一般对话任务会话")
     public Result<AiConversationDetailVo> createGlobalConversation(@RequestBody(required = false) AiConversationCreateDto createDto) {
         return Result.success(aiConversationService.createGlobalConversation(createDto));
     }
 
-    @PostMapping("/article/{articleId}")
-    @Operation(summary = "创建文章 AI 会话")
+    @PostMapping("/conversations/article/{articleId}")
+    @Operation(summary = "创建文章上下文问答任务会话")
     public Result<AiConversationDetailVo> createArticleConversation(@PathVariable Long articleId,
                                                                     @RequestBody(required = false) AiConversationCreateDto createDto) {
         return Result.success(aiConversationService.createArticleConversation(articleId, createDto));
     }
 
-    @GetMapping("/detail/{conversationId}")
-    @Operation(summary = "获取 AI 会话详情")
+    @GetMapping("/conversations/{conversationId}")
+    @Operation(summary = "获取一般对话任务会话详情")
     public Result<AiConversationDetailVo> getConversationDetail(@PathVariable Long conversationId) {
         return Result.success(aiConversationService.getConversationDetail(conversationId));
     }
 
-    @GetMapping("/page")
-    @Operation(summary = "分页获取 AI 会话列表")
+    @GetMapping("/conversations")
+    @Operation(summary = "分页获取一般对话任务会话列表")
     public Result<IPage<AiConversationListVo>> pageConversations(@RequestParam(required = false) String type) {
         return Result.success(aiConversationService.pageConversations(type));
     }
 
-    @GetMapping("/messages/{conversationId}")
-    @Operation(summary = "分页获取 AI 会话消息")
+    @GetMapping("/conversations/{conversationId}/messages")
+    @Operation(summary = "分页获取一般对话任务会话消息")
     public Result<IPage<AiMessageVo>> pageMessages(@PathVariable Long conversationId) {
         return Result.success(aiConversationService.pageMessages(conversationId));
     }
@@ -84,8 +84,8 @@ public class AiConversationController {
         return Result.success(aiQuotaCoreService.getQuotaSnapshot(StpUtil.getLoginIdAsLong()));
     }
 
-    @PostMapping(value = "/stream/{conversationId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    @Operation(summary = "流式发送 AI 会话消息")
+    @PostMapping(value = "/conversations/{conversationId}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "流式发送一般对话任务消息")
     public SseEmitter streamMessage(@PathVariable Long conversationId,
                                     @RequestBody AiSendMessageDto sendMessageDto,
                                     HttpServletResponse response) {
@@ -94,15 +94,15 @@ public class AiConversationController {
         return aiConversationService.streamMessage(conversationId, sendMessageDto);
     }
 
-    @PutMapping("/rename/{conversationId}")
-    @Operation(summary = "重命名 AI 会话")
+    @PutMapping("/conversations/{conversationId}/title")
+    @Operation(summary = "重命名一般对话任务会话")
     public Result<Void> renameConversation(@PathVariable Long conversationId, @RequestParam String title) {
         aiConversationService.renameConversation(conversationId, title);
         return Result.success();
     }
 
-    @DeleteMapping("/delete/{conversationId}")
-    @Operation(summary = "删除 AI 会话")
+    @DeleteMapping("/conversations/{conversationId}")
+    @Operation(summary = "删除一般对话任务会话")
     public Result<Void> deleteConversation(@PathVariable Long conversationId) {
         aiConversationService.deleteConversation(conversationId);
         return Result.success();
