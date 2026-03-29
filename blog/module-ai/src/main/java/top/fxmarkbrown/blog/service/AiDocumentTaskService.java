@@ -37,12 +37,12 @@ public interface AiDocumentTaskService {
     AiDocumentTaskDetailVo renameTask(Long taskId, AiDocumentTaskRenameDto renameDto);
 
     /**
-     * 删除指定文档任务及其关联结果。
+     * 删除指定文档任务及其关联结果、对话、向量索引和源文件。
      */
     void deleteTask(Long taskId);
 
     /**
-     * 清理所有已过期的文档任务及其关联结果。
+     * 清理所有已过期的文档任务及其关联结果、对话、向量索引和源文件。
      */
     int cleanupExpiredTasks();
 

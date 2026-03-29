@@ -7,14 +7,13 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import top.fxmarkbrown.blog.entity.*;
 import top.fxmarkbrown.blog.mapper.*;
 import top.fxmarkbrown.blog.service.AiChatModelService;
-import top.fxmarkbrown.blog.service.AiDocumentVectorIndexService;
+import top.fxmarkbrown.blog.service.AiDocumentTaskCleanupService;
 import top.fxmarkbrown.blog.service.SysAiDocumentTaskService;
 import top.fxmarkbrown.blog.utils.JsonUtil;
 import top.fxmarkbrown.blog.utils.PageUtil;
@@ -36,7 +35,7 @@ public class SysAiDocumentTaskServiceImpl implements SysAiDocumentTaskService {
     private final SysAiDocumentNodeMessageMapper documentNodeMessageMapper;
     private final SysUserMapper userMapper;
     private final AiChatModelService aiChatModelService;
-    private final ObjectProvider<AiDocumentVectorIndexService> documentVectorIndexServiceProvider;
+    private final AiDocumentTaskCleanupService aiDocumentTaskCleanupService;
 
     @Override
     public IPage<AiDocumentTaskAdminVo> pageTasks(String status, String provider, String keyword, String userKeyword) {
@@ -153,37 +152,7 @@ public class SysAiDocumentTaskServiceImpl implements SysAiDocumentTaskService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteTasks(List<Long> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return;
-        }
-        List<Long> normalizedIds = ids.stream()
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-        if (normalizedIds.isEmpty()) {
-            return;
-        }
-
-        List<SysAiDocumentNodeThread> threads = documentNodeThreadMapper.selectList(new LambdaQueryWrapper<SysAiDocumentNodeThread>()
-                .in(SysAiDocumentNodeThread::getTaskId, normalizedIds));
-        List<Long> threadIds = threads.stream()
-                .map(SysAiDocumentNodeThread::getId)
-                .filter(Objects::nonNull)
-                .toList();
-
-        if (!threadIds.isEmpty()) {
-            documentNodeMessageMapper.delete(new LambdaQueryWrapper<SysAiDocumentNodeMessage>()
-                    .in(SysAiDocumentNodeMessage::getThreadId, threadIds));
-        }
-        documentNodeThreadMapper.delete(new LambdaQueryWrapper<SysAiDocumentNodeThread>()
-                .in(SysAiDocumentNodeThread::getTaskId, normalizedIds));
-        documentResultMapper.deleteByIds(normalizedIds);
-
-        Optional.ofNullable(documentVectorIndexServiceProvider.getIfAvailable())
-                .filter(AiDocumentVectorIndexService::isReady)
-                .ifPresent(service -> normalizedIds.forEach(service::deleteTaskIndex));
-
-        documentTaskMapper.deleteByIds(normalizedIds);
+        aiDocumentTaskCleanupService.deleteTasksCascade(ids);
     }
 
     private List<Long> findMatchedUserIds(String userKeyword) {

@@ -7,7 +7,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.Strings;
 import org.dromara.x.file.storage.core.FileInfo;
 import org.dromara.x.file.storage.core.FileStorageService;
 import org.springframework.web.bind.annotation.*;
@@ -145,15 +144,7 @@ public class FileController {
     @Operation(summary = "删除文件")
     @SaCheckPermission("sys:file:delete")
     public Result<Boolean> delete(String url) {
-        String storageUrl = fileDetailService.resolveStorageUrl(url);
-        boolean flag = fileStorageService.delete(storageUrl);
-        if (!flag && !Strings.CS.equals(storageUrl, url)) {
-            flag = fileStorageService.delete(url);
-        }
-        if (flag) {
-            fileDetailService.delete(url);
-        }
-        return Result.success(flag);
+        return Result.success(fileDetailService.deleteManagedFile(url));
     }
 
     private String buildUploadPath(String source) {

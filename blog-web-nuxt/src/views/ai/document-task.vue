@@ -199,6 +199,14 @@ watch(selectedOutlineNodeId, () => {
   void rebuildCanvas()
 })
 
+function normalizeTaskStatus(status?: string) {
+  return String(status || '').trim().toUpperCase()
+}
+
+function isParsedTask(status?: string) {
+  return normalizeTaskStatus(status) === 'PARSED'
+}
+
 async function loadTask(silent = false) {
   if (!taskId.value) {
     return
@@ -215,6 +223,14 @@ async function loadTask(silent = false) {
     ])
     taskDetail.value = unwrapResponseData<DocumentTaskDetail | null>(detailResponse)
     parseResult.value = unwrapResponseData<DocumentParseResult | null>(resultResponse)
+
+    if (!isParsedTask(taskDetail.value?.status)) {
+      if (!silent) {
+        ElMessage.info('文档尚未解析完成，请稍后从任务列表进入画布')
+      }
+      await router.replace('/ai/document')
+      return
+    }
 
     const rootNodeId = parseResult.value?.root?.id
     if (rootNodeId && previousRootId && previousRootId !== rootNodeId) {

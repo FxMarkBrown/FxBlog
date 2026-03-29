@@ -1,5 +1,6 @@
 dependencies {
     api(project(":module-commom"))
+    implementation(project(":module-file"))
 
     implementation(platform(libs.spring.ai.bom))
     implementation(enforcedPlatform(libs.grpc.bom))

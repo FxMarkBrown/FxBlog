@@ -25,7 +25,7 @@ public interface SysAiDocumentTaskService {
     IPage<AiDocumentNodeMessageVo> pageMessages(Long threadId);
 
     /**
-     * 批量删除文档任务及其关联结果、线程、消息和向量索引。
+     * 批量删除文档任务及其关联结果、线程、消息、向量索引和源文件。
      */
     void deleteTasks(List<Long> ids);
 }

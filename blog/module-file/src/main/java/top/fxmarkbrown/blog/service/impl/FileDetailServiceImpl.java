@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.dromara.x.file.storage.core.FileInfo;
+import org.dromara.x.file.storage.core.FileStorageService;
 import org.dromara.x.file.storage.core.hash.HashInfo;
 import org.dromara.x.file.storage.core.upload.FilePartInfo;
 import org.springframework.beans.BeanUtils;
@@ -39,6 +40,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -54,6 +56,8 @@ public class FileDetailServiceImpl extends ServiceImpl<FileDetailMapper, FileDet
     private final FilePartDetailService filePartDetailService;
 
     private final SysFileOssMapper sysFileOssMapper;
+
+    private final FileStorageService fileStorageService;
 
     @Override
     public IPage<FileDetail> selectPage(FileDetail fileDetail) {
@@ -142,6 +146,40 @@ public class FileDetailServiceImpl extends ServiceImpl<FileDetailMapper, FileDet
         }
         remove(new LambdaQueryWrapper<FileDetail>().in(FileDetail::getUrl, candidates));
         return true;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteManagedFile(String url) {
+        if (!StringUtils.hasText(url)) {
+            return true;
+        }
+        FileDetail detail = findByUrl(url);
+        if (detail != null) {
+            return deleteManagedFile(detail);
+        }
+        String storageUrl = resolveStorageUrl(url);
+        boolean deleted = fileStorageService.delete(storageUrl);
+        if (!deleted && !Objects.equals(storageUrl, url)) {
+            deleted = fileStorageService.delete(url);
+        }
+        if (deleted) {
+            delete(url);
+        }
+        return deleted;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteManagedFileById(String id) {
+        if (!StringUtils.hasText(id)) {
+            return true;
+        }
+        FileDetail detail = getById(id);
+        if (detail == null) {
+            return true;
+        }
+        return deleteManagedFile(detail);
     }
 
     @Override
@@ -557,5 +595,55 @@ public class FileDetailServiceImpl extends ServiceImpl<FileDetailMapper, FileDet
     private String defaultString(String value) {
         return value == null ? "" : value;
     }
-}
 
+    private boolean deleteManagedFile(FileDetail detail) {
+        boolean deleted = deletePrimaryFile(detail);
+        deleteThumbnailFile(detail);
+        removeById(detail.getId());
+        return deleted;
+    }
+
+    private boolean deletePrimaryFile(FileDetail detail) {
+        if (detail == null) {
+            return true;
+        }
+        if (FileOssEnum.LOCAL.getValue().equals(detail.getPlatform())) {
+            try {
+                SysFileOss ossConfig = requireLocalOssConfig(detail.getPlatform());
+                return Files.deleteIfExists(resolvePhysicalFile(detail, ossConfig));
+            } catch (IOException e) {
+                throw new ServiceException("删除本地文件失败: " + e.getMessage());
+            }
+        }
+        String storageUrl = resolveStorageUrl(detail.getUrl());
+        boolean deleted = fileStorageService.delete(storageUrl);
+        if (!deleted && !Objects.equals(storageUrl, detail.getUrl())) {
+            deleted = fileStorageService.delete(detail.getUrl());
+        }
+        return deleted;
+    }
+
+    private void deleteThumbnailFile(FileDetail detail) {
+        if (detail == null || (!StringUtils.hasText(detail.getThFilename()) && !StringUtils.hasText(detail.getThUrl()))) {
+            return;
+        }
+        if (FileOssEnum.LOCAL.getValue().equals(detail.getPlatform())) {
+            try {
+                SysFileOss ossConfig = requireLocalOssConfig(detail.getPlatform());
+                if (StringUtils.hasText(detail.getThFilename())) {
+                    Files.deleteIfExists(resolvePhysicalFile(ossConfig, detail.getBasePath(), detail.getPath(), detail.getThFilename()));
+                }
+                return;
+            } catch (IOException e) {
+                throw new ServiceException("删除本地缩略图失败: " + e.getMessage());
+            }
+        }
+        if (StringUtils.hasText(detail.getThUrl())) {
+            String thumbnailStorageUrl = resolveStorageUrl(detail.getThUrl());
+            boolean deleted = fileStorageService.delete(thumbnailStorageUrl);
+            if (!deleted && !Objects.equals(thumbnailStorageUrl, detail.getThUrl())) {
+                fileStorageService.delete(detail.getThUrl());
+            }
+        }
+    }
+}

@@ -9,7 +9,7 @@ import {
 import {uploadFileApi} from '@/api/file'
 import {useNoIndexSeo} from '@/composables/useSeo'
 import {unwrapResponseData} from '@/utils/response'
-import type {DocumentTaskDetail, DocumentTaskListItem} from '@/types/ai-document'
+import type {DocumentTaskListItem} from '@/types/ai-document'
 
 const runtimeConfig = useRuntimeConfig()
 const router = useRouter()
@@ -19,31 +19,78 @@ const loading = ref(false)
 const creating = ref(false)
 const tasks = ref<DocumentTaskListItem[]>([])
 const uploadInputRef = ref<HTMLInputElement | null>(null)
+let taskPollingTimer: ReturnType<typeof setInterval> | null = null
 
 useNoIndexSeo({
   title: () => `文档任务 - ${runtimeConfig.public.siteName}`,
   description: '面向结构化解析、节点画布与上下文问答的文档任务工作台'
 })
 
-async function loadPageData() {
-  loading.value = true
+function normalizeTaskStatus(status?: string) {
+  return String(status || '').trim().toUpperCase()
+}
+
+function isTaskReady(status?: string) {
+  return normalizeTaskStatus(status) === 'PARSED'
+}
+
+function shouldPollTaskList() {
+  return tasks.value.some((task) => ['SUBMITTED', 'PROCESSING'].includes(normalizeTaskStatus(task.status)))
+}
+
+function stopTaskPolling() {
+  if (taskPollingTimer && import.meta.client) {
+    window.clearInterval(taskPollingTimer)
+  }
+  taskPollingTimer = null
+}
+
+function syncTaskPolling() {
+  if (!import.meta.client) {
+    return
+  }
+  if (!shouldPollTaskList()) {
+    stopTaskPolling()
+    return
+  }
+  if (taskPollingTimer) {
+    return
+  }
+  taskPollingTimer = window.setInterval(() => {
+    void loadPageData(true)
+  }, 4000)
+}
+
+async function loadPageData(silent = false) {
+  if (!silent) {
+    loading.value = true
+  }
   try {
     const listResponse = await getDocumentTaskListApi()
     const records = unwrapResponseData<DocumentTaskListItem[] | null>(listResponse)
     tasks.value = Array.isArray(records) ? records : []
+    syncTaskPolling()
   } catch (error) {
-    ElMessage.error((error as Error)?.message || '文档任务加载失败')
+    if (!silent) {
+      ElMessage.error((error as Error)?.message || '文档任务加载失败')
+    }
   } finally {
-    loading.value = false
+    if (!silent) {
+      loading.value = false
+    }
   }
 }
 
-function openTask(taskId: number) {
+function openTask(taskId: number, status?: string) {
+  if (!isTaskReady(status)) {
+    ElMessage.info('文档解析完成后才可进入画布')
+    return
+  }
   router.push(`/ai/document/${taskId}`)
 }
 
 function formatTaskStatus(status?: string) {
-  const normalized = String(status || '').toUpperCase()
+  const normalized = normalizeTaskStatus(status)
   if (normalized === 'PARSED') {
     return '已解析'
   }
@@ -115,6 +162,7 @@ async function handleDeleteTask(task: DocumentTaskListItem) {
     })
     await deleteDocumentTaskApi(task.taskId)
     tasks.value = tasks.value.filter(item => item.taskId !== task.taskId)
+    syncTaskPolling()
     ElMessage.success('任务已删除')
   } catch (error) {
     if (error === 'cancel' || error === 'close') {
@@ -155,14 +203,9 @@ async function handleDocumentUpload(event: Event) {
       sourceUrl,
       sourceFileId
     }
-    const createResponse = await createDocumentTaskApi(requestBody)
-    const created = unwrapResponseData<DocumentTaskDetail | null>(createResponse)
-    ElMessage.success('文档任务已创建')
+    await createDocumentTaskApi(requestBody)
+    ElMessage.success('文档任务已提交，解析完成后将开放进入画布')
     await loadPageData()
-    const nextTaskId = created?.taskId || tasks.value[0]?.taskId
-    if (nextTaskId) {
-      await router.push(`/ai/document/${nextTaskId}`)
-    }
   } catch (error) {
     ElMessage.error((error as Error)?.message || '上传文档失败')
   } finally {
@@ -180,6 +223,10 @@ onMounted(() => {
   }
 
   void loadPageData()
+})
+
+onBeforeUnmount(() => {
+  stopTaskPolling()
 })
 </script>
 
@@ -233,11 +280,12 @@ onMounted(() => {
           >
             <div
               role="button"
-              tabindex="0"
+              :tabindex="isTaskReady(task.status) ? 0 : -1"
               class="task-item__surface"
-              @click="openTask(task.taskId)"
-              @keydown.enter.prevent="openTask(task.taskId)"
-              @keydown.space.prevent="openTask(task.taskId)"
+              :class="{ 'is-disabled': !isTaskReady(task.status) }"
+              @click="openTask(task.taskId, task.status)"
+              @keydown.enter.prevent="openTask(task.taskId, task.status)"
+              @keydown.space.prevent="openTask(task.taskId, task.status)"
             >
               <div class="task-item__main">
                 <div class="task-item__top">
@@ -248,6 +296,7 @@ onMounted(() => {
                   <span class="task-item__pages">{{ task.pageCount || 0 }} 页</span>
                 </div>
                 <p>{{ task.fileName || '未命名文件' }}</p>
+                <p v-if="!isTaskReady(task.status)" class="task-item__hint">解析完成后可进入画布</p>
               </div>
               <div class="task-item__meta">
                 <span v-if="task.expireAt">保留至 {{ task.expireAt }}</span>
@@ -495,6 +544,16 @@ onMounted(() => {
     border-color: rgba(79, 70, 229, 0.26);
     box-shadow: 0 16px 30px rgba(79, 70, 229, 0.08);
   }
+
+  &.is-disabled {
+    cursor: default;
+  }
+
+  &.is-disabled:hover {
+    transform: none;
+    border-color: rgba(148, 163, 184, 0.16);
+    box-shadow: none;
+  }
 }
 
 .task-item__top {
@@ -523,6 +582,12 @@ onMounted(() => {
 .task-item__meta {
   color: #475569;
   margin: 0;
+}
+
+.task-item__hint {
+  margin-top: 8px !important;
+  color: #64748b;
+  font-size: 0.84rem;
 }
 
 .task-item__meta {
@@ -649,6 +714,11 @@ onMounted(() => {
   box-shadow: 0 12px 26px rgba(2, 6, 23, 0.2);
 }
 
+:global(:root[data-theme='dark'] .task-item__surface.is-disabled:hover) {
+  border-color: rgba(71, 85, 105, 0.28);
+  box-shadow: none;
+}
+
 :global(:root[data-theme='dark'] .task-item__headline h3) {
   color: rgba(241, 245, 249, 0.96);
 }
@@ -657,6 +727,10 @@ onMounted(() => {
 :global(:root[data-theme='dark'] .task-item__meta),
 :global(:root[data-theme='dark'] .task-item__pages) {
   color: rgba(148, 163, 184, 0.92);
+}
+
+:global(:root[data-theme='dark'] .task-item__hint) {
+  color: rgba(148, 163, 184, 0.84);
 }
 
 :global(:root[data-theme='dark'] .task-action) {

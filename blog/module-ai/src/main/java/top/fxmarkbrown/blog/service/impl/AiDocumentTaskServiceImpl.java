@@ -66,6 +66,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
     private final AiChatModelService aiChatModelService;
     private final AiModelQuotaBillingService aiModelQuotaBillingService;
     private final AiQuotaCoreService aiQuotaCoreService;
+    private final AiDocumentTaskCleanupService aiDocumentTaskCleanupService;
     private final ObjectProvider<AiDocumentVectorIndexService> documentVectorIndexServiceProvider;
     private final SysAiDocumentNodeThreadMapper documentNodeThreadMapper;
     private final SysAiDocumentNodeMessageMapper documentNodeMessageMapper;
@@ -174,8 +175,8 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
 
     @Override
     public void deleteTask(Long taskId) {
-        DocumentTaskAggregate aggregate = requireAggregate(taskId);
-        deletePersistedTask(aggregate.taskEntity());
+        requireAggregate(taskId);
+        aiDocumentTaskCleanupService.deleteTaskCascade(taskId);
     }
 
     @Override
@@ -189,7 +190,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         int deleted = 0;
         for (SysAiDocumentTask expiredTask : expiredTasks) {
             try {
-                deletePersistedTask(expiredTask);
+                aiDocumentTaskCleanupService.deleteTaskCascade(expiredTask.getId());
                 deleted++;
             } catch (Exception ex) {
                 log.warn("清理过期文档任务失败, taskId={}", expiredTask.getId(), ex);
@@ -484,21 +485,6 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         } else {
             documentResultMapper.updateById(resultEntity);
         }
-    }
-
-    private void deletePersistedTask(SysAiDocumentTask taskEntity) {
-        if (taskEntity == null || taskEntity.getId() == null) {
-            throw new IllegalStateException("待删除文档任务不存在");
-        }
-        deleteTaskVectorCollection(taskEntity.getId());
-        documentResultMapper.deleteById(taskEntity.getId());
-        documentTaskMapper.deleteById(taskEntity.getId());
-    }
-
-    private void deleteTaskVectorCollection(Long taskId) {
-        Optional.ofNullable(documentVectorIndexServiceProvider.getIfAvailable())
-                .filter(AiDocumentVectorIndexService::isReady)
-                .ifPresent(service -> service.deleteTaskIndex(taskId));
     }
 
     private void syncTaskVectorIndexIfParsed(DocumentTaskAggregate aggregate) {

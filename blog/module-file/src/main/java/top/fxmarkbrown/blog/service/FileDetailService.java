@@ -28,6 +28,16 @@ public interface FileDetailService extends FileRecorder, IService<FileDetail> {
     boolean delete(String url);
 
     /**
+     * 按文件访问地址删除托管文件及其文件记录。
+     */
+    boolean deleteManagedFile(String url);
+
+    /**
+     * 按文件 ID 删除托管文件及其文件记录。
+     */
+    boolean deleteManagedFileById(String id);
+
+    /**
      * 判断指定路径下是否已存在同名文件
      */
     boolean existsByPathAndFilename(String path, String filename);
