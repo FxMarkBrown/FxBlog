@@ -6,15 +6,24 @@ import type { Connection, Edge, Node, OnConnectStartParams } from '@vue-flow/cor
 import { ConnectionMode, MarkerType, VueFlow } from '@vue-flow/core'
 import DocumentCanvasNode from '@/components/ai-document/DocumentCanvasNode.vue'
 import { getConversationModelOptionsApi } from '@/api/ai'
-import { getDocumentTaskDetailApi, getDocumentTaskResultApi, streamDocumentNodeApi } from '@/api/ai-document'
+import {
+  getDocumentNodeMessagesApi,
+  getDocumentNodeThreadApi,
+  getDocumentTaskDetailApi,
+  getDocumentTaskResultApi,
+  streamDocumentNodeApi
+} from '@/api/ai-document'
 import type {
   DocumentContextNode,
   DocumentKnowledgeFlowEdge,
   DocumentNodeAnswer,
+  DocumentNodeMessage,
+  DocumentNodeThread,
   DocumentParseResult,
   DocumentTaskDetail,
   DocumentTreeNode
 } from '@/types/ai-document'
+import type { PageResult } from '@/types/common'
 import { normalizeMarkdownContent } from '@/utils/ai-markdown'
 import { unwrapResponseData } from '@/utils/response'
 import { getThemeMode, initTheme, setThemeMode } from '@/utils/theme'
@@ -27,6 +36,8 @@ type ChatState = {
   mode: QueryModePreset
   question: string
   sending: boolean
+  threadId?: number
+  historyLoaded?: boolean
   selectedNodeIds?: string[]
   modelId?: string
   answer?: string
@@ -1099,8 +1110,9 @@ function handleTogglePreview(nodeId: string) {
   toggleSetValue(previewOpenIds, nodeId)
 }
 
-function handleToggleChat(nodeId: string) {
+async function handleToggleChat(nodeId: string) {
   ensureChatState(nodeId)
+  const shouldLoadHistory = !chatOpenIds.value.has(nodeId)
   activeAnswerNodeId.value = nodeId
   toggleSetValue(chatOpenIds, nodeId)
   if (!chatOpenIds.value.has(nodeId) && activeAnswerNodeId.value === nodeId) {
@@ -1108,6 +1120,9 @@ function handleToggleChat(nodeId: string) {
   }
   if (!chatOpenIds.value.has(nodeId) && connectingSocketChatNodeId.value === nodeId) {
     connectingSocketChatNodeId.value = ''
+  }
+  if (shouldLoadHistory && chatOpenIds.value.has(nodeId)) {
+    await loadNodeThreadState(nodeId)
   }
 }
 
@@ -1149,6 +1164,7 @@ async function handleSubmitQuestion(nodeId: string) {
     [nodeId]: {
       ...currentState,
       sending: true,
+      historyLoaded: true,
       modelId: selectedModelId.value || currentState.modelId || '',
       error: '',
       answer: '',
@@ -1182,6 +1198,8 @@ async function handleSubmitQuestion(nodeId: string) {
             ...getChatState(nodeId),
             question,
             sending: true,
+            threadId: metaAnswer?.threadId,
+            historyLoaded: true,
             error: '',
             selectedNodeIds,
             modelId: String(metaAnswer?.modelId || selectedModelId.value || ''),
@@ -1213,6 +1231,8 @@ async function handleSubmitQuestion(nodeId: string) {
             ...getChatState(nodeId),
             question,
             sending: false,
+            threadId: answer?.threadId,
+            historyLoaded: true,
             error: '',
             selectedNodeIds,
             modelId: String(answer?.modelId || selectedModelId.value || ''),
@@ -1233,6 +1253,7 @@ async function handleSubmitQuestion(nodeId: string) {
             ...getChatState(nodeId),
             question,
             sending: false,
+            historyLoaded: true,
             error: error.message || '节点问答失败'
           }
         }
@@ -1250,10 +1271,87 @@ async function handleSubmitQuestion(nodeId: string) {
         ...getChatState(nodeId),
         question,
         sending: false,
+        historyLoaded: true,
         error: (error as Error)?.message || '节点问答失败'
       }
     }
   }
+}
+
+async function loadNodeThreadState(nodeId: string) {
+  if (!taskId.value) {
+    return
+  }
+  const currentState = getChatState(nodeId)
+  if (currentState.historyLoaded) {
+    return
+  }
+
+  try {
+    const threadResponse = await getDocumentNodeThreadApi(taskId.value, nodeId)
+    const thread = unwrapResponseData<DocumentNodeThread | null>(threadResponse)
+    if (!thread?.threadId) {
+      chatStateMap.value = {
+        ...chatStateMap.value,
+        [nodeId]: {
+          ...currentState,
+          historyLoaded: true,
+          threadId: undefined
+        }
+      }
+      return
+    }
+
+    const messageResponse = await getDocumentNodeMessagesApi(taskId.value, nodeId, { pageNum: 1, pageSize: 50 })
+    const page = unwrapResponseData<PageResult<DocumentNodeMessage> | null>(messageResponse) || {}
+    const messages = Array.isArray(page.records) ? page.records : []
+    const assistantIndex = findLastMessageIndex(messages, 'assistant')
+    const assistantMessage = assistantIndex >= 0 ? messages[assistantIndex] : null
+    const userMessage = assistantIndex >= 0
+      ? findPreviousMessage(messages, assistantIndex - 1, 'user')
+      : findPreviousMessage(messages, messages.length - 1, 'user')
+
+    chatStateMap.value = {
+      ...chatStateMap.value,
+      [nodeId]: {
+        ...currentState,
+        threadId: Number(thread.threadId),
+        historyLoaded: true,
+        question: String(userMessage?.content || currentState.question || ''),
+        answer: assistantMessage?.content ? normalizeMarkdownContent(String(assistantMessage.content), true) : '',
+        modelId: String(assistantMessage?.modelId || thread.modelId || currentState.modelId || ''),
+        error: '',
+        citations: assistantMessage?.citations || [],
+        usedNodes: assistantMessage?.usedNodes || [],
+        candidateNodes: assistantMessage?.candidateNodes || [],
+        knowledgeFlowEdges: assistantMessage?.knowledgeFlowEdges || [],
+        contextPlan: assistantMessage?.contextPlan,
+        budgetReport: assistantMessage?.budgetReport,
+        selectedNodeIds: assistantMessage?.selectedNodeIds || currentState.selectedNodeIds || []
+      }
+    }
+  } catch (error) {
+    ElMessage.error((error as Error)?.message || '节点对话历史加载失败')
+  }
+}
+
+function findLastMessageIndex(messages: DocumentNodeMessage[], role: string) {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    if (String(messages[index]?.role || '') === role) {
+      return index
+    }
+  }
+  return -1
+}
+
+function findPreviousMessage(messages: DocumentNodeMessage[], startIndex: number, role: string) {
+  for (let index = startIndex; index >= 0; index -= 1) {
+    const message = messages[index]
+    if (String(message?.role || '') === role) {
+      return message
+    }
+  }
+  return null
 }
 
 function buildAskPayloadByMode(mode: QueryModePreset = 'balanced') {
@@ -1649,6 +1747,7 @@ function createDefaultChatState(): ChatState {
     question: '',
     mode: 'balanced',
     sending: false,
+    historyLoaded: false,
     modelId: '',
     answer: '',
     error: '',

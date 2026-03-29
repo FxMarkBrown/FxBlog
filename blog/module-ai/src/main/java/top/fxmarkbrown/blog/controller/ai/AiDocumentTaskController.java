@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,7 +21,8 @@ import top.fxmarkbrown.blog.dto.ai.AiDocumentNodeAskDto;
 import top.fxmarkbrown.blog.dto.ai.AiDocumentTaskCreateDto;
 import top.fxmarkbrown.blog.dto.ai.AiDocumentTaskRenameDto;
 import top.fxmarkbrown.blog.service.AiDocumentTaskService;
-import top.fxmarkbrown.blog.vo.ai.AiDocumentNodeAnswerVo;
+import top.fxmarkbrown.blog.vo.ai.AiDocumentNodeMessageVo;
+import top.fxmarkbrown.blog.vo.ai.AiDocumentNodeThreadVo;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentParseResultVo;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentTaskDetailVo;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentTaskListVo;
@@ -74,12 +76,18 @@ public class AiDocumentTaskController {
         return Result.success(aiDocumentTaskService.getTaskResult(taskId));
     }
 
-    @PostMapping("/tasks/{taskId}/nodes/{nodeId}/ask")
-    @Operation(summary = "对文档节点发起问答")
-    public Result<AiDocumentNodeAnswerVo> askNode(@PathVariable Long taskId,
-                                                  @PathVariable String nodeId,
-                                                  @RequestBody AiDocumentNodeAskDto askDto) {
-        return Result.success(aiDocumentTaskService.askNode(taskId, nodeId, askDto));
+    @GetMapping("/tasks/{taskId}/nodes/{nodeId}/thread")
+    @Operation(summary = "获取文档节点线程详情")
+    public Result<AiDocumentNodeThreadVo> getNodeThread(@PathVariable Long taskId,
+                                                        @PathVariable String nodeId) {
+        return Result.success(aiDocumentTaskService.getNodeThread(taskId, nodeId));
+    }
+
+    @GetMapping("/tasks/{taskId}/nodes/{nodeId}/messages")
+    @Operation(summary = "分页获取文档节点线程消息")
+    public Result<IPage<AiDocumentNodeMessageVo>> pageNodeMessages(@PathVariable Long taskId,
+                                                                   @PathVariable String nodeId) {
+        return Result.success(aiDocumentTaskService.pageNodeMessages(taskId, nodeId));
     }
 
     @PostMapping(value = "/tasks/{taskId}/nodes/{nodeId}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)

@@ -1,25 +1,32 @@
 package top.fxmarkbrown.blog.vo.ai;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
+import top.fxmarkbrown.blog.utils.DateUtil;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
-public class AiDocumentNodeAnswerVo {
+public class AiDocumentNodeMessageVo {
 
-    private Long taskId;
+    private Long id;
 
     private Long threadId;
 
-    private String nodeId;
+    private String role;
 
-    private String question;
-
-    private String answer;
+    private String content;
 
     private String modelId;
 
-    private List<String> contextNodeIds;
+    private Integer tokensIn;
+
+    private Integer tokensOut;
+
+    private String quotePayload;
+
+    private List<String> selectedNodeIds;
 
     private List<AiDocumentNodeCitationVo> citations;
 
@@ -32,4 +39,7 @@ public class AiDocumentNodeAnswerVo {
     private List<AiDocumentContextNodeVo> candidateNodes;
 
     private List<AiDocumentKnowledgeFlowEdgeVo> knowledgeFlowEdges;
+
+    @JsonFormat(pattern = DateUtil.YYYY_MM_DD_HH_MM_SS)
+    private LocalDateTime createTime;
 }

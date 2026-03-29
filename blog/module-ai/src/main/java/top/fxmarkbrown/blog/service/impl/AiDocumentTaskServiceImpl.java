@@ -2,6 +2,9 @@ package top.fxmarkbrown.blog.service.impl;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,12 +18,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.Disposable;
+import top.fxmarkbrown.blog.common.Constants;
 import top.fxmarkbrown.blog.config.ai.AiProperties;
 import top.fxmarkbrown.blog.dto.ai.AiDocumentNodeAskDto;
 import top.fxmarkbrown.blog.dto.ai.AiDocumentTaskCreateDto;
 import top.fxmarkbrown.blog.dto.ai.AiDocumentTaskRenameDto;
+import top.fxmarkbrown.blog.entity.SysAiDocumentNodeMessage;
+import top.fxmarkbrown.blog.entity.SysAiDocumentNodeThread;
 import top.fxmarkbrown.blog.entity.SysAiDocumentResult;
 import top.fxmarkbrown.blog.entity.SysAiDocumentTask;
+import top.fxmarkbrown.blog.mapper.SysAiDocumentNodeMessageMapper;
+import top.fxmarkbrown.blog.mapper.SysAiDocumentNodeThreadMapper;
 import top.fxmarkbrown.blog.mapper.SysAiDocumentResultMapper;
 import top.fxmarkbrown.blog.mapper.SysAiDocumentTaskMapper;
 import top.fxmarkbrown.blog.model.ai.AiDocumentChunkHit;
@@ -33,13 +41,16 @@ import top.fxmarkbrown.blog.service.AiModelQuotaBillingService;
 import top.fxmarkbrown.blog.service.AiQuotaCoreService;
 import top.fxmarkbrown.blog.utils.HttpUtil;
 import top.fxmarkbrown.blog.utils.JsonUtil;
+import top.fxmarkbrown.blog.utils.PageUtil;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentNodeAnswerVo;
+import top.fxmarkbrown.blog.vo.ai.AiDocumentNodeMessageVo;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentContextBudgetVo;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentContextNodeVo;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentContextPlanVo;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentKnowledgeFlowEdgeVo;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentNodeCitationVo;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentNodeStreamEventVo;
+import top.fxmarkbrown.blog.vo.ai.AiDocumentNodeThreadVo;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentParseResultVo;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentSourceAnchorVo;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentTaskDetailVo;
@@ -85,6 +96,8 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
     private final AiModelQuotaBillingService aiModelQuotaBillingService;
     private final AiQuotaCoreService aiQuotaCoreService;
     private final ObjectProvider<AiDocumentVectorIndexService> documentVectorIndexServiceProvider;
+    private final SysAiDocumentNodeThreadMapper documentNodeThreadMapper;
+    private final SysAiDocumentNodeMessageMapper documentNodeMessageMapper;
     private final SysAiDocumentTaskMapper documentTaskMapper;
     private final SysAiDocumentResultMapper documentResultMapper;
 
@@ -110,6 +123,43 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
     public AiDocumentParseResultVo getTaskResult(Long taskId) {
         DocumentTaskAggregate aggregate = requireAggregate(taskId);
         return copyResult(aggregate.result());
+    }
+
+    @Override
+    public AiDocumentNodeThreadVo getNodeThread(Long taskId, String nodeId) {
+        DocumentTaskAggregate aggregate = requireAggregate(taskId);
+        AiDocumentTreeNodeVo currentNode = findNode(aggregate.result().getRoot(), nodeId);
+        if (currentNode == null) {
+            throw new IllegalStateException("未找到目标节点: " + nodeId);
+        }
+        SysAiDocumentNodeThread thread = findNodeThread(taskId, nodeId, StpUtil.getLoginIdAsLong());
+        return toNodeThreadVo(thread);
+    }
+
+    @Override
+    public IPage<AiDocumentNodeMessageVo> pageNodeMessages(Long taskId, String nodeId) {
+        DocumentTaskAggregate aggregate = requireAggregate(taskId);
+        AiDocumentTreeNodeVo currentNode = findNode(aggregate.result().getRoot(), nodeId);
+        if (currentNode == null) {
+            throw new IllegalStateException("未找到目标节点: " + nodeId);
+        }
+        SysAiDocumentNodeThread thread = findNodeThread(taskId, nodeId, StpUtil.getLoginIdAsLong());
+        if (thread == null) {
+            Page<AiDocumentNodeMessageVo> emptyPage = PageUtil.getPage();
+            emptyPage.setTotal(0);
+            emptyPage.setRecords(List.of());
+            return emptyPage;
+        }
+        Page<SysAiDocumentNodeMessage> page = documentNodeMessageMapper.selectPage(
+                PageUtil.getPage(),
+                new LambdaQueryWrapper<SysAiDocumentNodeMessage>()
+                        .eq(SysAiDocumentNodeMessage::getThreadId, thread.getId())
+                        .orderByAsc(SysAiDocumentNodeMessage::getCreateTime)
+                        .orderByAsc(SysAiDocumentNodeMessage::getId)
+        );
+        Page<AiDocumentNodeMessageVo> result = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
+        result.setRecords(page.getRecords().stream().map(this::toNodeMessageVo).toList());
+        return result;
     }
 
     @Override
@@ -245,59 +295,13 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
     }
 
     @Override
-    public AiDocumentNodeAnswerVo askNode(Long taskId, String nodeId, AiDocumentNodeAskDto askDto) {
-        if (!aiProperties.isEnabled()) {
-            throw new IllegalStateException("AI 功能未启用");
-        }
-        NodeAskPreparation preparation = prepareNodeAsk(taskId, nodeId, askDto);
-        ChatClient chatClient = aiChatModelService.getChatClient(preparation.resolvedChatModel());
-
-        try {
-            ChatResponse chatResponse = chatClient.prompt()
-                    .system(buildNodeAskSystemPrompt())
-                    .user(buildNodeAskUserPrompt(
-                            preparation.aggregate().detail(),
-                            preparation.currentNode(),
-                            preparation.question(),
-                            preparation.contextPayload()
-                    ))
-                    .options(OpenAiChatOptions.builder()
-                            .model(preparation.resolvedChatModel().modelName())
-                            .temperature(Math.min(preparation.resolvedChatModel().temperature(), 0.35D))
-                            .build())
-                    .call()
-                    .chatResponse();
-
-            String answer = extractAnswer(chatResponse);
-            if (!StringUtils.hasText(answer)) {
-                throw new IllegalStateException("AI 未返回有效内容");
-            }
-
-            Usage usage = chatResponse.getMetadata().getUsage();
-            aiQuotaCoreService.consumeTokens(
-                    preparation.currentUserId(),
-                    aiModelQuotaBillingService.resolveBilledTokens(
-                            resolveConsumedTokens(preparation.question(), answer, usage),
-                            preparation.resolvedChatModel()
-                    ),
-                    preparation.aggregate().detail().getTitle(),
-                    "文档节点问答消耗"
-            );
-            return buildNodeAnswerVo(preparation, answer.trim());
-        } catch (IllegalStateException ex) {
-            throw ex;
-        } catch (Exception ex) {
-            log.error("文档节点问答失败, taskId={}, nodeId={}", taskId, nodeId, ex);
-            throw new IllegalStateException("文档节点问答失败，请稍后重试");
-        }
-    }
-
-    @Override
     public SseEmitter streamAskNode(Long taskId, String nodeId, AiDocumentNodeAskDto askDto) {
         if (!aiProperties.isEnabled()) {
             throw new IllegalStateException("AI 功能未启用");
         }
         NodeAskPreparation preparation = prepareNodeAsk(taskId, nodeId, askDto);
+        SysAiDocumentNodeThread thread = touchNodeThread(preparation);
+        saveNodeUserMessage(thread.getId(), preparation.question());
         ChatClient chatClient = aiChatModelService.getChatClient(preparation.resolvedChatModel());
         SseEmitter emitter = new SseEmitter(0L);
         AtomicBoolean emitterClosed = new AtomicBoolean(false);
@@ -316,7 +320,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
                 emitterClosed,
                 disposableRef,
                 "meta",
-                nodeStreamEvent("meta", null, buildNodeAnswerVo(preparation, null), null, null, null, null)
+                nodeStreamEvent("meta", null, buildNodeAnswerVo(preparation, thread.getId(), null), null, null, null, null)
         );
 
         Disposable disposable = chatClient.prompt()
@@ -361,6 +365,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
                                 emitterClosed,
                                 disposableRef,
                                 preparation,
+                                thread,
                                 answerBuilder,
                                 tokensIn,
                                 tokensOut,
@@ -1517,6 +1522,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
                                        AtomicBoolean emitterClosed,
                                        AtomicReference<Disposable> disposableRef,
                                        NodeAskPreparation preparation,
+                                       SysAiDocumentNodeThread thread,
                                        AtomicReference<StringBuilder> answerBuilder,
                                        AtomicInteger tokensIn,
                                        AtomicInteger tokensOut,
@@ -1534,6 +1540,13 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
                 preparation.aggregate().detail().getTitle(),
                 "文档节点问答消耗"
         );
+        AiDocumentNodeAnswerVo answerVo = buildNodeAnswerVo(preparation, thread.getId(), answer);
+        saveNodeAssistantMessage(
+                thread.getId(),
+                answerVo,
+                zeroToNull(tokensIn.get()),
+                zeroToNull(tokensOut.get())
+        );
         sendNodeAskStreamEvent(
                 emitter,
                 emitterClosed,
@@ -1542,7 +1555,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
                 nodeStreamEvent(
                         "done",
                         null,
-                        buildNodeAnswerVo(preparation, answer),
+                        answerVo,
                         null,
                         zeroToNull(tokensIn.get()),
                         zeroToNull(tokensOut.get()),
@@ -1550,6 +1563,150 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
                 )
         );
         emitter.complete();
+    }
+
+    private SysAiDocumentNodeThread findNodeThread(Long taskId, String nodeId, Long userId) {
+        if (taskId == null || userId == null || !StringUtils.hasText(nodeId)) {
+            return null;
+        }
+        return documentNodeThreadMapper.selectOne(new LambdaQueryWrapper<SysAiDocumentNodeThread>()
+                .eq(SysAiDocumentNodeThread::getTaskId, taskId)
+                .eq(SysAiDocumentNodeThread::getUserId, userId)
+                .eq(SysAiDocumentNodeThread::getNodeId, nodeId.trim())
+                .last("limit 1"));
+    }
+
+    private SysAiDocumentNodeThread touchNodeThread(NodeAskPreparation preparation) {
+        LocalDateTime now = LocalDateTime.now();
+        SysAiDocumentNodeThread thread = findNodeThread(
+                preparation.aggregate().detail().getTaskId(),
+                preparation.currentNode().getId(),
+                preparation.currentUserId()
+        );
+        String summary = buildNodeThreadSummary(preparation.currentNode());
+        if (thread == null) {
+            thread = SysAiDocumentNodeThread.builder()
+                    .taskId(preparation.aggregate().detail().getTaskId())
+                    .userId(preparation.currentUserId())
+                    .nodeId(preparation.currentNode().getId())
+                    .title(safeText(preparation.currentNode().getTitle(), "节点对话"))
+                    .summary(summary)
+                    .modelProvider(preparation.resolvedChatModel().providerName())
+                    .modelName(preparation.resolvedChatModel().modelName())
+                    .lastMessageAt(now)
+                    .build();
+            documentNodeThreadMapper.insert(thread);
+            return thread;
+        }
+        thread.setTitle(safeText(preparation.currentNode().getTitle(), "节点对话"));
+        thread.setSummary(summary);
+        thread.setModelProvider(preparation.resolvedChatModel().providerName());
+        thread.setModelName(preparation.resolvedChatModel().modelName());
+        thread.setLastMessageAt(now);
+        documentNodeThreadMapper.updateById(thread);
+        return thread;
+    }
+
+    private String buildNodeThreadSummary(AiDocumentTreeNodeVo node) {
+        String summary = safeText(node == null ? null : node.getSummary(), null);
+        if (StringUtils.hasText(summary)) {
+            return summary;
+        }
+        String markdown = safeText(node == null ? null : node.getMarkdown(), null);
+        if (!StringUtils.hasText(markdown)) {
+            return safeText(node == null ? null : node.getTitle(), "文档节点问答");
+        }
+        return summarizeText(markdown.replace('\n', ' ').replace('\r', ' '));
+    }
+
+    private void saveNodeUserMessage(Long threadId, String question) {
+        if (threadId == null || !StringUtils.hasText(question)) {
+            return;
+        }
+        documentNodeMessageMapper.insert(SysAiDocumentNodeMessage.builder()
+                .threadId(threadId)
+                .role(Constants.AI_MESSAGE_ROLE_USER)
+                .content(question.trim())
+                .build());
+    }
+
+    private void saveNodeAssistantMessage(Long threadId,
+                                          AiDocumentNodeAnswerVo answerVo,
+                                          Integer tokensIn,
+                                          Integer tokensOut) {
+        if (threadId == null || answerVo == null || !StringUtils.hasText(answerVo.getAnswer())) {
+            return;
+        }
+        documentNodeMessageMapper.insert(SysAiDocumentNodeMessage.builder()
+                .threadId(threadId)
+                .role(Constants.AI_MESSAGE_ROLE_ASSISTANT)
+                .content(answerVo.getAnswer().trim())
+                .tokensIn(tokensIn)
+                .tokensOut(tokensOut)
+                .quotePayload(buildNodeQuotePayload(answerVo))
+                .build());
+        documentNodeThreadMapper.updateById(SysAiDocumentNodeThread.builder()
+                .id(threadId)
+                .lastMessageAt(LocalDateTime.now())
+                .build());
+    }
+
+    private String buildNodeQuotePayload(AiDocumentNodeAnswerVo answerVo) {
+        if (answerVo == null) {
+            return null;
+        }
+        Map<String, Object> payload = new LinkedHashMap<>();
+        if (StringUtils.hasText(answerVo.getModelId())) {
+            payload.put("modelId", answerVo.getModelId());
+        }
+        if (answerVo.getContextNodeIds() != null && !answerVo.getContextNodeIds().isEmpty()) {
+            payload.put("contextNodeIds", answerVo.getContextNodeIds());
+        }
+        List<String> selectedNodeIds = extractSelectedNodeIds(answerVo);
+        if (!selectedNodeIds.isEmpty()) {
+            payload.put("selectedNodeIds", selectedNodeIds);
+        }
+        if (answerVo.getCitations() != null && !answerVo.getCitations().isEmpty()) {
+            payload.put("citations", answerVo.getCitations());
+        }
+        if (answerVo.getContextPlan() != null) {
+            payload.put("contextPlan", answerVo.getContextPlan());
+        }
+        if (answerVo.getBudgetReport() != null) {
+            payload.put("budgetReport", answerVo.getBudgetReport());
+        }
+        if (answerVo.getUsedNodes() != null && !answerVo.getUsedNodes().isEmpty()) {
+            payload.put("usedNodes", answerVo.getUsedNodes());
+        }
+        if (answerVo.getCandidateNodes() != null && !answerVo.getCandidateNodes().isEmpty()) {
+            payload.put("candidateNodes", answerVo.getCandidateNodes());
+        }
+        if (answerVo.getKnowledgeFlowEdges() != null && !answerVo.getKnowledgeFlowEdges().isEmpty()) {
+            payload.put("knowledgeFlowEdges", answerVo.getKnowledgeFlowEdges());
+        }
+        return payload.isEmpty() ? null : JsonUtil.toJsonString(payload);
+    }
+
+    private List<String> extractSelectedNodeIds(AiDocumentNodeAnswerVo answerVo) {
+        Set<String> selectedNodeIds = new LinkedHashSet<>();
+        if (answerVo == null) {
+            return List.of();
+        }
+        collectSelectedNodeIds(selectedNodeIds, answerVo.getUsedNodes());
+        collectSelectedNodeIds(selectedNodeIds, answerVo.getCandidateNodes());
+        return new ArrayList<>(selectedNodeIds);
+    }
+
+    private void collectSelectedNodeIds(Set<String> selectedNodeIds, List<AiDocumentContextNodeVo> nodes) {
+        if (nodes == null || nodes.isEmpty()) {
+            return;
+        }
+        for (AiDocumentContextNodeVo node : nodes) {
+            if (node == null || !Objects.equals(node.getRelation(), "selected") || !StringUtils.hasText(node.getNodeId())) {
+                continue;
+            }
+            selectedNodeIds.add(node.getNodeId());
+        }
     }
 
     private void sendNodeAskStreamEvent(SseEmitter emitter,
@@ -1594,9 +1751,10 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         return event;
     }
 
-    private AiDocumentNodeAnswerVo buildNodeAnswerVo(NodeAskPreparation preparation, String answer) {
+    private AiDocumentNodeAnswerVo buildNodeAnswerVo(NodeAskPreparation preparation, Long threadId, String answer) {
         AiDocumentNodeAnswerVo vo = new AiDocumentNodeAnswerVo();
         vo.setTaskId(preparation.aggregate().detail().getTaskId());
+        vo.setThreadId(threadId);
         vo.setNodeId(preparation.currentNode().getId());
         vo.setQuestion(preparation.question());
         vo.setAnswer(answer);
@@ -1609,6 +1767,91 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         vo.setCandidateNodes(preparation.contextCompilation().candidates().stream().map(this::toContextNodeVo).toList());
         vo.setKnowledgeFlowEdges(preparation.contextCompilation().knowledgeFlowEdges());
         return vo;
+    }
+
+    private AiDocumentNodeThreadVo toNodeThreadVo(SysAiDocumentNodeThread thread) {
+        if (thread == null) {
+            return null;
+        }
+        AiDocumentNodeThreadVo vo = new AiDocumentNodeThreadVo();
+        vo.setThreadId(thread.getId());
+        vo.setTaskId(thread.getTaskId());
+        vo.setNodeId(thread.getNodeId());
+        vo.setTitle(thread.getTitle());
+        vo.setSummary(thread.getSummary());
+        vo.setModelProvider(thread.getModelProvider());
+        vo.setModelName(thread.getModelName());
+        vo.setModelId(aiChatModelService.resolveModelId(thread.getModelProvider(), thread.getModelName()));
+        vo.setModelDisplayName(aiChatModelService.resolveDisplayName(thread.getModelProvider(), thread.getModelName()));
+        vo.setLastMessageAt(thread.getLastMessageAt());
+        vo.setCreateTime(thread.getCreateTime());
+        vo.setUpdateTime(thread.getUpdateTime());
+        return vo;
+    }
+
+    private AiDocumentNodeMessageVo toNodeMessageVo(SysAiDocumentNodeMessage message) {
+        AiDocumentNodeMessageVo vo = new AiDocumentNodeMessageVo();
+        vo.setId(message.getId());
+        vo.setThreadId(message.getThreadId());
+        vo.setRole(message.getRole());
+        vo.setContent(message.getContent());
+        vo.setTokensIn(message.getTokensIn());
+        vo.setTokensOut(message.getTokensOut());
+        vo.setQuotePayload(message.getQuotePayload());
+        JsonNode quotePayload = parseNodeQuotePayload(message.getQuotePayload());
+        vo.setModelId(textAt(quotePayload, "modelId"));
+        vo.setSelectedNodeIds(parseNodeQuoteList(quotePayload, "selectedNodeIds", new TypeReference<List<String>>() {
+        }));
+        vo.setCitations(parseNodeQuoteList(quotePayload, "citations", new TypeReference<List<AiDocumentNodeCitationVo>>() {
+        }));
+        vo.setContextPlan(parseNodeQuoteObject(quotePayload, "contextPlan", AiDocumentContextPlanVo.class));
+        vo.setBudgetReport(parseNodeQuoteObject(quotePayload, "budgetReport", AiDocumentContextBudgetVo.class));
+        vo.setUsedNodes(parseNodeQuoteList(quotePayload, "usedNodes", new TypeReference<List<AiDocumentContextNodeVo>>() {
+        }));
+        vo.setCandidateNodes(parseNodeQuoteList(quotePayload, "candidateNodes", new TypeReference<List<AiDocumentContextNodeVo>>() {
+        }));
+        vo.setKnowledgeFlowEdges(parseNodeQuoteList(quotePayload, "knowledgeFlowEdges", new TypeReference<List<AiDocumentKnowledgeFlowEdgeVo>>() {
+        }));
+        vo.setCreateTime(message.getCreateTime());
+        return vo;
+    }
+
+    private JsonNode parseNodeQuotePayload(String quotePayload) {
+        if (!StringUtils.hasText(quotePayload)) {
+            return null;
+        }
+        try {
+            return JsonUtil.readTree(quotePayload);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private <T> T parseNodeQuoteObject(JsonNode quotePayload, String fieldName, Class<T> targetType) {
+        if (quotePayload == null || !StringUtils.hasText(fieldName) || !quotePayload.hasNonNull(fieldName)) {
+            return null;
+        }
+        try {
+            return JsonUtil.convertValue(quotePayload.get(fieldName), targetType);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private <T> List<T> parseNodeQuoteList(JsonNode quotePayload, String fieldName, TypeReference<List<T>> valueTypeRef) {
+        if (quotePayload == null || !StringUtils.hasText(fieldName) || !quotePayload.hasNonNull(fieldName)) {
+            return List.of();
+        }
+        JsonNode node = quotePayload.get(fieldName);
+        if (node == null || !node.isArray()) {
+            return List.of();
+        }
+        try {
+            List<T> records = JsonUtil.convertValue(node, valueTypeRef);
+            return records == null ? List.of() : records;
+        } catch (Exception ignored) {
+            return List.of();
+        }
     }
 
     private String extractAnswer(ChatResponse chatResponse) {

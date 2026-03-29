@@ -105,6 +105,7 @@ export interface DocumentContextBudget {
 
 export interface DocumentNodeAnswer {
   taskId: number
+  threadId?: number
   nodeId: string
   question: string
   answer?: string
@@ -116,4 +117,38 @@ export interface DocumentNodeAnswer {
   usedNodes?: DocumentContextNode[]
   candidateNodes?: DocumentContextNode[]
   knowledgeFlowEdges?: DocumentKnowledgeFlowEdge[]
+}
+
+export interface DocumentNodeThread {
+  threadId: number
+  taskId: number
+  nodeId: string
+  title?: string
+  summary?: string
+  modelProvider?: string
+  modelName?: string
+  modelId?: string
+  modelDisplayName?: string
+  lastMessageAt?: string
+  createTime?: string
+  updateTime?: string
+}
+
+export interface DocumentNodeMessage {
+  id: number
+  threadId: number
+  role: string
+  content: string
+  modelId?: string
+  tokensIn?: number
+  tokensOut?: number
+  quotePayload?: string
+  selectedNodeIds?: string[]
+  citations?: DocumentNodeCitation[]
+  contextPlan?: DocumentContextPlan
+  budgetReport?: DocumentContextBudget
+  usedNodes?: DocumentContextNode[]
+  candidateNodes?: DocumentContextNode[]
+  knowledgeFlowEdges?: DocumentKnowledgeFlowEdge[]
+  createTime?: string
 }

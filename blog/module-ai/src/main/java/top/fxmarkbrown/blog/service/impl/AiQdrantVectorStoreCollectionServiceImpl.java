@@ -1,6 +1,7 @@
 package top.fxmarkbrown.blog.service.impl;
 
 import io.qdrant.client.QdrantClient;
+import io.qdrant.client.grpc.Collections;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.ai.embedding.EmbeddingModel;
@@ -91,10 +92,35 @@ public class AiQdrantVectorStoreCollectionServiceImpl implements AiVectorStoreCo
         if (!isReady()) {
             throw new IllegalStateException("Qdrant 向量能力未就绪");
         }
+        if (initializeSchema) {
+            ensureCollectionExists(collectionName);
+        }
         return vectorStoreCache.computeIfAbsent(collectionName, key -> QdrantVectorStore.builder(qdrantClient, embeddingModel)
                 .collectionName(key)
-                .initializeSchema(initializeSchema)
+                .initializeSchema(false)
                 .build());
+    }
+
+    private void ensureCollectionExists(String collectionName) {
+        if (!StringUtils.hasText(collectionName)) {
+            throw new IllegalStateException("Qdrant collection 名称不能为空");
+        }
+        String normalizedCollectionName = collectionName.trim();
+        try {
+            boolean exists = qdrantClient.collectionExistsAsync(normalizedCollectionName).get();
+            if (exists) {
+                return;
+            }
+            Collections.VectorParams vectorParams = Collections.VectorParams.newBuilder()
+                    .setDistance(Collections.Distance.Cosine)
+                    .setSize(embeddingModel.dimensions())
+                    .build();
+            qdrantClient.createCollectionAsync(normalizedCollectionName, vectorParams).get();
+            log.info("Qdrant collection 已创建, collection={}, dimensions={}",
+                    normalizedCollectionName, embeddingModel.dimensions());
+        } catch (Exception ex) {
+            throw new IllegalStateException("创建 Qdrant collection 失败: " + normalizedCollectionName, ex);
+        }
     }
 
     private AiProperties.Qdrant requireQdrantConfig() {

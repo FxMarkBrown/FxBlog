@@ -1,9 +1,11 @@
 package top.fxmarkbrown.blog.service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import top.fxmarkbrown.blog.dto.ai.AiDocumentNodeAskDto;
 import top.fxmarkbrown.blog.dto.ai.AiDocumentTaskCreateDto;
 import top.fxmarkbrown.blog.dto.ai.AiDocumentTaskRenameDto;
-import top.fxmarkbrown.blog.vo.ai.AiDocumentNodeAnswerVo;
+import top.fxmarkbrown.blog.vo.ai.AiDocumentNodeMessageVo;
+import top.fxmarkbrown.blog.vo.ai.AiDocumentNodeThreadVo;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentParseResultVo;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentTaskDetailVo;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentTaskListVo;
@@ -59,12 +61,17 @@ public interface AiDocumentTaskService {
     void handleMineruCallback(String checksum, String content);
 
     /**
-     * 在指定文档节点上下文内执行问答。
-     */
-    AiDocumentNodeAnswerVo askNode(Long taskId, String nodeId, AiDocumentNodeAskDto askDto);
-
-    /**
      * 在指定文档节点上下文内执行流式问答。
      */
     SseEmitter streamAskNode(Long taskId, String nodeId, AiDocumentNodeAskDto askDto);
+
+    /**
+     * 查询指定文档节点的线程详情。
+     */
+    AiDocumentNodeThreadVo getNodeThread(Long taskId, String nodeId);
+
+    /**
+     * 分页查询指定文档节点的线程消息。
+     */
+    IPage<AiDocumentNodeMessageVo> pageNodeMessages(Long taskId, String nodeId);
 }

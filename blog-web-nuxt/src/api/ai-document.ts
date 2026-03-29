@@ -1,5 +1,11 @@
-import type { ApiResponse } from '@/types/common'
-import type { DocumentNodeAnswer, DocumentParseResult, DocumentTaskDetail, DocumentTaskListItem } from '@/types/ai-document'
+import type { ApiResponse, PageResult } from '@/types/common'
+import type {
+  DocumentNodeMessage,
+  DocumentNodeThread,
+  DocumentParseResult,
+  DocumentTaskDetail,
+  DocumentTaskListItem
+} from '@/types/ai-document'
 import { getToken } from '@/utils/cookie'
 
 export function getDocumentTaskListApi() {
@@ -41,10 +47,13 @@ export function getDocumentTaskResultApi(taskId: number | string) {
   return useApiClient()<ApiResponse<DocumentParseResult>>(`/api/ai/document/tasks/${taskId}/result`)
 }
 
-export function askDocumentNodeApi(taskId: number | string, nodeId: string, data: Record<string, unknown>) {
-  return useApiClient()<ApiResponse<DocumentNodeAnswer>>(`/api/ai/document/tasks/${taskId}/nodes/${nodeId}/ask`, {
-    method: 'POST',
-    body: data
+export function getDocumentNodeThreadApi(taskId: number | string, nodeId: string) {
+  return useApiClient()<ApiResponse<DocumentNodeThread | null>>(`/api/ai/document/tasks/${taskId}/nodes/${nodeId}/thread`)
+}
+
+export function getDocumentNodeMessagesApi(taskId: number | string, nodeId: string, query: Record<string, unknown>) {
+  return useApiClient()<ApiResponse<PageResult<DocumentNodeMessage>>>(`/api/ai/document/tasks/${taskId}/nodes/${nodeId}/messages`, {
+    query
   })
 }
 
