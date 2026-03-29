@@ -111,7 +111,8 @@ export default defineNuxtConfig({
         'vue-cropper',
         'element-plus',
         'element-plus/es',
-        'ogl'
+        'ogl',
+        'elkjs/lib/elk.bundled.js'
       ]
     },
     css: {

@@ -704,21 +704,22 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
 
     private AiDocumentTreeNodeVo buildTreeFromContentList(Long taskId, String title, JsonNode contentListNode, String markdown) {
         AiDocumentTreeNodeVo root = createNode("doc-" + taskId + "-root", null, "document", safeText(title, "未命名文档"), 0,
-                "根据 MinerU content_list 生成的结构树。", buildRootMarkdown(title, markdown), true);
+                "根据 MinerU 真实 content_list 生成的结构树。", buildRootMarkdown(title, markdown), true);
         List<AiDocumentTreeNodeVo> headingStack = new ArrayList<>();
+        StringBuilder contentTextBuffer = new StringBuilder();
+        StringBuilder contentMarkdownBuffer = new StringBuilder();
+        List<AiDocumentSourceAnchorVo> contentAnchors = new ArrayList<>();
         int contentCounter = 0;
         int headingCounter = 0;
 
-        for (JsonNode item : contentListNode) {
-            if (item == null || item.isNull()) {
-                continue;
-            }
-            String text = extractContentText(item);
-            int level = normalizeHeadingLevel(item.path("text_level").asInt(0));
-            Integer page = item.hasNonNull("page_idx") ? item.get("page_idx").asInt() + 1 : null;
-            List<Double> bbox = extractBbox(item);
+        for (MineruContentBlock block : flattenMineruContentBlocks(contentListNode)) {
+            String text = block.text();
+            int level = block.level();
+            Integer page = block.page();
+            List<Double> bbox = block.bbox();
 
             if (StringUtils.hasText(text) && level > 0) {
+                contentCounter = flushContentListBlock(taskId, headingStack, root, contentTextBuffer, contentMarkdownBuffer, contentAnchors, contentCounter);
                 AiDocumentTreeNodeVo headingNode = createNode(
                         "doc-" + taskId + "-heading-" + (++headingCounter),
                         null,
@@ -745,24 +746,98 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
                 continue;
             }
 
-            AiDocumentTreeNodeVo parent = headingStack.isEmpty() ? root : headingStack.getLast();
-            String contentType = safeText(textAt(item, "type"), "content");
-            AiDocumentTreeNodeVo contentNode = createNode(
-                    "doc-" + taskId + "-content-" + (++contentCounter),
-                    parent.getId(),
-                    contentType,
-                    summarizeTitleByType(contentType, text),
-                    Math.max(1, headingStack.size() + 1),
-                    summarizeText(text),
-                    toMarkdownByType(contentType, text),
-                    false
-            );
-            attachAnchor(contentNode, page, bbox, text);
-            parent.getChildren().add(contentNode);
+            String contentType = safeText(block.type(), "content");
+            appendBufferedBlock(contentTextBuffer, contentMarkdownBuffer, contentType, text);
+            if (page != null && page > 0 && bbox != null && bbox.size() >= 4) {
+                contentAnchors.add(anchor(page, bbox, summarizeText(text)));
+            }
         }
 
+        flushContentListBlock(taskId, headingStack, root, contentTextBuffer, contentMarkdownBuffer, contentAnchors, contentCounter);
         finalizeExpandability(root);
         return root;
+    }
+
+    private int flushContentListBlock(Long taskId, List<AiDocumentTreeNodeVo> headingStack, AiDocumentTreeNodeVo root,
+                                      StringBuilder contentTextBuffer, StringBuilder contentMarkdownBuffer,
+                                      List<AiDocumentSourceAnchorVo> contentAnchors, int contentCounter) {
+        String contentText = contentTextBuffer.toString().trim();
+        String contentMarkdown = contentMarkdownBuffer.toString().trim();
+        contentTextBuffer.setLength(0);
+        contentMarkdownBuffer.setLength(0);
+
+        if (!StringUtils.hasText(contentText) && !StringUtils.hasText(contentMarkdown)) {
+            contentAnchors.clear();
+            return contentCounter;
+        }
+
+        AiDocumentTreeNodeVo parent = headingStack.isEmpty() ? root : headingStack.getLast();
+        String markdown = StringUtils.hasText(contentMarkdown) ? contentMarkdown : contentText;
+        String summaryText = StringUtils.hasText(contentText) ? contentText : markdown;
+        AiDocumentTreeNodeVo contentNode = createNode(
+                "doc-" + taskId + "-content-" + (++contentCounter),
+                parent.getId(),
+                "content",
+                summarizeTitleByType("content", summaryText),
+                Math.max(1, headingStack.size() + 1),
+                summarizeText(summaryText),
+                markdown,
+                false
+        );
+        if (!contentAnchors.isEmpty()) {
+            contentNode.getSourceAnchors().addAll(contentAnchors);
+        }
+        contentAnchors.clear();
+        parent.getChildren().add(contentNode);
+        return contentCounter;
+    }
+
+    private List<MineruContentBlock> flattenMineruContentBlocks(JsonNode contentListNode) {
+        if (contentListNode == null || !contentListNode.isArray()) {
+            return List.of();
+        }
+
+        List<MineruContentBlock> blocks = new ArrayList<>();
+        int pageIndex = 0;
+        for (JsonNode pageNode : contentListNode) {
+            pageIndex += 1;
+            if (pageNode == null || pageNode.isNull()) {
+                continue;
+            }
+            if (pageNode.isArray()) {
+                for (JsonNode item : pageNode) {
+                    MineruContentBlock block = toMineruContentBlock(item, pageIndex);
+                    if (block != null) {
+                        blocks.add(block);
+                    }
+                }
+                continue;
+            }
+
+            MineruContentBlock block = toMineruContentBlock(pageNode, null);
+            if (block != null) {
+                blocks.add(block);
+            }
+        }
+        return blocks;
+    }
+
+    private MineruContentBlock toMineruContentBlock(JsonNode item, Integer fallbackPage) {
+        if (item == null || item.isNull() || !item.isObject()) {
+            return null;
+        }
+
+        String type = safeText(textAt(item, "type"), "content").toLowerCase(Locale.ROOT);
+        Integer page = item.hasNonNull("page_idx") ? item.get("page_idx").asInt() + 1 : fallbackPage;
+        List<Double> bbox = extractBbox(item);
+        int level = "title".equals(type) ? normalizeHeadingLevel(item.path("content").path("level").asInt(0)) : 0;
+        String text = extractMineruBlockText(item, type);
+
+        if (!StringUtils.hasText(text) && !"image".equals(type) && !"table".equals(type)) {
+            return null;
+        }
+
+        return new MineruContentBlock(type, level, safeText(text, null), page, bbox);
     }
 
     private AiDocumentTreeNodeVo buildTreeFromMarkdown(Long taskId, String title, String markdown) {
@@ -1075,7 +1150,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
 
     private String buildRootMarkdown(String title, String markdown) {
         if (StringUtils.hasText(markdown)) {
-            return markdown.length() > 800 ? markdown.substring(0, 800) + "\n\n[Markdown 已截断]" : markdown;
+            return markdown;
         }
         return "# " + safeText(title, "未命名文档");
     }
@@ -1111,16 +1186,143 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
             case "image" -> "图片节点";
             case "list" -> "列表节点";
             case "code" -> "代码节点";
+            case "equation_interline", "equation_inline" -> "公式节点";
             default -> normalized;
         };
     }
 
     private String toMarkdownByType(String type, String text) {
         String normalizedType = safeText(type, "content");
-        if ("code".equals(normalizedType)) {
-            return "```\n" + text.trim() + "\n```";
+        return switch (normalizedType) {
+            case "code" -> "```\n" + text.trim() + "\n```";
+            case "equation_interline", "equation_inline" -> "$$\n" + text.trim() + "\n$$";
+            default -> text.trim();
+        };
+    }
+
+    private void appendBufferedBlock(StringBuilder textBuffer, StringBuilder markdownBuffer, String type, String text) {
+        if (!StringUtils.hasText(text)) {
+            return;
         }
-        return text.trim();
+
+        String normalizedText = text.trim();
+        String normalizedMarkdown = toMarkdownByType(type, normalizedText).trim();
+
+        if (textBuffer.length() > 0) {
+            textBuffer.append("\n\n");
+        }
+        textBuffer.append(normalizedText);
+
+        if (markdownBuffer.length() > 0) {
+            markdownBuffer.append("\n\n");
+        }
+        markdownBuffer.append(normalizedMarkdown);
+    }
+
+    private String extractMineruBlockText(JsonNode item, String type) {
+        JsonNode contentNode = item == null ? null : item.get("content");
+        if (contentNode == null || contentNode.isNull()) {
+            return null;
+        }
+
+        return switch (safeText(type, "content")) {
+            case "title" -> extractMineruText(contentNode.path("title_content"), "\n");
+            case "paragraph" -> extractMineruText(contentNode.path("paragraph_content"), "\n");
+            case "list" -> extractMineruText(contentNode.path("list_items"), "\n");
+            case "code" -> extractMineruText(contentNode.path("code_content"), "\n");
+            case "equation_interline", "equation_inline" -> safeText(textAt(contentNode, "math_content"), null);
+            case "image" -> joinNonBlank("\n",
+                    "图片",
+                    extractMineruText(contentNode.path("image_caption"), "\n"),
+                    extractMineruText(contentNode.path("image_footnote"), "\n"));
+            case "table" -> {
+                String html = safeText(textAt(contentNode, "html"), null);
+                if (StringUtils.hasText(html)) {
+                    yield html;
+                }
+                yield joinNonBlank("\n",
+                        "表格",
+                        extractMineruText(contentNode.path("table_caption"), "\n"),
+                        extractMineruText(contentNode.path("table_footnote"), "\n"));
+            }
+            default -> extractMineruText(contentNode, "\n");
+        };
+    }
+
+    private String extractMineruText(JsonNode node, String separator) {
+        List<String> parts = new ArrayList<>();
+        collectMineruText(node, parts);
+        if (parts.isEmpty()) {
+            return null;
+        }
+        return String.join(separator, parts).trim();
+    }
+
+    private void collectMineruText(JsonNode node, List<String> parts) {
+        if (node == null || node.isNull()) {
+            return;
+        }
+        if (node.isTextual()) {
+            String text = node.asText().trim();
+            if (StringUtils.hasText(text)) {
+                parts.add(text);
+            }
+            return;
+        }
+        if (node.isArray()) {
+            for (JsonNode child : node) {
+                collectMineruText(child, parts);
+            }
+            return;
+        }
+        if (!node.isObject()) {
+            return;
+        }
+
+        if ("text".equals(node.path("type").asText()) && node.hasNonNull("content") && node.get("content").isTextual()) {
+            String text = node.get("content").asText().trim();
+            if (StringUtils.hasText(text)) {
+                parts.add(text);
+            }
+            return;
+        }
+        if (node.hasNonNull("math_content") && node.get("math_content").isTextual()) {
+            String text = node.get("math_content").asText().trim();
+            if (StringUtils.hasText(text)) {
+                parts.add(text);
+            }
+            return;
+        }
+
+        String[] orderedFields = {
+                "title_content",
+                "paragraph_content",
+                "list_items",
+                "item_content",
+                "code_content",
+                "table_caption",
+                "table_footnote",
+                "image_caption",
+                "image_footnote",
+                "html",
+                "text",
+                "content"
+        };
+        for (String field : orderedFields) {
+            if (node.has(field)) {
+                collectMineruText(node.get(field), parts);
+            }
+        }
+    }
+
+    private String joinNonBlank(String separator, String... values) {
+        List<String> normalized = new ArrayList<>();
+        for (String value : values) {
+            if (StringUtils.hasText(value)) {
+                normalized.add(value.trim());
+            }
+        }
+        return normalized.isEmpty() ? null : String.join(separator, normalized);
     }
 
     private String extractContentText(JsonNode item) {
@@ -1334,8 +1536,8 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         resultVo.setTitle(task.getTitle());
         if (result != null) {
             resultVo.setMarkdown(result.getMarkdown());
-            AiDocumentTreeNodeVo root = JsonUtil.readValue(result.getRootJson(), AiDocumentTreeNodeVo.class);
-            if (root == null && StringUtils.hasText(result.getContentListJson())) {
+            AiDocumentTreeNodeVo root = null;
+            if (StringUtils.hasText(result.getContentListJson())) {
                 JsonNode contentListNode = JsonUtil.readTree(result.getContentListJson());
                 if (contentListNode != null && contentListNode.isArray() && !contentListNode.isEmpty()) {
                     root = buildTreeFromContentList(task.getId(), task.getTitle(), contentListNode, result.getMarkdown());
@@ -1395,6 +1597,13 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
                                          AiDocumentParseResultVo result,
                                          SysAiDocumentTask taskEntity,
                                          SysAiDocumentResult resultEntity) {
+    }
+
+    private record MineruContentBlock(String type,
+                                      int level,
+                                      String text,
+                                      Integer page,
+                                      List<Double> bbox) {
     }
 
     private record ZipDocumentPayload(String markdown, String contentListJson) {

@@ -121,7 +121,7 @@ onBeforeUnmount(() => {
     <ClientOnly>
       <WeatherDecor v-if="!disableGlobalOverlays" />
     </ClientOnly>
-    <div class="app-shell">
+    <div class="app-shell" :class="{ 'app-shell--minimal': disableGlobalOverlays }">
       <NuxtLayout>
         <NuxtPage :page-key="getPageKey" />
       </NuxtLayout>

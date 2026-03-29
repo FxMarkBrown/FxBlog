@@ -1,8 +1,12 @@
 <script setup lang="ts">
+import 'md-editor-v3/lib/style.css'
 import type { NodeProps } from '@vue-flow/core'
+
+const MdPreview = defineAsyncComponent(() => import('md-editor-v3').then((module) => module.MdPreview))
 
 type CanvasNodeData = {
   kind?: 'outline' | 'source-preview' | 'chat-thread'
+  themeMode?: 'light' | 'dark'
   title?: string
   subtitle?: string
   body?: string
@@ -31,6 +35,7 @@ const props = defineProps<NodeProps<CanvasNodeData>>()
 const isOutline = computed(() => props.data.kind === 'outline')
 const isPreview = computed(() => props.data.kind === 'source-preview')
 const isChat = computed(() => props.data.kind === 'chat-thread')
+const markdownTheme = computed(() => props.data.themeMode === 'dark' ? 'dark' : 'light')
 
 function handleToggleExpand() {
   if (!props.data.nodeId || !props.data.onToggleExpand) {
@@ -81,7 +86,8 @@ function handleSubmitQuestion() {
       'is-selected': selected,
       'is-outline': isOutline,
       'is-preview': isPreview,
-      'is-chat': isChat
+      'is-chat': isChat,
+      'is-dark': data.themeMode === 'dark'
     }"
   >
     <div class="node-card">
@@ -105,30 +111,26 @@ function handleSubmitQuestion() {
       <div v-if="data.body" class="node-card__body">{{ data.body }}</div>
 
       <div v-if="isPreview && data.pageLabel" class="node-card__meta">{{ data.pageLabel }}</div>
-      <div v-if="isPreview" class="source-preview-sheet">
-        <div class="source-preview-sheet__paper">
-          <div
-            v-if="data.anchorBox && data.anchorBox.length >= 4"
-            class="source-preview-sheet__bbox"
-            :style="{
-              left: `${Math.max(0, Math.min(100, Number(data.anchorBox[0]) * 100))}%`,
-              top: `${Math.max(0, Math.min(100, Number(data.anchorBox[1]) * 100))}%`,
-              width: `${Math.max(4, Math.min(100, (Number(data.anchorBox[2]) - Number(data.anchorBox[0])) * 100))}%`,
-              height: `${Math.max(6, Math.min(100, (Number(data.anchorBox[3]) - Number(data.anchorBox[1])) * 100))}%`
-            }"
-          ></div>
-        </div>
-      </div>
-      <div v-if="isPreview && data.markdown" class="node-preview">
-        {{ data.markdown }}
+      <div v-if="isPreview && data.markdown" class="node-preview markdown-preview">
+        <MdPreview
+          :model-value="data.markdown"
+          :theme="markdownTheme"
+          preview-theme="github"
+          code-theme="github"
+        />
       </div>
       <a v-if="isPreview && data.sourceUrl" :href="data.sourceUrl" target="_blank" rel="noopener noreferrer" class="source-link">
         <i class="fas fa-up-right-from-square"></i>
         <span>打开原文</span>
       </a>
 
-      <div v-if="isChat && data.markdown" class="node-chat">
-        {{ data.markdown }}
+      <div v-if="isChat && data.markdown" class="node-chat markdown-preview">
+        <MdPreview
+          :model-value="data.markdown"
+          :theme="markdownTheme"
+          preview-theme="github"
+          code-theme="github"
+        />
       </div>
 
       <div v-if="isChat" class="node-ask">
@@ -146,8 +148,13 @@ function handleSubmitQuestion() {
           </button>
         </div>
         <div v-if="data.error" class="node-ask__error">{{ data.error }}</div>
-        <div v-if="data.answer" class="node-answer">
-          {{ data.answer }}
+        <div v-if="data.answer" class="node-answer markdown-preview">
+          <MdPreview
+            :model-value="data.answer"
+            :theme="markdownTheme"
+            preview-theme="github"
+            code-theme="github"
+          />
         </div>
         <div v-if="data.citations?.length" class="node-citations">
           <span
@@ -180,6 +187,12 @@ function handleSubmitQuestion() {
   max-width: 340px;
 }
 
+.document-canvas-node.is-preview,
+.document-canvas-node.is-chat {
+  width: clamp(420px, 34vw, 620px);
+  max-width: min(78vw, 760px);
+}
+
 .node-card {
   padding: 14px 14px 12px;
   border-radius: 18px;
@@ -188,6 +201,16 @@ function handleSubmitQuestion() {
   box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
   backdrop-filter: blur(12px);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.document-canvas-node.is-preview .node-card,
+.document-canvas-node.is-chat .node-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 420px;
+  height: min(68vh, 760px);
+  resize: both;
+  overflow: hidden;
 }
 
 .is-selected .node-card {
@@ -214,19 +237,26 @@ function handleSubmitQuestion() {
 
 .node-card__heading {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: nowrap;
   gap: 8px;
+  min-width: 0;
 
   strong {
+    min-width: 0;
     color: #0f172a;
     font-size: 1rem;
     line-height: 1.35;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 
 .node-badge {
   display: inline-flex;
-  width: fit-content;
+  flex: 0 0 auto;
   padding: 4px 8px;
   border-radius: 999px;
   background: rgba(16, 185, 129, 0.12);
@@ -275,8 +305,12 @@ function handleSubmitQuestion() {
   border: 1px solid rgba(148, 163, 184, 0.2);
   color: #334155;
   line-height: 1.75;
-  white-space: pre-wrap;
   font-size: 0.88rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  white-space: normal;
+  scrollbar-gutter: stable;
 }
 
 .node-ask {
@@ -322,7 +356,9 @@ function handleSubmitQuestion() {
   border: 1px solid rgba(14, 165, 233, 0.16);
   color: #1e293b;
   line-height: 1.75;
-  white-space: pre-wrap;
+  max-height: 260px;
+  overflow: auto;
+  white-space: normal;
 }
 
 .node-citations {
@@ -343,41 +379,6 @@ function handleSubmitQuestion() {
   font-weight: 600;
 }
 
-.source-preview-sheet {
-  margin-top: 10px;
-}
-
-.source-preview-sheet__paper {
-  position: relative;
-  height: 170px;
-  border-radius: 14px;
-  background:
-    linear-gradient(180deg, rgba(248, 250, 252, 0.98), rgba(241, 245, 249, 0.98));
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  overflow: hidden;
-
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 10px;
-    border-radius: 10px;
-    background:
-      repeating-linear-gradient(
-        180deg,
-        rgba(148, 163, 184, 0.08) 0 8px,
-        transparent 8px 18px
-      );
-  }
-}
-
-.source-preview-sheet__bbox {
-  position: absolute;
-  border: 2px dashed #4f46e5;
-  border-radius: 8px;
-  background: rgba(79, 70, 229, 0.12);
-  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.14);
-}
-
 .source-link {
   display: inline-flex;
   align-items: center;
@@ -393,6 +394,82 @@ function handleSubmitQuestion() {
   display: flex;
   gap: 10px;
   margin-top: 14px;
+}
+
+.markdown-preview {
+  min-width: 0;
+}
+
+.markdown-preview :deep(.md-editor) {
+  --md-color: var(--text-secondary);
+  --md-hover-color: var(--text-primary);
+  --md-bk-color: transparent;
+  --md-bk-color-outstand: rgba(var(--border-color-rgb), 0.08);
+  --md-bk-hover-color: rgba(var(--border-color-rgb), 0.08);
+  --md-border-color: transparent;
+  --md-border-hover-color: transparent;
+  background: transparent;
+  border: none;
+  height: auto;
+}
+
+.markdown-preview :deep(.md-editor-toolbar),
+.markdown-preview :deep(.md-editor-toolbar-wrapper),
+.markdown-preview :deep(.md-editor-footer) {
+  display: none !important;
+}
+
+.markdown-preview :deep(.md-editor-content),
+.markdown-preview :deep(.md-editor-preview-wrapper),
+.markdown-preview :deep(.md-editor-preview) {
+  background: transparent;
+}
+
+.markdown-preview :deep(.md-editor-preview) {
+  --md-theme-color: var(--text-secondary);
+  --md-theme-color-reverse: var(--card-bg);
+  --md-theme-border-color: rgba(var(--border-color-rgb), 0.16);
+  --md-theme-border-color-reverse: rgba(var(--border-color-rgb), 0.16);
+  --md-theme-border-color-inset: rgba(var(--border-color-rgb), 0.16);
+  --md-theme-bg-color: transparent;
+  --md-theme-bg-color-inset: rgba(var(--border-color-rgb), 0.08);
+  --md-theme-code-copy-tips-color: var(--text-primary);
+  --md-theme-code-copy-tips-bg-color: var(--card-bg);
+  color: inherit;
+  font-size: 14px;
+}
+
+.markdown-preview :deep(.md-editor-preview > *:first-child) {
+  margin-top: 0;
+}
+
+.markdown-preview :deep(.md-editor-preview > *:last-child) {
+  margin-bottom: 0;
+}
+
+.markdown-preview :deep(pre) {
+  overflow-x: auto;
+}
+
+.markdown-preview :deep(table) {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  background: rgba(var(--surface-rgb), 0.24);
+}
+
+.markdown-preview :deep(thead th) {
+  background: rgba(var(--border-color-rgb), 0.1);
+  color: var(--text-primary);
+}
+
+.markdown-preview :deep(th),
+.markdown-preview :deep(td) {
+  border-color: rgba(var(--border-color-rgb), 0.16);
+}
+
+.markdown-preview :deep(tbody tr:nth-child(even)) {
+  background: rgba(var(--border-color-rgb), 0.05);
 }
 
 .node-action {
@@ -417,51 +494,137 @@ function handleSubmitQuestion() {
   }
 }
 
-:root[data-theme='dark'] .node-card {
+.document-canvas-node.is-dark .node-card {
   background: rgba(15, 23, 42, 0.92);
   border-color: rgba(100, 116, 139, 0.34);
 }
 
-:root[data-theme='dark'] .node-card__heading strong {
+.document-canvas-node.is-dark.is-preview .node-card {
+  background: rgba(15, 23, 42, 0.94);
+}
+
+.document-canvas-node.is-dark.is-chat .node-card {
+  background: rgba(8, 47, 73, 0.92);
+}
+
+.document-canvas-node.is-dark .node-card__heading strong {
   color: #e2e8f0;
 }
 
-:root[data-theme='dark'] .node-card__subtitle,
-:root[data-theme='dark'] .node-card__body,
-:root[data-theme='dark'] .node-preview,
-:root[data-theme='dark'] .node-chat {
+.document-canvas-node.is-dark .node-badge {
+  background: rgba(16, 185, 129, 0.18);
+  color: #6ee7b7;
+}
+
+.document-canvas-node.is-dark .node-toggle {
+  background: rgba(99, 102, 241, 0.18);
+  color: #a5b4fc;
+}
+
+.document-canvas-node.is-dark .node-card__subtitle,
+.document-canvas-node.is-dark .node-card__body,
+.document-canvas-node.is-dark .node-preview,
+.document-canvas-node.is-dark .node-chat {
   color: #cbd5e1;
 }
 
-:root[data-theme='dark'] .node-preview,
-:root[data-theme='dark'] .node-chat {
+.document-canvas-node.is-dark .node-card__meta {
+  color: #818cf8;
+}
+
+.document-canvas-node.is-dark .node-preview,
+.document-canvas-node.is-dark .node-chat {
   background: rgba(15, 23, 42, 0.78);
   border-color: rgba(100, 116, 139, 0.28);
 }
 
-:root[data-theme='dark'] .node-ask__input,
-:root[data-theme='dark'] .node-answer {
+.document-canvas-node.is-dark .node-ask__input,
+.document-canvas-node.is-dark .node-answer {
   background: rgba(15, 23, 42, 0.82);
   border-color: rgba(100, 116, 139, 0.3);
   color: #e2e8f0;
 }
 
-:root[data-theme='dark'] .node-citation {
+.document-canvas-node.is-dark .node-ask__input::placeholder {
+  color: #64748b;
+}
+
+.document-canvas-node.is-dark .node-citation {
   background: rgba(59, 130, 246, 0.16);
   color: #93c5fd;
 }
 
-:root[data-theme='dark'] .source-preview-sheet__paper {
-  background: linear-gradient(180deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.98));
-  border-color: rgba(100, 116, 139, 0.26);
-}
-
-:root[data-theme='dark'] .source-link {
+.document-canvas-node.is-dark .source-link {
   color: #818cf8;
 }
 
-:root[data-theme='dark'] .is-selected .node-card {
+.document-canvas-node.is-dark .node-action.ghost {
+  background: rgba(51, 65, 85, 0.48);
+  color: #cbd5e1;
+}
+
+.document-canvas-node.is-dark.is-selected .node-card {
   border-color: #818cf8;
   box-shadow: 0 18px 34px rgba(99, 102, 241, 0.22);
+}
+
+@media (max-width: 900px) {
+  .document-canvas-node {
+    min-width: min(272px, calc(100vw - 56px));
+    max-width: min(300px, calc(100vw - 56px));
+  }
+
+  .document-canvas-node.is-preview,
+  .document-canvas-node.is-chat {
+    width: min(calc(100vw - 40px), 360px);
+    max-width: min(calc(100vw - 40px), 360px);
+  }
+
+  .document-canvas-node.is-preview .node-card,
+  .document-canvas-node.is-chat .node-card {
+    min-height: 360px;
+    height: min(62vh, 560px);
+  }
+
+  .node-card {
+    padding: 12px 12px 10px;
+    border-radius: 16px;
+  }
+
+  .node-card__heading {
+    gap: 6px;
+  }
+
+  .node-card__heading strong {
+    font-size: 0.94rem;
+  }
+
+  .node-preview,
+  .node-chat,
+  .node-answer {
+    padding: 10px;
+    border-radius: 12px;
+  }
+
+  .node-action {
+    padding: 9px 11px;
+  }
+}
+
+@media (max-width: 420px) {
+  .document-canvas-node {
+    min-width: min(252px, calc(100vw - 36px));
+    max-width: min(280px, calc(100vw - 36px));
+  }
+
+  .document-canvas-node.is-preview,
+  .document-canvas-node.is-chat {
+    width: min(calc(100vw - 24px), 332px);
+    max-width: min(calc(100vw - 24px), 332px);
+  }
+
+  .node-actions {
+    flex-wrap: wrap;
+  }
 }
 </style>
