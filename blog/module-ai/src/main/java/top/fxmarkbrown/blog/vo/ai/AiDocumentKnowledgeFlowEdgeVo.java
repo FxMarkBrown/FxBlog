@@ -5,6 +5,8 @@ import lombok.Data;
 @Data
 public class AiDocumentKnowledgeFlowEdgeVo {
 
+    private String displayLabel;
+
     private String fromNodeId;
 
     private String toNodeId;

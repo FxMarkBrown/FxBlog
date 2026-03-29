@@ -24,12 +24,12 @@ public class AiDocumentNodeAskDto {
     @Schema(description = "子树展开深度，默认按 queryMode 自动决定")
     private Integer descendantDepth;
 
-    @Schema(description = "是否补充祖先节点的关键兄弟节点")
-    private Boolean includeAncestorSiblings;
+    @Schema(description = "是否补充主召回节点的同层上下文")
+    private Boolean includePeerContext;
 
-    @Schema(description = "是否补充语义桥接节点")
-    private Boolean includeSemanticBridges;
+    @Schema(description = "是否启用文档内 RAG 召回")
+    private Boolean enableRetrieval;
 
-    @Schema(description = "语义桥接节点数量上限，默认按 queryMode 自动决定")
-    private Integer maxBridgeNodes;
+    @Schema(description = "RAG 召回节点数量上限，默认按 queryMode 自动决定")
+    private Integer maxRetrievedNodes;
 }

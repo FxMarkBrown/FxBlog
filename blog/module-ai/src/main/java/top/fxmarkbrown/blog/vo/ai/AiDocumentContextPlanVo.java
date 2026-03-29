@@ -11,17 +11,17 @@ public class AiDocumentContextPlanVo {
 
     private Integer descendantDepth;
 
-    private Integer maxBridgeNodes;
+    private Integer maxRetrievedNodes;
 
     private Integer ancestorCount;
 
     private Integer descendantCount;
 
-    private Integer ancestorSiblingCount;
+    private Integer peerContextCount;
 
     private Integer selectedCount;
 
-    private Integer semanticBridgeCount;
+    private Integer retrievedCount;
 
     private Integer totalCandidateCount;
 

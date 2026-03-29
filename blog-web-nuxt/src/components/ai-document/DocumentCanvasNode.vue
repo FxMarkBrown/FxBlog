@@ -13,6 +13,7 @@ type CanvasNodeData = {
   body?: string
   markdown?: string
   badge?: string
+  isActive?: boolean
   expandable?: boolean
   expanded?: boolean
   pageLabel?: string
@@ -20,6 +21,9 @@ type CanvasNodeData = {
   sourceUrl?: string
   question?: string
   answer?: string
+  helperLines?: string[]
+  modelId?: string
+  modelOptions?: Array<{ id: string; displayName?: string; quotaMultiplier?: number }>
   queryMode?: 'strict' | 'balanced' | 'explore'
   contextSummary?: string
   usedNodes?: Array<{ nodeId: string; title?: string; relation?: string }>
@@ -37,6 +41,7 @@ type CanvasNodeData = {
   onQuestionChange?: (nodeId: string, value: string) => void
   onSubmitQuestion?: (nodeId: string) => void
   onSelectCitation?: (nodeId: string) => void
+  onModelChange?: (nodeId: string, modelId: string) => void
   onQueryModeChange?: (nodeId: string, mode: 'strict' | 'balanced' | 'explore') => void
   onToggleSelectedContextNode?: (nodeId: string, targetNodeId: string) => void
 }
@@ -50,6 +55,7 @@ const showClose = computed(() => isPreview.value || isChat.value)
 const markdownTheme = computed(() => props.data.themeMode === 'dark' ? 'dark' : 'light')
 const selectedContextSet = computed(() => new Set((props.data.selectedContextNodes || []).map((node) => String(node.nodeId || '')).filter(Boolean)))
 const showContextSocket = computed(() => isChat.value && Boolean(props.data.showContextSocket))
+const selectedModelOption = computed(() => (props.data.modelOptions || []).find((item) => item.id === props.data.modelId) || null)
 
 function handleToggleExpand() {
   if (!props.data.nodeId || !props.data.onToggleExpand) {
@@ -116,6 +122,13 @@ function handleQueryModeChange(mode: 'strict' | 'balanced' | 'explore') {
   props.data.onQueryModeChange(props.data.nodeId, mode)
 }
 
+function handleModelSelectChange(modelId: string) {
+  if (!props.data.nodeId || !props.data.onModelChange || !modelId) {
+    return
+  }
+  props.data.onModelChange(props.data.nodeId, modelId)
+}
+
 function handleToggleSelectedContextNode(targetNodeId?: string) {
   if (!props.data.nodeId || !targetNodeId || !props.data.onToggleSelectedContextNode) {
     return
@@ -129,13 +142,28 @@ function isSelectedContextNode(nodeId?: string) {
   }
   return selectedContextSet.value.has(nodeId)
 }
+
+function formatQuotaMultiplier(value?: number) {
+  const normalized = Number(value || 1)
+  if (Number.isNaN(normalized) || normalized <= 0) {
+    return '1'
+  }
+  return Number.isInteger(normalized) ? String(normalized) : normalized.toFixed(1).replace(/\.0$/, '')
+}
+
+function buildModelOptionLabel(model?: { id: string; displayName?: string; quotaMultiplier?: number } | null) {
+  if (!model) {
+    return '请选择模型'
+  }
+  return `${model.displayName || model.id} · x${formatQuotaMultiplier(model.quotaMultiplier)}`
+}
 </script>
 
 <template>
   <div
     class="document-canvas-node"
     :class="{
-      'is-selected': selected,
+      'is-active-node': Boolean(data.isActive),
       'is-outline': isOutline,
       'is-preview': isPreview,
       'is-chat': isChat,
@@ -226,177 +254,190 @@ function isSelectedContextNode(nodeId?: string) {
         <span>打开原文</span>
       </a>
 
-      <div v-if="isChat && data.markdown" class="node-chat markdown-preview">
-        <MdPreview
-          :model-value="data.markdown"
-          :theme="markdownTheme"
-          preview-theme="github"
-          code-theme="github"
-        />
-      </div>
-
       <div v-if="isChat" class="node-ask">
-        <div class="node-query-modes">
-          <button
-            type="button"
-            class="node-query-mode"
-            :class="{ 'is-active': data.queryMode === 'strict' }"
-            @click.stop="handleQueryModeChange('strict')"
-          >
-            严格
-          </button>
-          <button
-            type="button"
-            class="node-query-mode"
-            :class="{ 'is-active': data.queryMode === 'balanced' || !data.queryMode }"
-            @click.stop="handleQueryModeChange('balanced')"
-          >
-            平衡
-          </button>
-          <button
-            type="button"
-            class="node-query-mode"
-            :class="{ 'is-active': data.queryMode === 'explore' }"
-            @click.stop="handleQueryModeChange('explore')"
-          >
-            探索
-          </button>
-        </div>
-
-        <div v-if="data.contextSummary" class="node-context-summary">{{ data.contextSummary }}</div>
-
-        <div v-if="data.selectedContextNodes?.length" class="node-context-group">
-          <div class="node-context-group__label">显式上下文</div>
-          <div class="node-context-chips">
-            <div
-              v-for="node in data.selectedContextNodes"
-              :key="`${node.nodeId}-selected`"
-              class="node-context-chip"
-            >
-              <button
-                type="button"
-                class="node-citation is-selected"
-                @click.stop="handleCitationSelect(node.nodeId)"
+        <div class="node-message-list">
+          <div v-if="!data.answer && data.helperLines?.length" class="node-message-item system">
+            <div class="node-message-role">使用说明</div>
+            <div class="node-chat-helper">
+              <div
+                v-for="(line, index) in data.helperLines"
+                :key="`helper-${index}`"
+                class="node-chat-helper__line"
               >
-                {{ node.title || node.nodeId }}
-              </button>
-              <button
-                type="button"
-                class="node-context-chip__toggle is-active"
-                title="移出显式上下文"
-                @click.stop="handleToggleSelectedContextNode(node.nodeId)"
-              >
-                <i class="fas fa-xmark"></i>
-              </button>
+                {{ line }}
+              </div>
             </div>
+          </div>
+
+          <div v-if="data.question" class="node-message-item user">
+            <div class="node-message-role">本轮问题</div>
+            <div class="node-message-plain">{{ data.question }}</div>
+          </div>
+
+          <div v-if="data.answer" class="node-message-item assistant">
+            <div class="node-message-role">节点回答</div>
+            <div class="node-message-content markdown-preview">
+              <MdPreview
+                :model-value="data.answer"
+                :theme="markdownTheme"
+                preview-theme="github"
+                code-theme="github"
+              />
+            </div>
+
+            <div v-if="data.contextSummary" class="node-message-activities">
+              <div class="node-message-activity completed">
+                <i class="fas fa-diagram-project"></i>
+                <span class="node-message-activity-label">{{ data.contextSummary }}</span>
+              </div>
+            </div>
+
+            <div v-if="data.citations?.length" class="node-message-citations">
+              <div class="node-citation-title">引用节点</div>
+              <div
+                v-for="citation in data.citations"
+                :key="`${citation.nodeId}-${citation.relation || 'citation'}`"
+                class="node-citation-card"
+              >
+                <div class="node-citation-meta">
+                  <button
+                    type="button"
+                    class="node-citation-card__main"
+                    @click.stop="handleCitationSelect(citation.nodeId)"
+                  >
+                    <span class="node-citation-article">{{ citation.displayLabel ? `${citation.displayLabel} · ` : '' }}{{ citation.title || citation.nodeId }}</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="node-context-chip__toggle"
+                    :class="{ 'is-active': isSelectedContextNode(citation.nodeId) }"
+                    :title="isSelectedContextNode(citation.nodeId) ? '移出显式上下文' : '纳入显式上下文'"
+                    @click.stop="handleToggleSelectedContextNode(citation.nodeId)"
+                  >
+                    <i :class="['fas', isSelectedContextNode(citation.nodeId) ? 'fa-check' : 'fa-plus']"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="data.usedNodes?.length || data.candidateNodes?.length" class="node-message-activities">
+              <div v-if="data.usedNodes?.length" class="node-message-activity completed">
+                <i class="fas fa-circle-check"></i>
+                <span class="node-message-activity-label">已使用 {{ data.usedNodes.length }} 个节点</span>
+              </div>
+              <div v-if="data.candidateNodes?.length" class="node-message-activity requested">
+                <i class="fas fa-wave-square"></i>
+                <span class="node-message-activity-label">候选 {{ data.candidateNodes.length }} 个节点</span>
+              </div>
+            </div>
+          </div>
+
+          <div v-else-if="data.sending" class="node-message-item assistant pending">
+            <div class="node-message-role">节点回答</div>
+            <div class="node-message-pending">生成中...</div>
           </div>
         </div>
 
-        <textarea
-          class="node-ask__input"
-          rows="4"
-          :value="data.question || ''"
-          placeholder="围绕当前节点提问，例如：这一节的核心论点是什么？"
-          @input="handleQuestionInput"
-        ></textarea>
-        <div class="node-ask__actions">
-          <button type="button" class="node-action primary" :disabled="data.sending" @click.stop="handleSubmitQuestion">
-            <i :class="['fas', data.sending ? 'fa-spinner fa-spin' : 'fa-paper-plane']"></i>
-            <span>{{ data.sending ? '提问中' : '发送问题' }}</span>
-          </button>
-        </div>
-        <div v-if="data.error" class="node-ask__error">{{ data.error }}</div>
-        <div v-if="data.answer" class="node-answer markdown-preview">
-          <MdPreview
-            :model-value="data.answer"
-            :theme="markdownTheme"
-            preview-theme="github"
-            code-theme="github"
-          />
-        </div>
-        <div v-if="data.citations?.length" class="node-citations">
-          <div
-            v-for="citation in data.citations"
-            :key="`${citation.nodeId}-${citation.relation || 'citation'}`"
-            class="node-context-chip"
-          >
-            <button
-              type="button"
-              class="node-citation"
-              @click.stop="handleCitationSelect(citation.nodeId)"
-            >
-              {{ citation.title || citation.nodeId }}
+        <div class="node-composer-shell">
+          <div class="node-query-toolbar">
+            <div v-if="data.modelOptions?.length" class="node-model-picker">
+              <ClientOnly>
+                <ElSelect
+                  :model-value="data.modelId || ''"
+                  class="node-model-select"
+                  popper-class="ai-model-select-dropdown"
+                  placeholder="请选择模型"
+                  @change="handleModelSelectChange"
+                >
+                  <ElOption
+                    v-for="model in data.modelOptions"
+                    :key="model.id"
+                    :label="buildModelOptionLabel(model)"
+                    :value="model.id"
+                  />
+                </ElSelect>
+                <template #fallback>
+                  <div class="node-model-select-fallback">
+                    {{ buildModelOptionLabel(selectedModelOption) }}
+                  </div>
+                </template>
+              </ClientOnly>
+            </div>
+
+            <div class="node-query-modes">
+              <button
+                type="button"
+                class="node-query-mode"
+                :class="{ 'is-active': data.queryMode === 'strict' }"
+                @click.stop="handleQueryModeChange('strict')"
+              >
+                严格
+              </button>
+              <button
+                type="button"
+                class="node-query-mode"
+                :class="{ 'is-active': data.queryMode === 'balanced' || !data.queryMode }"
+                @click.stop="handleQueryModeChange('balanced')"
+              >
+                平衡
+              </button>
+              <button
+                type="button"
+                class="node-query-mode"
+                :class="{ 'is-active': data.queryMode === 'explore' }"
+                @click.stop="handleQueryModeChange('explore')"
+              >
+                探索
+              </button>
+            </div>
+          </div>
+
+          <div v-if="data.selectedContextNodes?.length" class="node-context-group">
+            <div class="node-context-group__label">显式上下文</div>
+            <div class="node-context-chips">
+              <div
+                v-for="node in data.selectedContextNodes"
+                :key="`${node.nodeId}-selected`"
+                class="node-context-chip"
+              >
+                <button
+                  type="button"
+                  class="node-citation is-selected"
+                  @click.stop="handleCitationSelect(node.nodeId)"
+                >
+                  {{ node.title || node.nodeId }}
+                </button>
+                <button
+                  type="button"
+                  class="node-context-chip__toggle is-active"
+                  title="移出显式上下文"
+                  @click.stop="handleToggleSelectedContextNode(node.nodeId)"
+                >
+                  <i class="fas fa-xmark"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <textarea
+            class="node-ask__input"
+            rows="4"
+            :value="data.question || ''"
+            placeholder="输入你想围绕当前节点追问的问题"
+            @input="handleQuestionInput"
+          ></textarea>
+          <div class="node-composer-footer">
+            <span class="node-composer-hint">{{ data.contextSummary || '支持显式上下文与知识流回跳' }}</span>
+            <button type="button" class="node-composer-btn" :disabled="data.sending" @click.stop="handleSubmitQuestion">
+              <i :class="['fas', data.sending ? 'fa-spinner fa-spin' : 'fa-paper-plane']"></i>
+              <span>{{ data.sending ? '发送中...' : '发送' }}</span>
             </button>
-            <button
-              type="button"
-              class="node-context-chip__toggle"
-              :class="{ 'is-active': isSelectedContextNode(citation.nodeId) }"
-              :title="isSelectedContextNode(citation.nodeId) ? '移出显式上下文' : '纳入显式上下文'"
-              @click.stop="handleToggleSelectedContextNode(citation.nodeId)"
-            >
-              <i :class="['fas', isSelectedContextNode(citation.nodeId) ? 'fa-check' : 'fa-plus']"></i>
-            </button>
           </div>
-        </div>
-
-        <div v-if="data.usedNodes?.length" class="node-context-group">
-          <div class="node-context-group__label">已使用上下文</div>
-          <div class="node-context-chips">
-            <div
-              v-for="node in data.usedNodes"
-              :key="`${node.nodeId}-used`"
-              class="node-context-chip"
-            >
-              <button
-                type="button"
-                class="node-citation is-used"
-                @click.stop="handleCitationSelect(node.nodeId)"
-              >
-                {{ node.title || node.nodeId }}
-              </button>
-              <button
-                type="button"
-                class="node-context-chip__toggle"
-                :class="{ 'is-active': isSelectedContextNode(node.nodeId) }"
-                :title="isSelectedContextNode(node.nodeId) ? '移出显式上下文' : '纳入显式上下文'"
-                @click.stop="handleToggleSelectedContextNode(node.nodeId)"
-              >
-                <i :class="['fas', isSelectedContextNode(node.nodeId) ? 'fa-check' : 'fa-plus']"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="data.candidateNodes?.length" class="node-context-group">
-          <div class="node-context-group__label">候选节点</div>
-          <div class="node-context-chips">
-            <div
-              v-for="node in data.candidateNodes.slice(0, 8)"
-              :key="`${node.nodeId}-candidate`"
-              class="node-context-chip"
-            >
-              <button
-                type="button"
-                class="node-citation is-candidate"
-                @click.stop="handleCitationSelect(node.nodeId)"
-              >
-                {{ node.title || node.nodeId }}
-              </button>
-              <button
-                type="button"
-                class="node-context-chip__toggle"
-                :class="{ 'is-active': isSelectedContextNode(node.nodeId) }"
-                :title="isSelectedContextNode(node.nodeId) ? '移出显式上下文' : '纳入显式上下文'"
-                @click.stop="handleToggleSelectedContextNode(node.nodeId)"
-              >
-                <i :class="['fas', isSelectedContextNode(node.nodeId) ? 'fa-check' : 'fa-plus']"></i>
-              </button>
-            </div>
-          </div>
+          <div v-if="data.error" class="node-ask__error">{{ data.error }}</div>
         </div>
       </div>
 
-      <div v-if="isOutline && selected" class="node-actions">
+      <div v-if="isOutline && data.isActive" class="node-actions">
         <button type="button" class="node-action ghost" @click.stop="handleTogglePreview">
           <i class="far fa-file-lines"></i>
           <span>查看原文</span>
@@ -543,34 +584,34 @@ function isSelectedContextNode(nodeId?: string) {
   overflow: hidden;
 }
 
-.is-selected .node-card {
+.is-active-node .node-card {
   border-style: dashed;
   border-width: 2px;
   border-color: #4f46e5;
   box-shadow: 0 18px 34px rgba(79, 70, 229, 0.16);
 }
 
-.is-current:not(.is-selected) .node-card {
+.is-current:not(.is-active-node) .node-card {
   border-color: rgba(14, 165, 233, 0.55);
   box-shadow: 0 18px 34px rgba(14, 165, 233, 0.14);
 }
 
-.is-used:not(.is-selected):not(.is-current) .node-card {
+.is-used:not(.is-active-node):not(.is-current) .node-card {
   border-color: rgba(56, 189, 248, 0.44);
   box-shadow: 0 16px 30px rgba(56, 189, 248, 0.1);
 }
 
-.is-candidate:not(.is-selected):not(.is-current):not(.is-used) .node-card {
+.is-candidate:not(.is-active-node):not(.is-current):not(.is-used) .node-card {
   border-color: rgba(148, 163, 184, 0.36);
   box-shadow: 0 14px 28px rgba(148, 163, 184, 0.08);
 }
 
-.is-citation:not(.is-selected):not(.is-current) .node-card {
+.is-citation:not(.is-active-node):not(.is-current) .node-card {
   border-color: rgba(168, 85, 247, 0.44);
   box-shadow: 0 16px 30px rgba(168, 85, 247, 0.1);
 }
 
-.is-selected-context:not(.is-selected):not(.is-current) .node-card {
+.is-selected-context:not(.is-active-node):not(.is-current) .node-card {
   border-color: rgba(245, 158, 11, 0.52);
   box-shadow: 0 18px 32px rgba(245, 158, 11, 0.14);
 }
@@ -595,6 +636,7 @@ function isSelectedContextNode(nodeId?: string) {
   flex-direction: row;
   align-items: center;
   flex-wrap: nowrap;
+  flex: 1 1 auto;
   gap: 8px;
   min-width: 0;
 
@@ -621,6 +663,7 @@ function isSelectedContextNode(nodeId?: string) {
 }
 
 .node-toggle {
+  flex: 0 0 auto;
   width: 28px;
   height: 28px;
   border: none;
@@ -631,6 +674,7 @@ function isSelectedContextNode(nodeId?: string) {
 }
 
 .node-close {
+  flex: 0 0 auto;
   width: 28px;
   height: 28px;
   border: none;
@@ -680,15 +724,225 @@ function isSelectedContextNode(nodeId?: string) {
 
 .node-ask {
   margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.node-message-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 4px;
+}
+
+.node-message-item {
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.node-message-item.system {
+  background: rgba(14, 165, 233, 0.08);
+}
+
+.node-message-item.user {
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.node-message-item.assistant {
+  background: rgba(20, 184, 166, 0.08);
+}
+
+.node-message-item.pending {
+  border-style: dashed;
+}
+
+.node-message-role {
+  margin-bottom: 8px;
+  color: #0f172a;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.node-message-plain,
+.node-message-content {
+  color: #475569;
+  line-height: 1.75;
+}
+
+.node-message-pending {
+  margin-top: 8px;
+  color: #0ea5e9;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.node-chat-helper {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.8rem;
+  line-height: 1.65;
+}
+
+.node-chat-helper__line + .node-chat-helper__line {
+  margin-top: 4px;
+}
+
+.node-message-citations {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.node-citation-title {
+  color: #0f172a;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.node-citation-card {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.node-citation-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.node-citation-card__main {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.node-citation-article {
+  color: #0f172a;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.node-message-activities {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.node-message-activity {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(148, 163, 184, 0.06);
+}
+
+.node-message-activity.completed {
+  background: rgba(20, 184, 166, 0.08);
+  border-color: rgba(20, 184, 166, 0.18);
+}
+
+.node-message-activity.requested {
+  background: rgba(14, 165, 233, 0.08);
+  border-color: rgba(14, 165, 233, 0.18);
+}
+
+.node-message-activity-label {
+  color: #0f172a;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.node-query-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.node-model-picker {
+  flex: 1 1 216px;
+  min-width: 180px;
+}
+
+.node-model-select {
+  width: 100%;
+}
+
+.node-model-select-fallback {
+  width: 100%;
+  min-height: 38px;
+  padding: 9px 14px;
+  border-radius: 16px;
+  background: rgba(148, 163, 184, 0.06);
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.16) inset;
+  color: #0f172a;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.node-model-select :deep(.el-input__wrapper),
+.node-model-select :deep(.el-select__wrapper),
+.node-model-select :deep(.el-input__inner) {
+  background: rgba(148, 163, 184, 0.06) !important;
+  color: #0f172a !important;
+}
+
+.node-model-select :deep(.el-input__wrapper),
+.node-model-select :deep(.el-select__wrapper) {
+  min-height: 38px;
+  border-radius: 16px !important;
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.16) inset !important;
+}
+
+.node-model-select :deep(.el-select__selection),
+.node-model-select :deep(.el-select__selected-item),
+.node-model-select :deep(.el-select__placeholder) {
+  border-radius: 16px !important;
+}
+
+.node-model-select :deep(.el-select__placeholder),
+.node-model-select :deep(.el-select__selected-item),
+.node-model-select :deep(.el-select__caret),
+.node-model-select :deep(.el-input__icon) {
+  color: #0f172a !important;
 }
 
 .node-query-modes {
   display: flex;
+  flex-wrap: nowrap;
   gap: 8px;
-  margin-bottom: 10px;
+  flex: 0 1 auto;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.node-query-modes::-webkit-scrollbar {
+  display: none;
 }
 
 .node-query-mode {
+  flex: 0 0 auto;
   border: none;
   border-radius: 999px;
   padding: 7px 11px;
@@ -711,16 +965,23 @@ function isSelectedContextNode(nodeId?: string) {
   line-height: 1.5;
 }
 
+.node-composer-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  padding-top: 12px;
+}
+
 .node-ask__input {
   width: 100%;
-  min-height: 112px;
-  margin-top: 12px;
-  padding: 12px 13px;
-  border-radius: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.26);
-  background: rgba(255, 255, 255, 0.88);
+  min-height: 92px;
+  resize: none;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(148, 163, 184, 0.06);
   color: #0f172a;
-  resize: vertical;
   outline: none;
   font: inherit;
   line-height: 1.65;
@@ -731,36 +992,41 @@ function isSelectedContextNode(nodeId?: string) {
   }
 }
 
-.node-ask__actions {
+.node-composer-footer {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
-  margin-top: 10px;
+  gap: 12px;
+}
+
+.node-composer-hint {
+  margin-right: auto;
+  color: #64748b;
+  font-size: 0.76rem;
+}
+
+.node-composer-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 12px;
+  background: rgba(148, 163, 184, 0.14);
+  color: #0f172a;
+  cursor: pointer;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.node-composer-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .node-ask__error {
-  margin-top: 10px;
   color: #dc2626;
   font-size: 0.82rem;
-}
-
-.node-answer {
-  margin-top: 12px;
-  padding: 12px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(14, 165, 233, 0.16);
-  color: #1e293b;
-  line-height: 1.75;
-  max-height: 260px;
-  overflow: auto;
-  white-space: normal;
-}
-
-.node-citations {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
 }
 
 .node-context-chips {
@@ -771,7 +1037,7 @@ function isSelectedContextNode(nodeId?: string) {
 }
 
 .node-context-group {
-  margin-top: 10px;
+  margin-top: 2px;
 }
 
 .node-context-group__label {
@@ -987,7 +1253,9 @@ function isSelectedContextNode(nodeId?: string) {
 .document-canvas-node.is-dark .node-card__subtitle,
 .document-canvas-node.is-dark .node-card__body,
 .document-canvas-node.is-dark .node-preview,
-.document-canvas-node.is-dark .node-chat {
+.document-canvas-node.is-dark .node-chat,
+.document-canvas-node.is-dark .node-message-plain,
+.document-canvas-node.is-dark .node-message-content {
   color: #cbd5e1;
 }
 
@@ -1001,11 +1269,49 @@ function isSelectedContextNode(nodeId?: string) {
   border-color: rgba(100, 116, 139, 0.28);
 }
 
-.document-canvas-node.is-dark .node-ask__input,
-.document-canvas-node.is-dark .node-answer {
+.document-canvas-node.is-dark .node-ask__input {
   background: rgba(15, 23, 42, 0.82);
   border-color: rgba(100, 116, 139, 0.3);
   color: #e2e8f0;
+}
+
+.document-canvas-node.is-dark .node-chat-helper {
+  background: transparent;
+  border-color: transparent;
+  color: #cbd5e1;
+}
+
+.document-canvas-node.is-dark .node-message-item {
+  border-color: rgba(100, 116, 139, 0.18);
+}
+
+.document-canvas-node.is-dark .node-message-item.system {
+  background: rgba(14, 165, 233, 0.12);
+}
+
+.document-canvas-node.is-dark .node-message-item.user {
+  background: rgba(51, 65, 85, 0.48);
+}
+
+.document-canvas-node.is-dark .node-message-item.assistant {
+  background: rgba(20, 184, 166, 0.12);
+}
+
+.document-canvas-node.is-dark .node-message-role,
+.document-canvas-node.is-dark .node-citation-title,
+.document-canvas-node.is-dark .node-citation-article,
+.document-canvas-node.is-dark .node-message-activity-label {
+  color: #e2e8f0;
+}
+
+.document-canvas-node.is-dark .node-citation-card {
+  background: rgba(15, 23, 42, 0.56);
+  border-color: rgba(100, 116, 139, 0.22);
+}
+
+.document-canvas-node.is-dark .node-message-activity {
+  background: rgba(51, 65, 85, 0.42);
+  border-color: rgba(100, 116, 139, 0.24);
 }
 
 .document-canvas-node.is-dark .node-ask__input::placeholder {
@@ -1023,7 +1329,8 @@ function isSelectedContextNode(nodeId?: string) {
 }
 
 .document-canvas-node.is-dark .node-context-summary,
-.document-canvas-node.is-dark .node-context-group__label {
+.document-canvas-node.is-dark .node-context-group__label,
+.document-canvas-node.is-dark .node-composer-hint {
   color: #94a3b8;
 }
 
@@ -1068,6 +1375,91 @@ function isSelectedContextNode(nodeId?: string) {
   }
 }
 
+.document-canvas-node.is-dark .node-composer-btn {
+  background: rgba(51, 65, 85, 0.48);
+  color: #e2e8f0;
+}
+
+.document-canvas-node.is-dark .node-model-select-fallback {
+  background: rgba(15, 23, 42, 0.92);
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.22) inset;
+  color: #e2e8f0;
+}
+
+.document-canvas-node.is-dark .node-model-select :deep(.el-input__wrapper),
+.document-canvas-node.is-dark .node-model-select :deep(.el-select__wrapper),
+.document-canvas-node.is-dark .node-model-select :deep(.el-input__inner) {
+  background: rgba(15, 23, 42, 0.92) !important;
+  color: #e2e8f0 !important;
+}
+
+.document-canvas-node.is-dark .node-model-select :deep(.el-input__wrapper),
+.document-canvas-node.is-dark .node-model-select :deep(.el-select__wrapper) {
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.22) inset !important;
+}
+
+.document-canvas-node.is-dark .node-model-select :deep(.el-select__placeholder),
+.document-canvas-node.is-dark .node-model-select :deep(.el-select__selected-item),
+.document-canvas-node.is-dark .node-model-select :deep(.el-select__caret),
+.document-canvas-node.is-dark .node-model-select :deep(.el-input__icon) {
+  color: #e2e8f0 !important;
+}
+
+:global(.ai-model-select-dropdown.el-popper) {
+  border-radius: 16px !important;
+  overflow: hidden !important;
+}
+
+:global(.ai-model-select-dropdown .el-select-dropdown__wrap),
+:global(.ai-model-select-dropdown .el-scrollbar),
+:global(.ai-model-select-dropdown .el-scrollbar__view),
+:global(.ai-model-select-dropdown .el-select-dropdown__list) {
+  background: transparent !important;
+}
+
+:global(.ai-model-select-dropdown .el-select-dropdown__list) {
+  padding: 6px !important;
+}
+
+:global(.ai-model-select-dropdown .el-select-dropdown__item) {
+  margin: 0 !important;
+  border-radius: 12px !important;
+}
+
+:global(:root[data-theme='dark'] .ai-model-select-dropdown) {
+  background: #0f172a !important;
+  border-color: rgba(148, 163, 184, 0.22) !important;
+  box-shadow: 0 18px 44px rgba(2, 6, 23, 0.36) !important;
+}
+
+:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-popper__arrow::before) {
+  background: #0f172a !important;
+  border-color: rgba(148, 163, 184, 0.22) !important;
+}
+
+:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__wrap),
+:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-scrollbar),
+:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-scrollbar__view),
+:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__list) {
+  background: #0f172a !important;
+}
+
+:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__item) {
+  background: transparent !important;
+  color: #e2e8f0 !important;
+}
+
+:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__item.hover),
+:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__item:hover) {
+  background: rgba(56, 189, 248, 0.14) !important;
+  color: #f8fafc !important;
+}
+
+:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__item.selected) {
+  background: rgba(56, 189, 248, 0.12) !important;
+  color: #67e8f9 !important;
+}
+
 .document-canvas-node.is-dark .source-link {
   color: #818cf8;
 }
@@ -1077,7 +1469,7 @@ function isSelectedContextNode(nodeId?: string) {
   color: #cbd5e1;
 }
 
-.document-canvas-node.is-dark.is-selected .node-card {
+.document-canvas-node.is-dark.is-active-node .node-card {
   border-color: #818cf8;
   box-shadow: 0 18px 34px rgba(99, 102, 241, 0.22);
 }
@@ -1115,7 +1507,7 @@ function isSelectedContextNode(nodeId?: string) {
 
   .node-preview,
   .node-chat,
-  .node-answer {
+  .node-message-item {
     padding: 10px;
     border-radius: 12px;
   }

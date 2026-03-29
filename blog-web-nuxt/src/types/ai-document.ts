@@ -54,6 +54,7 @@ export interface DocumentParseResult {
 }
 
 export interface DocumentNodeCitation {
+  displayLabel?: string
   nodeId: string
   title?: string
   level?: number
@@ -74,6 +75,7 @@ export interface DocumentContextNode {
 }
 
 export interface DocumentKnowledgeFlowEdge {
+  displayLabel?: string
   fromNodeId: string
   toNodeId: string
   edgeType?: string
@@ -85,12 +87,12 @@ export interface DocumentContextPlan {
   queryMode?: string
   currentNodeId?: string
   descendantDepth?: number
-  maxBridgeNodes?: number
+  maxRetrievedNodes?: number
   ancestorCount?: number
   descendantCount?: number
-  ancestorSiblingCount?: number
+  peerContextCount?: number
   selectedCount?: number
-  semanticBridgeCount?: number
+  retrievedCount?: number
   totalCandidateCount?: number
   totalUsedCount?: number
 }

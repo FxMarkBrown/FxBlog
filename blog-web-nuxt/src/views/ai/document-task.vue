@@ -5,7 +5,7 @@ import { ElMessage } from 'element-plus'
 import type { Connection, Edge, Node, OnConnectStartParams } from '@vue-flow/core'
 import { ConnectionMode, MarkerType, VueFlow } from '@vue-flow/core'
 import DocumentCanvasNode from '@/components/ai-document/DocumentCanvasNode.vue'
-import { getConversationModelOptionsApi } from '@/api/ai'
+import { getConversationModelOptionsApi, getConversationQuotaApi } from '@/api/ai'
 import {
   getDocumentNodeMessagesApi,
   getDocumentNodeThreadApi,
@@ -31,6 +31,15 @@ import { getThemeMode, initTheme, setThemeMode } from '@/utils/theme'
 type QueryModePreset = 'strict' | 'balanced' | 'explore'
 type AnyRecord = Record<string, any>
 const AI_DOCUMENT_MODEL_STORAGE_KEY = 'BLOG_AI_DOCUMENT_SELECTED_MODEL_ID'
+
+function createEmptyQuotaSnapshot() {
+  return {
+    enabled: true,
+    minRequestTokens: 0,
+    availableTokens: 0,
+    usedTokens: 0
+  }
+}
 
 type ChatState = {
   mode: QueryModePreset
@@ -60,6 +69,7 @@ type CanvasNodeData = {
   body?: string
   markdown?: string
   badge?: string
+  isActive?: boolean
   expandable?: boolean
   expanded?: boolean
   pageLabel?: string
@@ -67,6 +77,9 @@ type CanvasNodeData = {
   sourceUrl?: string
   question?: string
   answer?: string
+  helperLines?: string[]
+  modelId?: string
+  modelOptions?: Array<{ id: string; displayName?: string; quotaMultiplier?: number }>
   citations?: DocumentNodeAnswer['citations']
   queryMode?: QueryModePreset
   contextSummary?: string
@@ -83,6 +96,7 @@ type CanvasNodeData = {
   onQuestionChange?: (nodeId: string, value: string) => void
   onSubmitQuestion?: (nodeId: string) => void
   onSelectCitation?: (nodeId: string) => void
+  onModelChange?: (nodeId: string, modelId: string) => void
   onQueryModeChange?: (nodeId: string, mode: QueryModePreset) => void
   onToggleSelectedContextNode?: (nodeId: string, targetNodeId: string) => void
 }
@@ -93,9 +107,7 @@ type OutlineDescriptor = {
   node: DocumentTreeNode
 }
 
-type CanvasFlowNode = Node<CanvasNodeData> & {
-  selected?: boolean
-}
+type CanvasFlowNode = Node<CanvasNodeData>
 
 type OutlinePanelItem = {
   id: string
@@ -128,8 +140,10 @@ const flowRef = ref<InstanceType<typeof VueFlow> | null>(null)
 const isDarkMode = ref(false)
 const isMobileViewport = ref(false)
 const modelOptionsLoading = ref(false)
+const quotaLoading = ref(false)
 const chatModels = ref<AnyRecord[]>([])
 const selectedModelId = ref('')
+const quotaSnapshot = ref(createEmptyQuotaSnapshot())
 const activeAnswerNodeId = ref('')
 const connectingSocketChatNodeId = ref('')
 const elkEngine = shallowRef<any | null>(null)
@@ -150,7 +164,6 @@ const documentNodeLookup = computed<Record<string, DocumentTreeNode>>(() => {
   return lookup
 })
 const activeAnswerState = computed(() => (activeAnswerNodeId.value ? chatStateMap.value[activeAnswerNodeId.value] : undefined))
-const selectedModelOption = computed(() => chatModels.value.find((item) => item.id === selectedModelId.value) || null)
 const contextControlState = computed(() => {
   if (connectingSocketChatNodeId.value) {
     return chatStateMap.value[connectingSocketChatNodeId.value]
@@ -183,7 +196,7 @@ watch(isMobileViewport, () => {
 })
 
 watch(selectedOutlineNodeId, () => {
-  syncSelectedOutlineNodes()
+  void rebuildCanvas()
 })
 
 async function loadTask(silent = false) {
@@ -236,6 +249,19 @@ async function loadChatModels() {
   }
 }
 
+async function loadQuotaSnapshot() {
+  quotaLoading.value = true
+  try {
+    const response = await getConversationQuotaApi()
+    quotaSnapshot.value = {
+      ...createEmptyQuotaSnapshot(),
+      ...(unwrapResponseData<AnyRecord | null>(response) || {})
+    }
+  } finally {
+    quotaLoading.value = false
+  }
+}
+
 function ensureSelectedModel() {
   if (!import.meta.client) {
     return
@@ -260,6 +286,24 @@ function ensureSelectedModel() {
     : (availableIds.has(storedModelId) ? storedModelId : defaultModel.id)
   selectedModelId.value = nextModelId
   persistSelectedModel(nextModelId)
+}
+
+function handleChatModelChange(nodeId: string, modelId: string) {
+  if (!modelId) {
+    return
+  }
+  selectedModelId.value = modelId
+  persistSelectedModel(modelId)
+  if (!nodeId) {
+    return
+  }
+  chatStateMap.value = {
+    ...chatStateMap.value,
+    [nodeId]: {
+      ...getChatState(nodeId),
+      modelId
+    }
+  }
 }
 
 function persistSelectedModel(modelId = selectedModelId.value) {
@@ -357,9 +401,9 @@ function getLayoutMetrics() {
       baseX: 36,
       baseY: 72,
       outlineWidth: 280,
-      outlineHeight: 116,
+      outlineHeight: 164,
       nodeGap: 22,
-      layerGap: 116,
+      layerGap: 148,
       attachmentOffsetX: 0,
       previewOffsetY: 228,
       chatOffsetY: 228,
@@ -373,9 +417,9 @@ function getLayoutMetrics() {
     baseX: 120,
     baseY: 100,
     outlineWidth: 308,
-    outlineHeight: 118,
+    outlineHeight: 176,
     nodeGap: 42,
-    layerGap: 188,
+    layerGap: 228,
     attachmentOffsetX: 372,
     previewOffsetY: 92,
     chatOffsetY: -128,
@@ -520,6 +564,7 @@ async function rebuildCanvas() {
         data: {
           kind: 'outline',
           nodeId: descriptor.id,
+          isActive: descriptor.id === selectedOutlineNodeId.value,
           highlightRole: resolveNodeHighlightRole(descriptor.id),
           themeMode: isDarkMode.value ? 'dark' : 'light',
         title: String(node.title || '未命名节点'),
@@ -540,7 +585,7 @@ async function rebuildCanvas() {
         id: `${descriptor.parentId}-->${descriptor.id}`,
         source: descriptor.parentId,
         target: descriptor.id,
-        type: 'bezier',
+        type: 'default',
         animated: false,
         markerEnd: {
           type: MarkerType.ArrowClosed,
@@ -555,16 +600,6 @@ async function rebuildCanvas() {
       })
     }
   }
-
-  result.nodes = result.nodes.map((node) => {
-    if (node.data?.kind === 'outline') {
-      return {
-        ...node,
-        selected: node.id === selectedOutlineNodeId.value
-      }
-    }
-    return node
-  })
 
   appendAttachmentNodes(root, result)
   appendKnowledgeFlowEdges(result)
@@ -637,7 +672,7 @@ function appendAttachmentNodes(
         id: `${node.id}-->${previewId}`,
         source: node.id,
         target: previewId,
-        type: 'bezier',
+        type: 'default',
         animated: true,
         markerEnd: {
           type: MarkerType.ArrowClosed,
@@ -679,7 +714,13 @@ function appendAttachmentNodes(
           themeMode: isDarkMode.value ? 'dark' : 'light',
           title: `${node.title || '节点'} · 节点对话`,
           subtitle: buildChatSubtitle(chatState),
-          markdown: chatState.answer ? '' : normalizeMarkdownContent(buildChatHint(node)),
+          helperLines: buildChatHint(node),
+          modelId: chatState.modelId || selectedModelId.value || '',
+          modelOptions: chatModels.value.map((model) => ({
+            id: String(model.id),
+            displayName: String(model.displayName || model.id),
+            quotaMultiplier: Number(model.quotaMultiplier || 1)
+          })),
           question: chatState.question,
           answer: chatState.answer,
           citations: chatState.citations,
@@ -695,6 +736,7 @@ function appendAttachmentNodes(
           onQuestionChange: handleQuestionChange,
           onSubmitQuestion: handleSubmitQuestion,
           onSelectCitation: handleSelectCitation,
+          onModelChange: handleChatModelChange,
           onQueryModeChange: handleQueryModeChange,
           onToggleSelectedContextNode: handleToggleSelectedContextNode
         }
@@ -704,7 +746,7 @@ function appendAttachmentNodes(
         source: node.id,
         target: chatId,
         targetHandle: 'context-socket-target',
-        type: 'bezier',
+        type: 'default',
         animated: true,
         markerEnd: {
           type: MarkerType.ArrowClosed,
@@ -724,8 +766,8 @@ function appendAttachmentNodes(
 function appendKnowledgeFlowEdges(result: { nodes: CanvasFlowNode[]; edges: Edge[]; centers: Map<string, { x: number; y: number }> }) {
   const visibleNodeIds = new Set(result.nodes.map((node) => node.id))
   activeKnowledgeFlowEdges.value.forEach((edge: DocumentKnowledgeFlowEdge, index: number) => {
-    const fromNodeId = String(edge.fromNodeId || '')
-    const toNodeId = String(edge.toNodeId || '')
+    const fromNodeId = resolveKnowledgeEdgeEndpoint(String(edge.fromNodeId || ''))
+    const toNodeId = resolveKnowledgeEdgeEndpoint(String(edge.toNodeId || ''))
     if (!fromNodeId || !toNodeId || !visibleNodeIds.has(fromNodeId) || !visibleNodeIds.has(toNodeId)) {
       return
     }
@@ -733,7 +775,8 @@ function appendKnowledgeFlowEdges(result: { nodes: CanvasFlowNode[]; edges: Edge
       id: `knowledge:${fromNodeId}:${toNodeId}:${index}`,
       source: fromNodeId,
       target: toNodeId,
-      type: 'bezier',
+      type: 'default',
+      class: 'knowledge-flow-edge',
       animated: true,
       markerEnd: {
         type: MarkerType.ArrowClosed,
@@ -772,7 +815,7 @@ function appendUserContextControlEdges(result: { nodes: CanvasFlowNode[]; edges:
         id: `context-control:${chatNodeId}:${targetNodeId}:${index}`,
         source: sourceId,
         target: targetNodeId,
-        type: 'bezier',
+        type: 'default',
         sourceHandle: 'context-socket-source',
         targetHandle: 'context-target',
         animated: connectingSocketChatNodeId.value === chatNodeId,
@@ -801,22 +844,6 @@ function flattenTree(root?: DocumentTreeNode | null): DocumentTreeNode[] {
     items.push(...flattenTree(child))
   }
   return items
-}
-
-function syncSelectedOutlineNodes() {
-  const nextNodes: CanvasFlowNode[] = []
-  for (const node of visibleNodes.value as CanvasFlowNode[]) {
-    if (node.data?.kind !== 'outline') {
-      nextNodes.push(node)
-      continue
-    }
-
-    nextNodes.push({
-      ...node,
-      selected: node.id === selectedOutlineNodeId.value
-    })
-  }
-  visibleNodes.value = nextNodes
 }
 
 function findOutlineTrail(root: DocumentTreeNode | null | undefined, nodeId: string) {
@@ -952,35 +979,46 @@ function buildBadge(node: DocumentTreeNode) {
 
 function buildChatHint(node: DocumentTreeNode) {
   return [
-    `当前对话默认绑定节点《${node.title || '未命名节点'}》。`,
-    '你也可以从顶部插口拖出箭头，把别的节点纳入本轮显式上下文。',
-    '提问后会显示：',
-    '1. 实际使用的上下文节点',
-    '2. 候选但未使用的节点',
-    '3. 可回跳的引用与知识流边'
-  ].join('\n')
+    `当前对话默认绑定《${node.title || '未命名节点'}》。`,
+    '从顶部插口拖出箭头，可以把别的节点纳入本轮显式上下文。',
+    '回答会返回可回跳的引用标签和知识流箭头标签。'
+  ]
+}
+
+function resolveKnowledgeEdgeEndpoint(nodeId: string) {
+  if (!nodeId) {
+    return ''
+  }
+  if (activeAnswerNodeId.value && nodeId === activeAnswerNodeId.value && chatOpenIds.value.has(nodeId)) {
+    return `${nodeId}__chat`
+  }
+  return nodeId
 }
 
 function buildKnowledgeEdgeLabel(edge?: DocumentKnowledgeFlowEdge) {
+  const prefix = String(edge?.displayLabel || '').trim()
   const edgeType = String(edge?.edgeType || '').toLowerCase()
-  switch (edgeType) {
-    case 'bridges':
-      return '桥接'
-    case 'supports':
-      return '补充'
-    case 'explains':
-      return '上文'
-    case 'extends':
-      return '下文'
-    case 'compares':
-      return '对照'
-    default:
-      return ''
-  }
+  const typeLabel = (() => {
+    switch (edgeType) {
+      case 'retrieves':
+        return '检索'
+      case 'supports':
+        return '补充'
+      case 'explains':
+        return '上文'
+      case 'extends':
+        return '下文'
+      case 'compares':
+        return '对照'
+      default:
+        return ''
+    }
+  })()
+  return [prefix, typeLabel].filter(Boolean).join(' · ')
 }
 
 function buildChatSubtitle(chatState?: ChatState) {
-  const modelLabel = resolveModelDisplayName(chatState?.modelId) || selectedModelOption.value?.displayName || '默认模型'
+  const modelLabel = resolveModelDisplayName(chatState?.modelId || selectedModelId.value) || '默认模型'
   if (chatState?.sending) {
     return `正在生成回答 · ${modelLabel}`
   }
@@ -1017,10 +1055,6 @@ function describeMode(mode?: QueryModePreset) {
   }
 }
 
-function buildModelOptionLabel(model: AnyRecord) {
-  return `${model.displayName} · x${formatQuotaMultiplier(model.quotaMultiplier)}`
-}
-
 function resolveModelDisplayName(modelId?: string) {
   if (!modelId) {
     return ''
@@ -1028,12 +1062,8 @@ function resolveModelDisplayName(modelId?: string) {
   return String(chatModels.value.find((item) => item.id === modelId)?.displayName || '')
 }
 
-function formatQuotaMultiplier(value: unknown) {
-  const normalized = Number(value || 1)
-  if (Number.isNaN(normalized) || normalized <= 0) {
-    return '1'
-  }
-  return Number.isInteger(normalized) ? String(normalized) : normalized.toFixed(1).replace(/\.0$/, '')
+function formatTokenCount(value: unknown) {
+  return Number(value || 0).toLocaleString('zh-CN')
 }
 
 function resolveNodeHighlightRole(nodeId: string) {
@@ -1165,7 +1195,7 @@ async function handleSubmitQuestion(nodeId: string) {
       ...currentState,
       sending: true,
       historyLoaded: true,
-      modelId: selectedModelId.value || currentState.modelId || '',
+      modelId: currentState.modelId || selectedModelId.value || '',
       error: '',
       answer: '',
       citations: [],
@@ -1186,7 +1216,7 @@ async function handleSubmitQuestion(nodeId: string) {
     ].filter((id) => id && id !== nodeId)))
     await streamDocumentNodeApi(taskId.value, nodeId, {
       question,
-      modelId: selectedModelId.value || undefined,
+      modelId: currentState.modelId || selectedModelId.value || undefined,
       selectedNodeIds,
       ...buildAskPayloadByMode(currentState.mode)
     }, {
@@ -1245,6 +1275,7 @@ async function handleSubmitQuestion(nodeId: string) {
             budgetReport: answer?.budgetReport
           }
         }
+        void loadQuotaSnapshot()
       },
       onError: (error) => {
         chatStateMap.value = {
@@ -1359,23 +1390,23 @@ function buildAskPayloadByMode(mode: QueryModePreset = 'balanced') {
     case 'strict':
       return {
         descendantDepth: 1,
-        includeAncestorSiblings: false,
-        includeSemanticBridges: false,
-        maxBridgeNodes: 0
+        includePeerContext: false,
+        enableRetrieval: false,
+        maxRetrievedNodes: 0
       }
     case 'explore':
       return {
         descendantDepth: 3,
-        includeAncestorSiblings: true,
-        includeSemanticBridges: true,
-        maxBridgeNodes: 4
+        includePeerContext: true,
+        enableRetrieval: true,
+        maxRetrievedNodes: 4
       }
     default:
       return {
         descendantDepth: 2,
-        includeAncestorSiblings: true,
-        includeSemanticBridges: true,
-        maxBridgeNodes: 2
+        includePeerContext: false,
+        enableRetrieval: true,
+        maxRetrievedNodes: 2
       }
   }
 }
@@ -1830,6 +1861,7 @@ onMounted(() => {
   }
 
   void loadChatModels()
+  void loadQuotaSnapshot()
   void loadTask()
 })
 
@@ -1848,53 +1880,21 @@ onBeforeUnmount(() => {
           <i class="fas fa-arrow-left"></i>
           <span>返回任务列表</span>
         </button>
+      </div>
+      <div class="task-toolbar__center">
         <div class="task-headline">
           <div class="task-title-row">
-            <span class="task-chip">文档画布</span>
             <h1>{{ taskDetail?.title || `文档任务 #${taskId}` }}</h1>
           </div>
-          <p>{{ taskDetail?.fileName || '未命名文档' }}</p>
         </div>
       </div>
       <div class="task-toolbar__right">
-        <div class="toolbar-model">
-          <span class="toolbar-model__label">当前模型</span>
-          <ClientOnly>
-            <ElSelect
-              v-model="selectedModelId"
-              class="model-select"
-              popper-class="ai-model-select-dropdown"
-              placeholder="请选择模型"
-              :disabled="modelOptionsLoading || !chatModels.length"
-              @change="persistSelectedModel"
-            >
-              <ElOption
-                v-for="model in chatModels"
-                :key="model.id"
-                :label="buildModelOptionLabel(model)"
-                :value="model.id"
-              />
-            </ElSelect>
-            <template #fallback>
-              <div class="model-select-fallback">
-                {{ selectedModelOption ? buildModelOptionLabel(selectedModelOption) : '请选择模型' }}
-              </div>
-            </template>
-          </ClientOnly>
-          <small v-if="selectedModelOption">倍率 x{{ formatQuotaMultiplier(selectedModelOption.quotaMultiplier) }}</small>
+        <div class="toolbar-token">
+          <span class="toolbar-token__label">当前 Token</span>
+          <strong>{{ quotaLoading ? '同步中...' : formatTokenCount(quotaSnapshot.availableTokens) }}</strong>
+          <small v-if="quotaSnapshot.enabled">门槛 {{ formatTokenCount(quotaSnapshot.minRequestTokens) }}</small>
+          <small v-else>额度未启用</small>
         </div>
-        <div class="toolbar-meta">
-          <span>状态：{{ taskDetail?.status || 'LOADING' }}</span>
-          <span>页数：{{ taskDetail?.pageCount || 0 }}</span>
-        </div>
-        <button type="button" class="toolbar-btn secondary" @click="loadTask()">
-          <i class="fas fa-rotate-right"></i>
-          <span>刷新结果</span>
-        </button>
-        <button type="button" class="toolbar-btn" @click="fitCanvas">
-          <i class="fas fa-expand"></i>
-          <span>重新聚焦</span>
-        </button>
       </div>
     </header>
 
@@ -1989,6 +1989,19 @@ onBeforeUnmount(() => {
       </button>
     </ElTooltip>
 
+    <div class="document-action-rail">
+      <ElTooltip content="刷新结果" placement="left" effect="light" popper-class="document-theme-tooltip" :teleported="false">
+        <button type="button" class="document-floating-action is-secondary" title="刷新结果" @click="loadTask()">
+          <i class="fas fa-rotate-right"></i>
+        </button>
+      </ElTooltip>
+      <ElTooltip content="重新聚焦" placement="left" effect="light" popper-class="document-theme-tooltip" :teleported="false">
+        <button type="button" class="document-floating-action" title="重新聚焦" @click="fitCanvas">
+          <i class="fas fa-expand"></i>
+        </button>
+      </ElTooltip>
+    </div>
+
     <aside v-if="!isMobileViewport" class="document-tip" :class="{ 'is-dark': isDarkMode }">
       <p>左侧抽屉: 查看结构与搜索节点</p>
       <p>单击节点: 选中</p>
@@ -2018,36 +2031,50 @@ onBeforeUnmount(() => {
 }
 
 .task-toolbar {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
   gap: 20px;
   flex: 0 0 auto;
   padding: 18px 24px 16px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
-  background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+  background: rgba(255, 255, 255, 0.38);
+  backdrop-filter: blur(10px);
+}
+
+.task-toolbar__left,
+.task-toolbar__center,
+.task-toolbar__right {
+  display: flex;
+  align-items: center;
 }
 
 .task-toolbar__left,
 .task-toolbar__right {
-  display: flex;
-  align-items: center;
   gap: 18px;
 }
 
+.task-toolbar__center {
+  justify-content: center;
+  min-width: 0;
+}
+
 .task-toolbar__right {
-  margin-left: auto;
   justify-content: flex-end;
   flex-wrap: wrap;
 }
 
 .task-headline {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .task-title-row {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 14px;
   min-width: 0;
 }
@@ -2062,11 +2089,6 @@ onBeforeUnmount(() => {
     overflow: hidden;
     text-overflow: ellipsis;
   }
-
-  p {
-    margin: 8px 0 0;
-    color: #64748b;
-  }
 }
 
 .task-chip {
@@ -2080,21 +2102,19 @@ onBeforeUnmount(() => {
   font-weight: 700;
 }
 
-.toolbar-meta {
+.toolbar-token {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  color: #475569;
-  font-size: 0.84rem;
-  min-width: 78px;
-}
-
-.toolbar-model {
-  display: flex;
+  align-items: flex-end;
   flex-direction: column;
   gap: 4px;
-  min-width: 220px;
-  max-width: 280px;
+  min-width: 132px;
+  text-align: right;
+
+  strong {
+    color: #0f172a;
+    font-size: 1rem;
+    line-height: 1.1;
+  }
 
   small {
     color: #64748b;
@@ -2102,52 +2122,10 @@ onBeforeUnmount(() => {
   }
 }
 
-.toolbar-model__label {
+.toolbar-token__label {
   color: #475569;
   font-size: 0.78rem;
   font-weight: 700;
-}
-
-.model-select {
-  width: 100%;
-}
-
-.model-select-fallback {
-  width: 100%;
-  min-height: 40px;
-  padding: 10px 14px;
-  border-radius: 16px;
-  background: rgba(148, 163, 184, 0.08);
-  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.16) inset;
-  color: #0f172a;
-  font-size: 14px;
-  line-height: 20px;
-}
-
-.model-select :deep(.el-input__wrapper),
-.model-select :deep(.el-select__wrapper),
-.model-select :deep(.el-input__inner) {
-  background: rgba(148, 163, 184, 0.08) !important;
-  color: #0f172a !important;
-}
-
-.model-select :deep(.el-input__wrapper),
-.model-select :deep(.el-select__wrapper) {
-  border-radius: 16px !important;
-  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.16) inset !important;
-}
-
-.model-select :deep(.el-select__selection),
-.model-select :deep(.el-select__selected-item),
-.model-select :deep(.el-select__placeholder) {
-  border-radius: 16px !important;
-}
-
-.model-select :deep(.el-select__placeholder),
-.model-select :deep(.el-select__selected-item),
-.model-select :deep(.el-select__caret),
-.model-select :deep(.el-input__icon) {
-  color: #0f172a !important;
 }
 
 .toolbar-btn {
@@ -2401,11 +2379,50 @@ onBeforeUnmount(() => {
   }
 }
 
+.document-action-rail {
+  position: fixed;
+  right: 24px;
+  bottom: 82px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.document-floating-action {
+  width: 46px;
+  height: 46px;
+  border: none;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #4f46e5, #0ea5e9);
+  color: #fff;
+  box-shadow: 0 16px 36px rgba(37, 99, 235, 0.28);
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
+
+  &.is-secondary {
+    background: rgba(255, 255, 255, 0.9);
+    color: #0f172a;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.12);
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+}
+
 .document-tip {
   position: fixed;
   left: 24px;
   bottom: 24px;
-  z-index: 22;
+  z-index: 0;
   width: min(240px, calc(100vw - 140px));
   pointer-events: none;
 
@@ -2466,6 +2483,8 @@ onBeforeUnmount(() => {
 }
 
 .document-flow {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   background:
@@ -2516,6 +2535,11 @@ onBeforeUnmount(() => {
   stroke-linecap: round;
 }
 
+:deep(.knowledge-flow-edge .vue-flow__edge-path) {
+  animation: knowledge-flow-breath 2.6s ease-in-out infinite;
+  transform-origin: center;
+}
+
 :deep(.vue-flow__edge-text) {
   fill: #0f172a;
   font-size: 11px;
@@ -2526,6 +2550,26 @@ onBeforeUnmount(() => {
   fill: rgba(255, 255, 255, 0.92);
 }
 
+@keyframes knowledge-flow-breath {
+  0% {
+    opacity: 0.6;
+    stroke-width: 1.8;
+    filter: drop-shadow(0 0 0 rgba(56, 189, 248, 0));
+  }
+
+  50% {
+    opacity: 1;
+    stroke-width: 2.8;
+    filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.32));
+  }
+
+  100% {
+    opacity: 0.72;
+    stroke-width: 2.05;
+    filter: drop-shadow(0 0 2px rgba(56, 189, 248, 0.14));
+  }
+}
+
 .document-task-page.is-dark {
   background:
     radial-gradient(circle at top left, rgba(99, 102, 241, 0.14), transparent 26%),
@@ -2533,47 +2577,21 @@ onBeforeUnmount(() => {
 }
 
 .document-task-page.is-dark .task-toolbar {
-  background: rgba(2, 6, 23, 0.74);
-  border-bottom-color: rgba(71, 85, 105, 0.28);
+  background: rgba(2, 6, 23, 0.34);
+  border-bottom-color: rgba(71, 85, 105, 0.16);
 }
 
 .document-task-page.is-dark .task-headline h1 {
   color: #e2e8f0;
 }
 
-.document-task-page.is-dark .task-headline p,
-.document-task-page.is-dark .toolbar-meta {
+.document-task-page.is-dark .toolbar-token__label,
+.document-task-page.is-dark .toolbar-token small {
   color: #94a3b8;
 }
 
-.document-task-page.is-dark .toolbar-model__label,
-.document-task-page.is-dark .toolbar-model small {
-  color: #94a3b8;
-}
-
-.document-task-page.is-dark .model-select-fallback {
-  background: rgba(15, 23, 42, 0.9);
-  box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.28) inset;
+.document-task-page.is-dark .toolbar-token strong {
   color: #e2e8f0;
-}
-
-.document-task-page.is-dark .model-select :deep(.el-input__wrapper),
-.document-task-page.is-dark .model-select :deep(.el-select__wrapper),
-.document-task-page.is-dark .model-select :deep(.el-input__inner) {
-  background: rgba(15, 23, 42, 0.9) !important;
-  color: #e2e8f0 !important;
-}
-
-.document-task-page.is-dark .model-select :deep(.el-input__wrapper),
-.document-task-page.is-dark .model-select :deep(.el-select__wrapper) {
-  box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.28) inset !important;
-}
-
-.document-task-page.is-dark .model-select :deep(.el-select__placeholder),
-.document-task-page.is-dark .model-select :deep(.el-select__selected-item),
-.document-task-page.is-dark .model-select :deep(.el-select__caret),
-.document-task-page.is-dark .model-select :deep(.el-input__icon) {
-  color: #e2e8f0 !important;
 }
 
 .document-task-page.is-dark .toolbar-btn.secondary {
@@ -2645,6 +2663,12 @@ onBeforeUnmount(() => {
   box-shadow: 0 16px 36px rgba(14, 165, 233, 0.24);
 }
 
+.document-task-page.is-dark .document-floating-action.is-secondary {
+  background: rgba(15, 23, 42, 0.92);
+  color: #e2e8f0;
+  border-color: rgba(100, 116, 139, 0.32);
+}
+
 .document-task-page.is-dark .document-tip {
   p {
     color: rgba(148, 163, 184, 0.88);
@@ -2686,61 +2710,8 @@ onBeforeUnmount(() => {
   color: var(--text-primary) !important;
   border: 1px solid var(--border-color) !important;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14) !important;
-}
-
-:global(.ai-model-select-dropdown.el-popper) {
-  max-width: min(420px, calc(100vw - 24px));
-}
-
-:global(.ai-model-select-dropdown .el-select-dropdown__wrap),
-:global(.ai-model-select-dropdown .el-scrollbar),
-:global(.ai-model-select-dropdown .el-scrollbar__view),
-:global(.ai-model-select-dropdown .el-select-dropdown__list) {
-  width: 100%;
-}
-
-:global(.ai-model-select-dropdown .el-select-dropdown__list) {
-  max-width: 100%;
-}
-
-:global(.ai-model-select-dropdown .el-select-dropdown__item) {
-  white-space: normal;
-  line-height: 1.4;
-  height: auto;
-  padding-top: 10px;
-  padding-bottom: 10px;
-}
-
-:global(:root[data-theme='dark'] .ai-model-select-dropdown) {
-  background: rgba(15, 23, 42, 0.96) !important;
-  border-color: rgba(100, 116, 139, 0.32) !important;
-  box-shadow: 0 18px 40px rgba(2, 6, 23, 0.4) !important;
-}
-
-:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-popper__arrow::before) {
-  background: rgba(15, 23, 42, 0.96) !important;
-  border-color: rgba(100, 116, 139, 0.32) !important;
-}
-
-:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__wrap),
-:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-scrollbar),
-:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-scrollbar__view),
-:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__list) {
-  background: transparent !important;
-}
-
-:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__item) {
-  color: #e2e8f0 !important;
-}
-
-:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__item.hover),
-:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__item:hover) {
-  background: rgba(59, 130, 246, 0.12) !important;
-}
-
-:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__item.selected) {
-  color: #93c5fd !important;
-  font-weight: 700;
+  white-space: nowrap !important;
+  writing-mode: horizontal-tb !important;
 }
 
 :deep(.document-theme-tooltip.el-popper .el-popper__arrow::before) {
@@ -2751,22 +2722,30 @@ onBeforeUnmount(() => {
 @media (max-width: 900px) {
   .task-toolbar,
   .task-toolbar__left,
+  .task-toolbar__center,
   .task-toolbar__right {
+    display: flex;
     flex-direction: column;
     align-items: flex-start;
   }
 
   .task-toolbar {
+    grid-template-columns: none;
     padding: 16px 16px 14px;
   }
 
   .task-title-row {
     flex-wrap: wrap;
     gap: 10px;
+    justify-content: flex-start;
   }
 
   .task-headline h1 {
     white-space: normal;
+  }
+
+  .task-headline {
+    align-items: flex-start;
   }
 
   .task-toolbar__right {
@@ -2775,10 +2754,9 @@ onBeforeUnmount(() => {
     justify-content: flex-start;
   }
 
-  .toolbar-model {
-    min-width: 0;
-    width: 100%;
-    max-width: none;
+  .toolbar-token {
+    align-items: flex-start;
+    text-align: left;
   }
 
   .toolbar-btn {
@@ -2788,6 +2766,11 @@ onBeforeUnmount(() => {
   .document-theme-toggle {
     right: 16px;
     bottom: 16px;
+  }
+
+  .document-action-rail {
+    right: 16px;
+    bottom: 74px;
   }
 
   .outline-drawer {

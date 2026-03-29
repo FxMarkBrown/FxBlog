@@ -5,6 +5,8 @@ import lombok.Data;
 @Data
 public class AiDocumentNodeCitationVo {
 
+    private String displayLabel;
+
     private String nodeId;
 
     private String title;

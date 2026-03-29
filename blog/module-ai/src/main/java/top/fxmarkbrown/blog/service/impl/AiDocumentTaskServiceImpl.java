@@ -77,6 +77,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -1120,7 +1121,10 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
                 1. 优先直接回答，再补充依据。
                 2. 如果上下文不足，明确说明“当前节点上下文不足以确定”。
                 3. 不要编造页码、作者意图或额外章节。
-                4. 回答保持中文，简洁但信息完整。
+                4. 不要输出内部 nodeId、taskId 或数据库标识。
+                5. 如果需要提醒用户去看画布证据，优先使用上下文里提供的“引用标签”或“箭头标签”，例如“看箭头 A1”或“看引用 R2”，不要编造新的标签。
+                6. 只有在消歧确有必要时才补充节点标题，且标题应作为标签后的补充说明，而不是替代标签。
+                7. 回答保持中文，简洁但信息完整。
                 """;
     }
 
@@ -1152,50 +1156,89 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
                                                   AiDocumentNodeAskDto askDto) {
         String queryMode = resolveQueryMode(askDto, question);
         int descendantDepth = resolveDescendantDepth(askDto, queryMode);
-        boolean includeAncestorSiblings = resolveIncludeAncestorSiblings(askDto, queryMode);
-        boolean includeSemanticBridges = resolveIncludeSemanticBridges(askDto, queryMode);
-        int maxBridgeNodes = resolveMaxBridgeNodes(askDto, queryMode);
+        List<AiDocumentTreeNodeVo> selectedNodes = resolveSelectedNodes(root, currentNode, askDto);
+        boolean includePeerContext = resolveIncludePeerContext(askDto, queryMode, selectedNodes);
+        boolean enableRetrieval = resolveEnableRetrieval(askDto);
+        int retrievedNodeBudget = resolveRetrievedNodeBudget(queryMode, enableRetrieval, resolveMaxRetrievedNodes(askDto, queryMode));
 
         List<AiDocumentTreeNodeVo> trail = new ArrayList<>();
         collectNodeTrail(root, currentNode.getId(), trail);
-        List<AiDocumentTreeNodeVo> ancestors = new ArrayList<>(trail);
-        if (!ancestors.isEmpty()) {
-            ancestors.removeLast();
-        }
-
-        List<AiDocumentTreeNodeVo> descendants = collectDescendants(currentNode, 1, descendantDepth);
-        List<AiDocumentTreeNodeVo> selectedNodes = resolveSelectedNodes(root, currentNode, askDto);
-        List<AiDocumentTreeNodeVo> ancestorSiblingNodes = includeAncestorSiblings
-                ? collectAncestorSiblingNodes(trail)
-                : List.of();
+        List<AiDocumentTreeNodeVo> anchorNodes = buildAnchorNodes(currentNode, selectedNodes);
+        int ancestorSupportDepth = resolveAncestorSupportDepth(queryMode);
+        int currentDescendantDepth = resolveCurrentDescendantSupportDepth(queryMode, descendantDepth);
+        int selectedDescendantDepth = resolveSelectedDescendantSupportDepth(queryMode, descendantDepth, selectedNodes);
 
         LinkedHashMap<String, ContextCandidate> candidateMap = new LinkedHashMap<>();
-        addCandidate(candidateMap, currentNode, "current", 1.0D, "当前聚焦节点");
+        addCandidate(candidateMap, currentNode, "current", 1.0D, "当前聚焦节点", currentNode.getId());
 
-        for (int i = 0; i < ancestors.size(); i++) {
-            AiDocumentTreeNodeVo ancestor = ancestors.get(i);
-            double weight = Math.max(0.68D, 0.9D - (ancestors.size() - i - 1) * 0.06D);
-            addCandidate(candidateMap, ancestor, "ancestor", weight, "当前节点的祖先路径");
+        for (AiDocumentTreeNodeVo selectedNode : selectedNodes) {
+            addCandidate(candidateMap, selectedNode, "selected", 0.95D, "用户显式选中的对照节点", selectedNode.getId());
         }
 
-        for (AiDocumentTreeNodeVo descendant : descendants) {
-            int relativeDepth = Math.max(1, Math.max(0, safeLevel(descendant) - safeLevel(currentNode)));
-            double weight = Math.max(0.6D, 0.86D - relativeDepth * 0.08D);
-            addCandidate(candidateMap, descendant, "descendant", weight, "当前节点子树中的下级内容");
+        Set<String> excludedNodeIds = new LinkedHashSet<>(candidateMap.keySet());
+        List<ContextCandidate> retrievedCandidates = collectRetrievedCandidates(
+                detail,
+                root,
+                question,
+                currentNode,
+                selectedNodes,
+                excludedNodeIds,
+                retrievedNodeBudget
+        );
+        for (ContextCandidate retrievedCandidate : retrievedCandidates) {
+            addCandidate(candidateMap,
+                    retrievedCandidate.node(),
+                    retrievedCandidate.relation(),
+                    retrievedCandidate.weight(),
+                    retrievedCandidate.reason(),
+                    retrievedCandidate.anchorNodeId());
+            excludedNodeIds.add(retrievedCandidate.nodeId());
+        }
+
+        for (ContextCandidate ancestorCandidate : collectAncestorSupportCandidates(root, anchorNodes, ancestorSupportDepth, candidateMap.keySet())) {
+            addCandidate(candidateMap,
+                    ancestorCandidate.node(),
+                    ancestorCandidate.relation(),
+                    ancestorCandidate.weight(),
+                    ancestorCandidate.reason(),
+                    ancestorCandidate.anchorNodeId());
+        }
+
+        for (ContextCandidate descendantCandidate : collectDescendantSupportCandidates(currentNode, currentDescendantDepth, "descendant", "当前节点的直接下文", currentNode.getId(), candidateMap.keySet())) {
+            addCandidate(candidateMap,
+                    descendantCandidate.node(),
+                    descendantCandidate.relation(),
+                    descendantCandidate.weight(),
+                    descendantCandidate.reason(),
+                    descendantCandidate.anchorNodeId());
         }
 
         for (AiDocumentTreeNodeVo selectedNode : selectedNodes) {
-            addCandidate(candidateMap, selectedNode, "selected", 0.88D, "用户显式选中的补充节点");
+            for (ContextCandidate descendantCandidate : collectDescendantSupportCandidates(
+                    selectedNode,
+                    selectedDescendantDepth,
+                    "selected_descendant",
+                    "显式对照节点的直接下文",
+                    selectedNode.getId(),
+                    candidateMap.keySet()
+            )) {
+                addCandidate(candidateMap,
+                        descendantCandidate.node(),
+                        descendantCandidate.relation(),
+                        descendantCandidate.weight(),
+                        descendantCandidate.reason(),
+                        descendantCandidate.anchorNodeId());
+            }
         }
 
-        for (AiDocumentTreeNodeVo siblingNode : ancestorSiblingNodes) {
-            addCandidate(candidateMap, siblingNode, "ancestor_sibling", 0.74D, "祖先节点下的关键兄弟节点");
-        }
-
-        if (includeSemanticBridges) {
-            Set<String> excludedNodeIds = new LinkedHashSet<>(candidateMap.keySet());
-            for (ContextCandidate bridgeCandidate : collectSemanticBridgeCandidates(detail, root, question, currentNode, excludedNodeIds, maxBridgeNodes)) {
-                addCandidate(candidateMap, bridgeCandidate.node(), bridgeCandidate.relation(), bridgeCandidate.weight(), bridgeCandidate.reason());
+        if (includePeerContext) {
+            for (ContextCandidate peerCandidate : collectPeerSupportCandidates(root, question, retrievedCandidates, candidateMap.keySet(), 2)) {
+                addCandidate(candidateMap,
+                        peerCandidate.node(),
+                        peerCandidate.relation(),
+                        peerCandidate.weight(),
+                        peerCandidate.reason(),
+                        peerCandidate.anchorNodeId());
             }
         }
 
@@ -1220,12 +1263,14 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         contextPlan.setQueryMode(queryMode);
         contextPlan.setCurrentNodeId(currentNode.getId());
         contextPlan.setDescendantDepth(descendantDepth);
-        contextPlan.setMaxBridgeNodes(maxBridgeNodes);
+        contextPlan.setMaxRetrievedNodes(retrievedNodeBudget);
         contextPlan.setAncestorCount((int) candidates.stream().filter(candidate -> Objects.equals(candidate.relation(), "ancestor")).count());
-        contextPlan.setDescendantCount((int) candidates.stream().filter(candidate -> Objects.equals(candidate.relation(), "descendant")).count());
-        contextPlan.setAncestorSiblingCount((int) candidates.stream().filter(candidate -> Objects.equals(candidate.relation(), "ancestor_sibling")).count());
+        contextPlan.setDescendantCount((int) candidates.stream()
+                .filter(candidate -> Objects.equals(candidate.relation(), "descendant") || Objects.equals(candidate.relation(), "selected_descendant"))
+                .count());
+        contextPlan.setPeerContextCount((int) candidates.stream().filter(candidate -> Objects.equals(candidate.relation(), "peer_context")).count());
         contextPlan.setSelectedCount((int) candidates.stream().filter(candidate -> Objects.equals(candidate.relation(), "selected")).count());
-        contextPlan.setSemanticBridgeCount((int) candidates.stream().filter(candidate -> Objects.equals(candidate.relation(), "semantic_bridge")).count());
+        contextPlan.setRetrievedCount((int) candidates.stream().filter(candidate -> Objects.equals(candidate.relation(), "retrieved")).count());
         contextPlan.setTotalCandidateCount(candidates.size());
         contextPlan.setTotalUsedCount(usedCandidates.size());
 
@@ -1236,7 +1281,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         budgetReport.setRemainingChars(Math.max(0, maxChars - usedChars));
         budgetReport.setTruncatedNodeCount(truncatedNodeCount);
 
-        List<AiDocumentKnowledgeFlowEdgeVo> knowledgeFlowEdges = buildKnowledgeFlowEdges(currentNode, trail, usedCandidates);
+        List<AiDocumentKnowledgeFlowEdgeVo> knowledgeFlowEdges = buildKnowledgeFlowEdges(currentNode, trail, usedCandidates, queryMode);
         return new ContextCompilation(detail, queryMode, currentNode, candidates, usedCandidates, contextPlan, budgetReport, knowledgeFlowEdges);
     }
 
@@ -1245,10 +1290,19 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
                               String relation,
                               double weight,
                               String reason) {
+        addCandidate(candidateMap, node, relation, weight, reason, null);
+    }
+
+    private void addCandidate(LinkedHashMap<String, ContextCandidate> candidateMap,
+                              AiDocumentTreeNodeVo node,
+                              String relation,
+                              double weight,
+                              String reason,
+                              String anchorNodeId) {
         if (node == null || !StringUtils.hasText(node.getId())) {
             return;
         }
-        ContextCandidate nextCandidate = new ContextCandidate(node, node.getId(), relation, weight, reason);
+        ContextCandidate nextCandidate = new ContextCandidate(node, node.getId(), relation, weight, reason, anchorNodeId);
         ContextCandidate existing = candidateMap.get(node.getId());
         if (existing == null) {
             candidateMap.put(node.getId(), nextCandidate);
@@ -1264,11 +1318,12 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
     private int relationPriority(String relation) {
         return switch (safeText(relation, "")) {
             case "current" -> 100;
-            case "selected" -> 90;
-            case "ancestor" -> 80;
+            case "selected" -> 95;
+            case "retrieved" -> 90;
+            case "selected_descendant" -> 80;
+            case "ancestor" -> 75;
             case "descendant" -> 70;
-            case "ancestor_sibling" -> 60;
-            case "semantic_bridge" -> 50;
+            case "peer_context" -> 60;
             default -> 0;
         };
     }
@@ -1313,22 +1368,24 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         };
     }
 
-    private boolean resolveIncludeAncestorSiblings(AiDocumentNodeAskDto askDto, String queryMode) {
-        if (askDto != null && askDto.getIncludeAncestorSiblings() != null) {
-            return askDto.getIncludeAncestorSiblings();
+    private boolean resolveIncludePeerContext(AiDocumentNodeAskDto askDto,
+                                              String queryMode,
+                                              List<AiDocumentTreeNodeVo> selectedNodes) {
+        if (askDto != null && askDto.getIncludePeerContext() != null) {
+            return askDto.getIncludePeerContext();
         }
-        return "compare".equals(queryMode) || "reason".equals(queryMode);
+        return "compare".equals(queryMode) && (selectedNodes == null || selectedNodes.isEmpty());
     }
 
-    private boolean resolveIncludeSemanticBridges(AiDocumentNodeAskDto askDto, String queryMode) {
-        if (askDto != null && askDto.getIncludeSemanticBridges() != null) {
-            return askDto.getIncludeSemanticBridges();
+    private boolean resolveEnableRetrieval(AiDocumentNodeAskDto askDto) {
+        if (askDto != null && askDto.getEnableRetrieval() != null) {
+            return askDto.getEnableRetrieval();
         }
-        return !"locate".equals(queryMode);
+        return true;
     }
 
-    private int resolveMaxBridgeNodes(AiDocumentNodeAskDto askDto, String queryMode) {
-        Integer specifiedCount = askDto == null ? null : askDto.getMaxBridgeNodes();
+    private int resolveMaxRetrievedNodes(AiDocumentNodeAskDto askDto, String queryMode) {
+        Integer specifiedCount = askDto == null ? null : askDto.getMaxRetrievedNodes();
         if (specifiedCount != null) {
             return Math.max(0, Math.min(specifiedCount, 6));
         }
@@ -1358,6 +1415,338 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
             }
         }
         return selectedNodes;
+    }
+
+    private List<AiDocumentTreeNodeVo> buildAnchorNodes(AiDocumentTreeNodeVo currentNode,
+                                                        List<AiDocumentTreeNodeVo> selectedNodes) {
+        LinkedHashMap<String, AiDocumentTreeNodeVo> anchors = new LinkedHashMap<>();
+        if (currentNode != null && StringUtils.hasText(currentNode.getId())) {
+            anchors.put(currentNode.getId(), currentNode);
+        }
+        if (selectedNodes != null) {
+            for (AiDocumentTreeNodeVo selectedNode : selectedNodes) {
+                if (selectedNode == null || !StringUtils.hasText(selectedNode.getId())) {
+                    continue;
+                }
+                anchors.putIfAbsent(selectedNode.getId(), selectedNode);
+            }
+        }
+        return new ArrayList<>(anchors.values());
+    }
+
+    private int resolveRetrievedNodeBudget(String queryMode, boolean enableRetrieval, int configuredBudget) {
+        if (!enableRetrieval) {
+            return 0;
+        }
+        int baseBudget = switch (safeText(queryMode, "explain")) {
+            case "locate" -> 2;
+            case "compare" -> 3;
+            case "summarize" -> 4;
+            case "reason" -> 4;
+            default -> 4;
+        };
+        int normalizedConfiguredBudget = Math.max(0, configuredBudget);
+        return normalizedConfiguredBudget > 0 ? Math.max(baseBudget, normalizedConfiguredBudget) : baseBudget;
+    }
+
+    private int resolveAncestorSupportDepth(String queryMode) {
+        return switch (safeText(queryMode, "explain")) {
+            case "compare", "locate" -> 0;
+            default -> 1;
+        };
+    }
+
+    private int resolveCurrentDescendantSupportDepth(String queryMode, int configuredDepth) {
+        int cap = switch (safeText(queryMode, "explain")) {
+            case "locate" -> 0;
+            case "compare" -> 1;
+            case "summarize" -> 2;
+            default -> 1;
+        };
+        return Math.min(Math.max(configuredDepth, 0), cap);
+    }
+
+    private int resolveSelectedDescendantSupportDepth(String queryMode, int configuredDepth, List<AiDocumentTreeNodeVo> selectedNodes) {
+        if (selectedNodes == null || selectedNodes.isEmpty()) {
+            return 0;
+        }
+        int cap = switch (safeText(queryMode, "explain")) {
+            case "compare" -> 1;
+            case "summarize" -> 1;
+            default -> 0;
+        };
+        return Math.min(Math.max(configuredDepth, 0), cap);
+    }
+
+    private List<ContextCandidate> collectRetrievedCandidates(AiDocumentTaskDetailVo detail,
+                                                              AiDocumentTreeNodeVo root,
+                                                              String question,
+                                                              AiDocumentTreeNodeVo currentNode,
+                                                              List<AiDocumentTreeNodeVo> selectedNodes,
+                                                              Set<String> excludedNodeIds,
+                                                              int budget) {
+        if (budget <= 0 || root == null) {
+            return List.of();
+        }
+        List<RetrievalQuery> queries = buildRetrievalQueries(question, currentNode, selectedNodes);
+        List<ContextCandidate> vectorCandidates = collectVectorRetrievedCandidates(detail, root, queries, excludedNodeIds, budget);
+        if (!vectorCandidates.isEmpty()) {
+            return vectorCandidates;
+        }
+        return collectLexicalRetrievedCandidates(root, queries, excludedNodeIds, budget);
+    }
+
+    private List<RetrievalQuery> buildRetrievalQueries(String question,
+                                                       AiDocumentTreeNodeVo currentNode,
+                                                       List<AiDocumentTreeNodeVo> selectedNodes) {
+        List<RetrievalQuery> queries = new ArrayList<>();
+        appendRetrievalQuery(queries, question, currentNode == null ? null : currentNode.getId(), 1.0D, "问题检索");
+        appendRetrievalQuery(
+                queries,
+                joinNonBlank("\n", question, currentNode == null ? null : currentNode.getTitle(), currentNode == null ? null : currentNode.getSummary()),
+                currentNode == null ? null : currentNode.getId(),
+                0.96D,
+                "当前节点对齐检索"
+        );
+        if (selectedNodes != null) {
+            for (AiDocumentTreeNodeVo selectedNode : selectedNodes) {
+                appendRetrievalQuery(
+                        queries,
+                        joinNonBlank("\n", question, selectedNode == null ? null : selectedNode.getTitle(), selectedNode == null ? null : selectedNode.getSummary()),
+                        selectedNode == null ? null : selectedNode.getId(),
+                        0.94D,
+                        "显式节点对齐检索"
+                );
+                appendRetrievalQuery(
+                        queries,
+                        joinNonBlank("\n",
+                                question,
+                                currentNode == null ? null : currentNode.getTitle(),
+                                selectedNode == null ? null : selectedNode.getTitle()),
+                        selectedNode == null ? null : selectedNode.getId(),
+                        0.98D,
+                        "当前节点与显式节点联合检索"
+                );
+            }
+        }
+        return queries;
+    }
+
+    private void appendRetrievalQuery(List<RetrievalQuery> queries,
+                                      String queryText,
+                                      String anchorNodeId,
+                                      double baseWeight,
+                                      String reasonPrefix) {
+        if (!StringUtils.hasText(queryText)) {
+            return;
+        }
+        String normalizedQuery = queryText.trim();
+        if (queries.stream().anyMatch(query -> Objects.equals(query.text(), normalizedQuery))) {
+            return;
+        }
+        queries.add(new RetrievalQuery(normalizedQuery, anchorNodeId, baseWeight, reasonPrefix));
+    }
+
+    private List<ContextCandidate> collectVectorRetrievedCandidates(AiDocumentTaskDetailVo detail,
+                                                                    AiDocumentTreeNodeVo root,
+                                                                    List<RetrievalQuery> queries,
+                                                                    Set<String> excludedNodeIds,
+                                                                    int budget) {
+        if (detail == null || detail.getTaskId() == null || queries.isEmpty()) {
+            return List.of();
+        }
+        AiDocumentVectorIndexService vectorIndexService = documentVectorIndexServiceProvider.getIfAvailable();
+        if (vectorIndexService == null || !vectorIndexService.isReady()) {
+            return List.of();
+        }
+        LinkedHashMap<String, ContextCandidate> retrieved = new LinkedHashMap<>();
+        int perQueryTopK = Math.max(budget * 2, 4);
+        for (int queryIndex = 0; queryIndex < queries.size(); queryIndex++) {
+            RetrievalQuery query = queries.get(queryIndex);
+            List<AiDocumentChunkHit> hits;
+            try {
+                hits = vectorIndexService.searchRelevantChunks(detail.getTaskId(), query.text(), perQueryTopK);
+            } catch (Exception ex) {
+                log.warn("文档任务上下文向量检索失败, taskId={}, query={}", detail.getTaskId(), query.text(), ex);
+                continue;
+            }
+            for (AiDocumentChunkHit hit : hits) {
+                if (hit == null || !StringUtils.hasText(hit.nodeId()) || excludedNodeIds.contains(hit.nodeId())) {
+                    continue;
+                }
+                AiDocumentTreeNodeVo node = findNode(root, hit.nodeId());
+                if (node == null) {
+                    continue;
+                }
+                double weight = Math.max(0.58D, query.baseWeight() - (hit.rank() - 1) * 0.07D - queryIndex * 0.03D);
+                String reason = StringUtils.hasText(hit.titlePath())
+                        ? query.reasonPrefix() + "：" + hit.titlePath()
+                        : query.reasonPrefix();
+                mergeRetrievedCandidate(retrieved, new ContextCandidate(
+                        node,
+                        node.getId(),
+                        "retrieved",
+                        weight,
+                        reason,
+                        query.anchorNodeId()
+                ));
+                if (retrieved.size() >= budget) {
+                    return new ArrayList<>(retrieved.values());
+                }
+            }
+        }
+        return new ArrayList<>(retrieved.values());
+    }
+
+    private List<ContextCandidate> collectLexicalRetrievedCandidates(AiDocumentTreeNodeVo root,
+                                                                     List<RetrievalQuery> queries,
+                                                                     Set<String> excludedNodeIds,
+                                                                     int budget) {
+        if (queries.isEmpty()) {
+            return List.of();
+        }
+        List<ContextCandidate> candidates = new ArrayList<>();
+        for (AiDocumentTreeNodeVo node : flattenTree(root)) {
+            if (node == null || !StringUtils.hasText(node.getId()) || excludedNodeIds.contains(node.getId())) {
+                continue;
+            }
+            RetrievalQuery bestQuery = null;
+            double bestScore = 0D;
+            for (RetrievalQuery query : queries) {
+                double score = scoreLexicalRetrieval(query.text(), node);
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestQuery = query;
+                }
+            }
+            if (bestQuery == null || bestScore < 0.14D) {
+                continue;
+            }
+            candidates.add(new ContextCandidate(
+                    node,
+                    node.getId(),
+                    "retrieved",
+                    Math.min(0.82D, 0.52D + bestScore * 0.34D),
+                    bestQuery.reasonPrefix() + "：词法回退召回",
+                    bestQuery.anchorNodeId()
+            ));
+        }
+        candidates.sort((left, right) -> Double.compare(right.weight(), left.weight()));
+        if (candidates.size() <= budget) {
+            return candidates;
+        }
+        return candidates.subList(0, budget);
+    }
+
+    private void mergeRetrievedCandidate(Map<String, ContextCandidate> retrieved, ContextCandidate candidate) {
+        if (candidate == null || !StringUtils.hasText(candidate.nodeId())) {
+            return;
+        }
+        ContextCandidate existing = retrieved.get(candidate.nodeId());
+        if (existing == null || candidate.weight() > existing.weight()) {
+            retrieved.put(candidate.nodeId(), candidate);
+        }
+    }
+
+    private List<ContextCandidate> collectAncestorSupportCandidates(AiDocumentTreeNodeVo root,
+                                                                    List<AiDocumentTreeNodeVo> anchorNodes,
+                                                                    int maxDepth,
+                                                                    Set<String> excludedNodeIds) {
+        if (root == null || maxDepth <= 0 || anchorNodes == null || anchorNodes.isEmpty()) {
+            return List.of();
+        }
+        List<ContextCandidate> candidates = new ArrayList<>();
+        Set<String> visited = new LinkedHashSet<>();
+        for (AiDocumentTreeNodeVo anchorNode : anchorNodes) {
+            List<AiDocumentTreeNodeVo> trail = new ArrayList<>();
+            if (!collectNodeTrail(root, anchorNode.getId(), trail) || trail.size() < 2) {
+                continue;
+            }
+            int added = 0;
+            for (int index = trail.size() - 2; index >= 0 && added < maxDepth; index--) {
+                AiDocumentTreeNodeVo ancestor = trail.get(index);
+                if (ancestor == null || isRootNode(ancestor) || excludedNodeIds.contains(ancestor.getId()) || !visited.add(ancestor.getId())) {
+                    continue;
+                }
+                double weight = Math.max(0.64D, 0.82D - added * 0.08D);
+                candidates.add(new ContextCandidate(
+                        ancestor,
+                        ancestor.getId(),
+                        "ancestor",
+                        weight,
+                        "围绕锚点补充最近祖先",
+                        anchorNode.getId()
+                ));
+                added++;
+            }
+        }
+        return candidates;
+    }
+
+    private List<ContextCandidate> collectDescendantSupportCandidates(AiDocumentTreeNodeVo anchorNode,
+                                                                      int maxDepth,
+                                                                      String relation,
+                                                                      String reason,
+                                                                      String anchorNodeId,
+                                                                      Set<String> excludedNodeIds) {
+        if (anchorNode == null || maxDepth <= 0) {
+            return List.of();
+        }
+        List<ContextCandidate> candidates = new ArrayList<>();
+        for (AiDocumentTreeNodeVo descendant : collectDescendants(anchorNode, 1, maxDepth)) {
+            if (descendant == null || excludedNodeIds.contains(descendant.getId())) {
+                continue;
+            }
+            int relativeDepth = Math.max(1, Math.max(0, safeLevel(descendant) - safeLevel(anchorNode)));
+            double weight = Math.max(0.58D, 0.84D - relativeDepth * 0.08D);
+            candidates.add(new ContextCandidate(descendant, descendant.getId(), relation, weight, reason, anchorNodeId));
+        }
+        return candidates;
+    }
+
+    private List<ContextCandidate> collectPeerSupportCandidates(AiDocumentTreeNodeVo root,
+                                                                String question,
+                                                                List<ContextCandidate> retrievedCandidates,
+                                                                Set<String> excludedNodeIds,
+                                                                int budget) {
+        if (root == null || budget <= 0 || retrievedCandidates == null || retrievedCandidates.isEmpty()) {
+            return List.of();
+        }
+        List<ContextCandidate> peers = new ArrayList<>();
+        Set<String> visited = new LinkedHashSet<>();
+        for (ContextCandidate retrievedCandidate : retrievedCandidates.stream().limit(2).toList()) {
+            AiDocumentTreeNodeVo retrievedNode = retrievedCandidate.node();
+            if (retrievedNode == null || !StringUtils.hasText(retrievedNode.getParentId())) {
+                continue;
+            }
+            AiDocumentTreeNodeVo parent = findNode(root, retrievedNode.getParentId());
+            if (parent == null || parent.getChildren() == null) {
+                continue;
+            }
+            List<AiDocumentTreeNodeVo> siblings = new ArrayList<>(parent.getChildren());
+            siblings.sort((left, right) -> Double.compare(scoreLexicalRetrieval(question, right), scoreLexicalRetrieval(question, left)));
+            for (AiDocumentTreeNodeVo sibling : siblings) {
+                if (sibling == null
+                        || Objects.equals(sibling.getId(), retrievedNode.getId())
+                        || excludedNodeIds.contains(sibling.getId())
+                        || !visited.add(sibling.getId())
+                        || scoreLexicalRetrieval(question, sibling) < 0.12D) {
+                    continue;
+                }
+                peers.add(new ContextCandidate(
+                        sibling,
+                        sibling.getId(),
+                        "peer_context",
+                        0.62D,
+                        "围绕主召回结果补充同层对照内容",
+                        retrievedCandidate.anchorNodeId()
+                ));
+                if (peers.size() >= budget) {
+                    return peers;
+                }
+            }
+        }
+        return peers;
     }
 
     private List<AiDocumentTreeNodeVo> collectDescendants(AiDocumentTreeNodeVo node, int depth, int maxDepth) {
@@ -1421,12 +1810,58 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         builder.append("问答模式: ").append(contextCompilation.queryMode()).append('\n');
         builder.append("候选节点数: ").append(contextCompilation.contextPlan().getTotalCandidateCount()).append('\n');
         builder.append("实际入选节点数: ").append(contextCompilation.contextPlan().getTotalUsedCount()).append("\n\n");
+        appendVisualReferenceIndex(builder, currentNode, contextCompilation);
         appendContextLane(builder, "Lane A - 当前节点", contextCompilation.usedCandidates(), "current");
-        appendContextLane(builder, "Lane B - 当前节点子树", contextCompilation.usedCandidates(), "descendant");
-        appendContextLane(builder, "Lane C - 祖先路径", contextCompilation.usedCandidates(), "ancestor");
-        appendContextLane(builder, "Lane D - 显式选择节点", contextCompilation.usedCandidates(), "selected");
-        appendContextLane(builder, "Lane E - 祖先兄弟与语义桥接", contextCompilation.usedCandidates(), "ancestor_sibling", "semantic_bridge");
+        appendContextLane(builder, "Lane B - 显式选择节点", contextCompilation.usedCandidates(), "selected");
+        appendContextLane(builder, "Lane C - RAG 主召回", contextCompilation.usedCandidates(), "retrieved");
+        appendContextLane(builder, "Lane D - 祖先框架", contextCompilation.usedCandidates(), "ancestor");
+        appendContextLane(builder, "Lane E - 当前节点与显式节点下文", contextCompilation.usedCandidates(), "descendant", "selected_descendant");
+        appendContextLane(builder, "Lane F - 同层补充", contextCompilation.usedCandidates(), "peer_context");
         return builder.toString().trim();
+    }
+
+    private void appendVisualReferenceIndex(StringBuilder builder,
+                                            AiDocumentTreeNodeVo currentNode,
+                                            ContextCompilation contextCompilation) {
+        List<ContextCandidate> usedCandidates = contextCompilation.usedCandidates();
+        if (usedCandidates == null || usedCandidates.isEmpty()) {
+            return;
+        }
+        builder.append("## 画布引用标签\n");
+        for (int index = 0; index < usedCandidates.size(); index++) {
+            ContextCandidate candidate = usedCandidates.get(index);
+            AiDocumentTreeNodeVo node = candidate.node();
+            builder.append("- ")
+                    .append(buildCitationDisplayLabel(index))
+                    .append(": ")
+                    .append(safeText(node == null ? null : node.getTitle(), "未命名节点"))
+                    .append("（")
+                    .append(describeCandidateRelation(candidate, currentNode))
+                    .append("）\n");
+        }
+
+        List<AiDocumentKnowledgeFlowEdgeVo> edges = contextCompilation.knowledgeFlowEdges();
+        if (edges != null && !edges.isEmpty()) {
+            Map<String, String> nodeTitleMap = usedCandidates.stream().collect(Collectors.toMap(
+                    ContextCandidate::nodeId,
+                    candidate -> safeText(candidate.node() == null ? null : candidate.node().getTitle(), "未命名节点"),
+                    (left, right) -> left,
+                    LinkedHashMap::new
+            ));
+            builder.append("## 画布箭头标签\n");
+            for (AiDocumentKnowledgeFlowEdgeVo edge : edges) {
+                builder.append("- ")
+                        .append(safeText(edge.getDisplayLabel(), "箭头"))
+                        .append(": ")
+                        .append(safeText(nodeTitleMap.get(edge.getFromNodeId()), "未命名节点"))
+                        .append(" -> ")
+                        .append(safeText(nodeTitleMap.get(edge.getToNodeId()), "未命名节点"))
+                        .append("（")
+                        .append(describeKnowledgeEdgeType(edge.getEdgeType()))
+                        .append("）\n");
+            }
+        }
+        builder.append('\n');
     }
 
     private void appendContextLane(StringBuilder builder,
@@ -1916,9 +2351,12 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
 
     private List<AiDocumentNodeCitationVo> buildCitations(List<ContextCandidate> usedCandidates, AiDocumentTreeNodeVo currentNode) {
         List<AiDocumentNodeCitationVo> citations = new ArrayList<>();
-        for (ContextCandidate candidate : usedCandidates.stream().limit(6).toList()) {
+        List<ContextCandidate> visibleCandidates = usedCandidates.stream().limit(6).toList();
+        for (int index = 0; index < visibleCandidates.size(); index++) {
+            ContextCandidate candidate = visibleCandidates.get(index);
             AiDocumentTreeNodeVo node = candidate.node();
             AiDocumentNodeCitationVo citation = new AiDocumentNodeCitationVo();
+            citation.setDisplayLabel(buildCitationDisplayLabel(index));
             citation.setNodeId(node.getId());
             citation.setTitle(node.getTitle());
             citation.setLevel(node.getLevel());
@@ -1931,157 +2369,24 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         return citations;
     }
 
-    private List<AiDocumentTreeNodeVo> collectAncestorSiblingNodes(List<AiDocumentTreeNodeVo> trail) {
-        if (trail == null || trail.size() < 2) {
-            return List.of();
-        }
-        List<AiDocumentTreeNodeVo> result = new ArrayList<>();
-        Set<String> visited = new LinkedHashSet<>();
-        for (int i = 0; i < trail.size() - 1; i++) {
-            AiDocumentTreeNodeVo ancestor = trail.get(i);
-            AiDocumentTreeNodeVo pathChild = trail.get(i + 1);
-            List<AiDocumentTreeNodeVo> children = ancestor.getChildren() == null ? List.of() : ancestor.getChildren();
-            boolean hasStructureChildren = children.stream().anyMatch(this::isStructuralNode);
-            for (AiDocumentTreeNodeVo child : children) {
-                if (Objects.equals(child.getId(), pathChild.getId())) {
-                    continue;
-                }
-                if (hasStructureChildren && !isStructuralNode(child)) {
-                    continue;
-                }
-                if (visited.add(child.getId())) {
-                    result.add(child);
-                }
-            }
-        }
-        return result;
-    }
-
-    private boolean isStructuralNode(AiDocumentTreeNodeVo node) {
-        String type = safeText(node == null ? null : node.getType(), "").toLowerCase(Locale.ROOT);
-        return "document".equals(type) || "section".equals(type) || "subsection".equals(type);
-    }
-
-    private List<ContextCandidate> collectSemanticBridgeCandidates(AiDocumentTaskDetailVo detail,
-                                                                   AiDocumentTreeNodeVo root,
-                                                                   String question,
-                                                                   AiDocumentTreeNodeVo currentNode,
-                                                                   Set<String> excludedNodeIds,
-                                                                   int maxBridgeNodes) {
-        if (maxBridgeNodes <= 0) {
-            return List.of();
-        }
-        List<ContextCandidate> bridgeCandidates = new ArrayList<>();
-        if (detail != null && detail.getTaskId() != null) {
-            bridgeCandidates.addAll(collectVectorBridgeCandidates(detail.getTaskId(), root, excludedNodeIds, question, maxBridgeNodes));
-        }
-        if (bridgeCandidates.size() >= maxBridgeNodes) {
-            return bridgeCandidates.subList(0, maxBridgeNodes);
-        }
-        String questionText = safeText(question, "");
-        String currentContext = joinNonBlank("\n",
-                currentNode == null ? null : currentNode.getTitle(),
-                currentNode == null ? null : currentNode.getSummary(),
-                currentNode == null ? null : currentNode.getMarkdown());
-
-        Set<String> excludedIds = new LinkedHashSet<>(excludedNodeIds);
-        bridgeCandidates.forEach(candidate -> excludedIds.add(candidate.nodeId()));
-        List<ContextCandidate> heuristicCandidates = new ArrayList<>();
-        for (AiDocumentTreeNodeVo node : flattenTree(root)) {
-            if (node == null || excludedIds.contains(node.getId())) {
-                continue;
-            }
-            double score = scoreSemanticBridge(questionText, currentContext, node);
-            if (score <= 0.12D) {
-                continue;
-            }
-            heuristicCandidates.add(new ContextCandidate(
-                    node,
-                    node.getId(),
-                    "semantic_bridge",
-                    Math.min(0.86D, 0.48D + score * 0.42D),
-                    "语义桥接补充节点"
-            ));
-        }
-        heuristicCandidates.sort((left, right) -> Double.compare(right.weight(), left.weight()));
-        for (ContextCandidate heuristicCandidate : heuristicCandidates) {
-            if (bridgeCandidates.size() >= maxBridgeNodes) {
-                break;
-            }
-            bridgeCandidates.add(heuristicCandidate);
-        }
-        if (bridgeCandidates.size() <= maxBridgeNodes) {
-            return bridgeCandidates;
-        }
-        return bridgeCandidates.subList(0, maxBridgeNodes);
-    }
-
-    private List<ContextCandidate> collectVectorBridgeCandidates(Long taskId,
-                                                                 AiDocumentTreeNodeVo root,
-                                                                 Set<String> excludedNodeIds,
-                                                                 String question,
-                                                                 int maxBridgeNodes) {
-        AiDocumentVectorIndexService vectorIndexService = documentVectorIndexServiceProvider.getIfAvailable();
-        if (vectorIndexService == null || !vectorIndexService.isReady()) {
-            return List.of();
-        }
-        List<AiDocumentChunkHit> hits;
-        try {
-            hits = vectorIndexService.searchRelevantChunks(taskId, question, Math.max(maxBridgeNodes * 2, maxBridgeNodes));
-        } catch (Exception ex) {
-            log.warn("文档任务语义桥接向量检索失败, taskId={}", taskId, ex);
-            return List.of();
-        }
-        if (hits.isEmpty()) {
-            return List.of();
-        }
-        List<ContextCandidate> candidates = new ArrayList<>();
-        for (AiDocumentChunkHit hit : hits) {
-            if (hit == null || !StringUtils.hasText(hit.nodeId()) || excludedNodeIds.contains(hit.nodeId())) {
-                continue;
-            }
-            AiDocumentTreeNodeVo node = findNode(root, hit.nodeId());
-            if (node == null) {
-                continue;
-            }
-            double weight = Math.max(0.64D, 0.88D - (hit.rank() - 1) * 0.06D);
-            String reason = StringUtils.hasText(hit.titlePath())
-                    ? "向量召回补充节点：" + hit.titlePath()
-                    : "向量召回补充节点";
-            candidates.add(new ContextCandidate(
-                    node,
-                    node.getId(),
-                    "semantic_bridge",
-                    weight,
-                    reason
-            ));
-            if (candidates.size() >= maxBridgeNodes) {
-                break;
-            }
-        }
-        return candidates;
-    }
-
-    private double scoreSemanticBridge(String questionText, String currentContext, AiDocumentTreeNodeVo candidateNode) {
-        String candidateText = joinNonBlank("\n", candidateNode.getTitle(), candidateNode.getSummary(), candidateNode.getMarkdown());
+    private double scoreLexicalRetrieval(String queryText, AiDocumentTreeNodeVo candidateNode) {
+        String candidateText = joinNonBlank("\n",
+                candidateNode == null ? null : candidateNode.getTitle(),
+                candidateNode == null ? null : candidateNode.getSummary(),
+                candidateNode == null ? null : candidateNode.getMarkdown());
         if (!StringUtils.hasText(candidateText)) {
             return 0D;
         }
-        String normalizedQuestion = normalizeComparableText(questionText);
-        String normalizedCurrent = normalizeComparableText(currentContext);
+        String normalizedQuery = normalizeComparableText(queryText);
         String normalizedCandidate = normalizeComparableText(candidateText);
-        if (!StringUtils.hasText(normalizedCandidate)) {
+        if (!StringUtils.hasText(normalizedQuery) || !StringUtils.hasText(normalizedCandidate)) {
             return 0D;
         }
-        double questionOverlap = overlapRatio(normalizedQuestion, normalizedCandidate);
-        double currentOverlap = overlapRatio(normalizedCurrent, normalizedCandidate);
-        double titleBonus = 0D;
-        String candidateTitle = normalizeComparableText(candidateNode.getTitle());
-        if (StringUtils.hasText(candidateTitle)
-                && (normalizedQuestion.contains(candidateTitle) || normalizedCurrent.contains(candidateTitle))) {
-            titleBonus = 0.18D;
-        }
-        return Math.min(1D, questionOverlap * 0.55D + currentOverlap * 0.45D + titleBonus);
+        double overlap = overlapRatio(normalizedQuery, normalizedCandidate);
+        double containsBonus = normalizedCandidate.contains(normalizedQuery) ? 0.18D : 0D;
+        String candidateTitle = normalizeComparableText(candidateNode == null ? null : candidateNode.getTitle());
+        double titleBonus = StringUtils.hasText(candidateTitle) && normalizedQuery.contains(candidateTitle) ? 0.12D : 0D;
+        return Math.min(1D, overlap + containsBonus + titleBonus);
     }
 
     private String normalizeComparableText(String rawText) {
@@ -2122,7 +2427,8 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
 
     private List<AiDocumentKnowledgeFlowEdgeVo> buildKnowledgeFlowEdges(AiDocumentTreeNodeVo currentNode,
                                                                         List<AiDocumentTreeNodeVo> trail,
-                                                                        List<ContextCandidate> usedCandidates) {
+                                                                        List<ContextCandidate> usedCandidates,
+                                                                        String queryMode) {
         Map<String, AiDocumentKnowledgeFlowEdgeVo> edgeMap = new LinkedHashMap<>();
         Set<String> usedNodeIds = usedCandidates.stream()
                 .map(ContextCandidate::nodeId)
@@ -2141,17 +2447,31 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
             if (Objects.equals(candidate.nodeId(), currentNode.getId())) {
                 continue;
             }
+            String anchorNodeId = StringUtils.hasText(candidate.anchorNodeId()) ? candidate.anchorNodeId() : currentNode.getId();
             switch (candidate.relation()) {
-                case "descendant" -> addKnowledgeEdge(edgeMap, currentNode.getId(), candidate.nodeId(), "extends", candidate.weight(), candidate.reason());
-                case "ancestor_sibling" -> addKnowledgeEdge(edgeMap, candidate.nodeId(), currentNode.getId(), "compares", candidate.weight(), candidate.reason());
-                case "selected" -> addKnowledgeEdge(edgeMap, candidate.nodeId(), currentNode.getId(), "supports", candidate.weight(), candidate.reason());
-                case "semantic_bridge" -> addKnowledgeEdge(edgeMap, candidate.nodeId(), currentNode.getId(), "bridges", candidate.weight(), candidate.reason());
-                case "ancestor" -> addKnowledgeEdge(edgeMap, candidate.nodeId(), currentNode.getId(), "explains", candidate.weight(), candidate.reason());
+                case "descendant", "selected_descendant" ->
+                        addKnowledgeEdge(edgeMap, anchorNodeId, candidate.nodeId(), "extends", candidate.weight(), candidate.reason());
+                case "peer_context" ->
+                        addKnowledgeEdge(edgeMap, candidate.nodeId(), anchorNodeId, "compares", candidate.weight(), candidate.reason());
+                case "selected" -> addKnowledgeEdge(
+                        edgeMap,
+                        candidate.nodeId(),
+                        currentNode.getId(),
+                        Objects.equals(queryMode, "compare") ? "compares" : "supports",
+                        candidate.weight(),
+                        candidate.reason()
+                );
+                case "retrieved" -> addKnowledgeEdge(edgeMap, candidate.nodeId(), anchorNodeId, "retrieves", candidate.weight(), candidate.reason());
+                case "ancestor" -> addKnowledgeEdge(edgeMap, candidate.nodeId(), anchorNodeId, "explains", candidate.weight(), candidate.reason());
                 default -> {
                 }
             }
         }
-        return new ArrayList<>(edgeMap.values());
+        List<AiDocumentKnowledgeFlowEdgeVo> edges = new ArrayList<>(edgeMap.values());
+        for (int index = 0; index < edges.size(); index++) {
+            edges.get(index).setDisplayLabel(buildKnowledgeEdgeDisplayLabel(index));
+        }
+        return edges;
     }
 
     private void addKnowledgeEdge(Map<String, AiDocumentKnowledgeFlowEdgeVo> edgeMap,
@@ -2171,6 +2491,46 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         edgeVo.setWeight(weight);
         edgeVo.setReason(reason);
         edgeMap.putIfAbsent(edgeKey, edgeVo);
+    }
+
+    private String buildCitationDisplayLabel(int index) {
+        return "R" + (index + 1);
+    }
+
+    private String buildKnowledgeEdgeDisplayLabel(int index) {
+        return "A" + (index + 1);
+    }
+
+    private String describeCandidateRelation(ContextCandidate candidate, AiDocumentTreeNodeVo currentNode) {
+        if (candidate == null) {
+            return "上下文";
+        }
+        return switch (safeText(candidate.relation(), "")) {
+            case "current" -> "当前节点";
+            case "selected" -> "显式节点";
+            case "retrieved" -> "RAG召回";
+            case "ancestor" -> "祖先框架";
+            case "descendant" -> Objects.equals(candidate.nodeId(), currentNode == null ? null : currentNode.getId()) ? "当前节点" : "当前下文";
+            case "selected_descendant" -> "显式节点下文";
+            case "peer_context" -> "同层补充";
+            default -> "上下文";
+        };
+    }
+
+    private String describeKnowledgeEdgeType(String edgeType) {
+        return switch (safeText(edgeType, "").toLowerCase(Locale.ROOT)) {
+            case "retrieves" -> "检索命中";
+            case "supports" -> "补充支持";
+            case "explains" -> "上文解释";
+            case "extends" -> "下文展开";
+            case "compares" -> "对照关系";
+            default -> "关联";
+        };
+    }
+
+    private boolean isRootNode(AiDocumentTreeNodeVo node) {
+        return "document".equalsIgnoreCase(safeText(node == null ? null : node.getType(), ""))
+                && !StringUtils.hasText(node == null ? null : node.getParentId());
     }
 
     private int safeLevel(AiDocumentTreeNodeVo node) {
@@ -2621,7 +2981,14 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
                                     String nodeId,
                                     String relation,
                                     double weight,
-                                    String reason) {
+                                    String reason,
+                                    String anchorNodeId) {
+    }
+
+    private record RetrievalQuery(String text,
+                                  String anchorNodeId,
+                                  double baseWeight,
+                                  String reasonPrefix) {
     }
 
     private record ContextCompilation(AiDocumentTaskDetailVo detail,
