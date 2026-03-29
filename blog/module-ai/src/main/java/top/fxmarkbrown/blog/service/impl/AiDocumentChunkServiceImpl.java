@@ -79,6 +79,7 @@ public class AiDocumentChunkServiceImpl implements AiDocumentChunkService {
             chunks.add(new AiDocumentChunk(
                     chunkId,
                     detail.getTaskId(),
+                    safeText(detail.getTitle(), "未命名文档"),
                     node.getId(),
                     node.getParentId(),
                     safeType(node.getType()),
@@ -121,16 +122,37 @@ public class AiDocumentChunkServiceImpl implements AiDocumentChunkService {
             return "";
         }
         List<String> parts = new ArrayList<>();
+        if (isStructuralNode(node)) {
+            appendDistinct(parts, node.getTitle());
+            appendDistinct(parts, node.getSummary());
+            appendDistinct(parts, buildStructuralOutline(node));
+            return String.join("\n\n", parts).trim();
+        }
         if (StringUtils.hasText(node.getMarkdown())) {
-            parts.add(node.getMarkdown().trim());
+            appendDistinct(parts, node.getMarkdown());
         }
-        if (StringUtils.hasText(node.getSummary()) && !parts.contains(node.getSummary().trim())) {
-            parts.add(node.getSummary().trim());
-        }
-        if (parts.isEmpty() && StringUtils.hasText(node.getTitle())) {
-            parts.add(node.getTitle().trim());
-        }
+        appendDistinct(parts, node.getSummary());
+        appendDistinct(parts, node.getTitle());
         return String.join("\n\n", parts).trim();
+    }
+
+    private String buildStructuralOutline(AiDocumentTreeNodeVo node) {
+        if (node == null || node.getChildren() == null || node.getChildren().isEmpty()) {
+            return "";
+        }
+        List<String> lines = new ArrayList<>();
+        for (AiDocumentTreeNodeVo child : node.getChildren().stream().limit(8).toList()) {
+            String excerpt = firstNonBlank(
+                    child.getTitle(),
+                    child.getSummary(),
+                    buildPreview(child.getMarkdown())
+            );
+            if (!StringUtils.hasText(excerpt)) {
+                continue;
+            }
+            lines.add("- [" + safeType(child.getType()) + "] " + excerpt.trim());
+        }
+        return lines.isEmpty() ? "" : "章节结构：\n" + String.join("\n", lines);
     }
 
     private String buildTitlePath(List<AiDocumentTreeNodeVo> trail) {
@@ -167,25 +189,61 @@ public class AiDocumentChunkServiceImpl implements AiDocumentChunkService {
             return StringUtils.hasText(normalized) ? List.of(normalized) : List.of();
         }
         List<String> result = new ArrayList<>();
+        splitByParagraph(normalized, maxChunkChars, result);
+        return result.isEmpty() ? List.of(normalized) : List.copyOf(result);
+    }
+
+    private void splitByParagraph(String text, int maxChunkChars, List<String> result) {
         StringBuilder current = new StringBuilder();
-        for (String paragraph : normalized.split("\\n\\s*\\n")) {
+        for (String paragraph : text.split("\\n\\s*\\n")) {
             String trimmed = paragraph.trim();
             if (!StringUtils.hasText(trimmed)) {
                 continue;
             }
+            if (trimmed.length() > maxChunkChars) {
+                flushCurrentChunk(current, result);
+                splitOversizedParagraph(trimmed, maxChunkChars, result);
+                continue;
+            }
             if (!current.isEmpty() && current.length() + trimmed.length() + 2 > maxChunkChars) {
-                result.add(current.toString().trim());
-                current.setLength(0);
+                flushCurrentChunk(current, result);
             }
             if (!current.isEmpty()) {
                 current.append("\n\n");
             }
             current.append(trimmed);
         }
-        if (!current.isEmpty()) {
-            result.add(current.toString().trim());
+        flushCurrentChunk(current, result);
+    }
+
+    private void splitOversizedParagraph(String paragraph, int maxChunkChars, List<String> result) {
+        StringBuilder current = new StringBuilder();
+        for (String sentence : paragraph.split("(?<=[。！？；.!?])")) {
+            String trimmed = sentence.trim();
+            if (!StringUtils.hasText(trimmed)) {
+                continue;
+            }
+            if (trimmed.length() > maxChunkChars) {
+                flushCurrentChunk(current, result);
+                for (int index = 0; index < trimmed.length(); index += maxChunkChars) {
+                    result.add(trimmed.substring(index, Math.min(index + maxChunkChars, trimmed.length())).trim());
+                }
+                continue;
+            }
+            if (!current.isEmpty() && current.length() + trimmed.length() > maxChunkChars) {
+                flushCurrentChunk(current, result);
+            }
+            current.append(trimmed);
         }
-        return result.isEmpty() ? List.of(normalized.substring(0, maxChunkChars)) : List.copyOf(result);
+        flushCurrentChunk(current, result);
+    }
+
+    private void flushCurrentChunk(StringBuilder current, List<String> result) {
+        if (current.isEmpty()) {
+            return;
+        }
+        result.add(current.toString().trim());
+        current.setLength(0);
     }
 
     private String buildPreview(String text) {
@@ -199,6 +257,11 @@ public class AiDocumentChunkServiceImpl implements AiDocumentChunkService {
     private boolean isRootNode(AiDocumentTreeNodeVo node) {
         return "document".equalsIgnoreCase(safeType(node == null ? null : node.getType()))
                 && !StringUtils.hasText(node == null ? null : node.getParentId());
+    }
+
+    private boolean isStructuralNode(AiDocumentTreeNodeVo node) {
+        String type = safeType(node == null ? null : node.getType());
+        return "document".equals(type) || "section".equals(type) || "subsection".equals(type);
     }
 
     private String safeType(String value) {
@@ -238,6 +301,25 @@ public class AiDocumentChunkServiceImpl implements AiDocumentChunkService {
         if (StringUtils.hasText(value)) {
             lines.add(label + "：" + value.trim());
         }
+    }
+
+    private void appendDistinct(List<String> parts, String value) {
+        if (!StringUtils.hasText(value)) {
+            return;
+        }
+        String normalized = value.trim();
+        if (!parts.contains(normalized)) {
+            parts.add(normalized);
+        }
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (StringUtils.hasText(value)) {
+                return value.trim();
+            }
+        }
+        return "";
     }
 
     private String safeText(String value, String fallback) {

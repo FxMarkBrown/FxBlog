@@ -7,6 +7,7 @@ import java.util.List;
 public record AiDocumentChunk(
         String chunkId,
         Long taskId,
+        String documentTitle,
         String nodeId,
         String parentNodeId,
         String nodeType,

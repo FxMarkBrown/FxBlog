@@ -23,9 +23,14 @@ import java.util.Map;
 public class AiRerankServiceSiliconFlowImpl implements AiRerankService {
 
     private static final String META_ARTICLE_TITLE = "articleTitle";
+    private static final String META_DOCUMENT_TITLE = "documentTitle";
+    private static final String META_NODE_TITLE = "nodeTitle";
     private static final String META_SECTION_PATH = "sectionPath";
+    private static final String META_TITLE_PATH = "titlePath";
     private static final String META_BLOCK_TYPE = "blockType";
+    private static final String META_CHUNK_TYPE = "chunkType";
     private static final String META_HEADING_LEVEL = "headingLevel";
+    private static final String META_LEVEL = "level";
     private static final String META_CONTENT_PREVIEW = "contentPreview";
     private static final String META_RAW_MARKDOWN = "rawMarkdownFragment";
     private static final int MAX_RERANK_CONTENT_CHARS = 1600;
@@ -92,12 +97,22 @@ public class AiRerankServiceSiliconFlowImpl implements AiRerankService {
 
     private String buildRerankDocument(Document document) {
         Object rawMarkdown = document.getMetadata().get(META_RAW_MARKDOWN);
-        String blockType = safe(document.getMetadata().get(META_BLOCK_TYPE));
-        int headingLevel = intValue(document.getMetadata().get(META_HEADING_LEVEL), 6);
+        String blockType = firstNonBlank(
+                safe(document.getMetadata().get(META_BLOCK_TYPE)),
+                safe(document.getMetadata().get(META_CHUNK_TYPE))
+        );
+        int headingLevel = intValue(
+                firstNonBlank(
+                        safe(document.getMetadata().get(META_HEADING_LEVEL)),
+                        safe(document.getMetadata().get(META_LEVEL))
+                ),
+                6
+        );
         String rawContent = rawMarkdown != null ? rawMarkdown.toString() : safe(document.getText());
         String content = truncate(rawContent, MAX_RERANK_CONTENT_CHARS);
         return """
-                文章标题：%s
+                文档标题：%s
+                节点标题：%s
                 标题路径：%s
                 标题层级：H%s
                 内容类型：%s
@@ -106,8 +121,15 @@ public class AiRerankServiceSiliconFlowImpl implements AiRerankService {
                 Markdown 片段：
                 %s
                 """.formatted(
-                safe(document.getMetadata().get(META_ARTICLE_TITLE)),
-                safe(document.getMetadata().get(META_SECTION_PATH)),
+                firstNonBlank(
+                        safe(document.getMetadata().get(META_ARTICLE_TITLE)),
+                        safe(document.getMetadata().get(META_DOCUMENT_TITLE))
+                ),
+                safe(document.getMetadata().get(META_NODE_TITLE)),
+                firstNonBlank(
+                        safe(document.getMetadata().get(META_SECTION_PATH)),
+                        safe(document.getMetadata().get(META_TITLE_PATH))
+                ),
                 headingLevel,
                 describeBlockType(blockType),
                 describeRetrievalValue(blockType, headingLevel),
@@ -145,6 +167,15 @@ public class AiRerankServiceSiliconFlowImpl implements AiRerankService {
         }
     }
 
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (StringUtils.hasText(value)) {
+                return value.trim();
+            }
+        }
+        return "";
+    }
+
     private String truncate(String content, int maxChars) {
         if (!StringUtils.hasText(content)) {
             return "";
@@ -167,6 +198,10 @@ public class AiRerankServiceSiliconFlowImpl implements AiRerankService {
             case "image" -> "图片说明";
             case "video-ref" -> "视频引用";
             case "html" -> "HTML 片段";
+            case "section" -> "章节节点";
+            case "section-part" -> "章节节点片段";
+            case "content" -> "文档内容块";
+            case "content-part" -> "文档内容片段";
             default -> StringUtils.hasText(blockType) ? blockType : "未标注";
         };
     }
@@ -183,6 +218,8 @@ public class AiRerankServiceSiliconFlowImpl implements AiRerankService {
             case "quote" -> "中，适合作为补充论据或原话引用";
             case "code" -> "中，适合实现细节和示例问题";
             case "image", "video-ref", "html" -> "中低，更多用于补充上下文";
+            case "section", "section-part" -> "高，适合章节主题、结构定位和全局概览问题";
+            case "content", "content-part" -> "高，适合局部事实、定义和细节问答";
             default -> "中，通用片段";
         };
     }

@@ -11,6 +11,7 @@ import top.fxmarkbrown.blog.config.ai.AiRagProperties;
 import top.fxmarkbrown.blog.model.ai.AiDocumentChunk;
 import top.fxmarkbrown.blog.model.ai.AiDocumentChunkHit;
 import top.fxmarkbrown.blog.service.AiDocumentChunkService;
+import top.fxmarkbrown.blog.service.AiRerankService;
 import top.fxmarkbrown.blog.service.AiDocumentVectorIndexService;
 import top.fxmarkbrown.blog.service.AiVectorStoreCollectionService;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentParseResultVo;
@@ -40,16 +41,20 @@ public class AiDocumentVectorIndexServiceImpl implements AiDocumentVectorIndexSe
     private static final String META_RAW_MARKDOWN = "rawMarkdownFragment";
     private static final String META_PAGE_START = "pageStart";
     private static final String META_PAGE_END = "pageEnd";
+    private static final String META_DOCUMENT_TITLE = "documentTitle";
 
     private final AiRagProperties aiRagProperties;
     private final AiDocumentChunkService aiDocumentChunkService;
+    private final AiRerankService aiRerankService;
     private final AiVectorStoreCollectionService aiVectorStoreCollectionService;
 
     public AiDocumentVectorIndexServiceImpl(AiRagProperties aiRagProperties,
                                             AiDocumentChunkService aiDocumentChunkService,
+                                            AiRerankService aiRerankService,
                                             AiVectorStoreCollectionService aiVectorStoreCollectionService) {
         this.aiRagProperties = aiRagProperties;
         this.aiDocumentChunkService = aiDocumentChunkService;
+        this.aiRerankService = aiRerankService;
         this.aiVectorStoreCollectionService = aiVectorStoreCollectionService;
     }
 
@@ -97,6 +102,7 @@ public class AiDocumentVectorIndexServiceImpl implements AiDocumentVectorIndexSe
             if (documents == null || documents.isEmpty()) {
                 return List.of();
             }
+            documents = aiRerankService.rerank(query.trim(), documents, Math.max(topK, 1));
             Map<String, AiDocumentChunkHit> deduplicated = new LinkedHashMap<>();
             int rank = 0;
             for (Document document : documents) {
@@ -120,6 +126,7 @@ public class AiDocumentVectorIndexServiceImpl implements AiDocumentVectorIndexSe
     private Document toDocument(AiDocumentChunk chunk) {
         Map<String, Object> metadata = new LinkedHashMap<>();
         metadata.put(META_TASK_ID, chunk.taskId());
+        metadata.put(META_DOCUMENT_TITLE, chunk.documentTitle());
         metadata.put(META_NODE_ID, chunk.nodeId());
         metadata.put(META_PARENT_NODE_ID, chunk.parentNodeId());
         metadata.put(META_NODE_TYPE, chunk.nodeType());
