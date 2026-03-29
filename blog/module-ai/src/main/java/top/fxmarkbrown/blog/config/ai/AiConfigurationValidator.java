@@ -15,6 +15,7 @@ public class AiConfigurationValidator {
         if (aiRagProperties.isEnabled()) {
             validateRag(aiProperties);
         }
+        validateDocument(aiProperties);
     }
 
     private void validateChat(AiProperties aiProperties) {
@@ -61,6 +62,25 @@ public class AiConfigurationValidator {
             throw new IllegalStateException("blog.ai.vector-store.qdrant.port 必须大于 0");
         }
         requireText(qdrant.getCollectionName(), "blog.ai.vector-store.qdrant.collection-name 未配置");
+    }
+
+    private void validateDocument(AiProperties aiProperties) {
+        AiProperties.Document document = aiProperties.getDocument();
+        if (document == null || !document.isEnabled()) {
+            return;
+        }
+        if (document.getRetentionDays() <= 0) {
+            throw new IllegalStateException("blog.ai.document.retention-days 必须大于 0");
+        }
+        AiProperties.Mineru mineru = document.getMineru();
+        if (mineru == null || !mineru.isEnabled() || mineru.isMockMode()) {
+            return;
+        }
+        requireText(mineru.getBaseUrl(), "blog.ai.document.mineru.base-url 未配置");
+        requireText(mineru.getApiKey(), "blog.ai.document.mineru.api-key 未配置");
+        if (mineru.getTimeoutMillis() <= 0) {
+            throw new IllegalStateException("blog.ai.document.mineru.timeout-millis 必须大于 0");
+        }
     }
 
     private void requireText(String value, String message) {

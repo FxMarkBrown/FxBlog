@@ -23,7 +23,7 @@ const routes: MobileMenuEntry[] = [
   { path: '/photos', title: '相册', icon: 'fas fa-images' },
   { path: '/messages', title: '留言', icon: 'fas fa-envelope' },
   { path: '/friends', title: '友链', icon: 'fas fa-users' },
-  { path: '/ai', title: 'AI工作台', icon: 'fas fa-robot' }
+  { path: '/ai', title: 'AI', icon: 'fas fa-robot' }
 ]
 
 const shortcutEntries = computed(() => {

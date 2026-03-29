@@ -101,6 +101,7 @@ export default defineNuxtConfig({
     ],
     optimizeDeps: {
       include: [
+        '@vue-flow/core',
         'highlight.js',
         'js-cookie',
         'marked',
@@ -133,7 +134,8 @@ export default defineNuxtConfig({
       siteDescription,
       seoImage,
       recordNum: readEnvValue('NUXT_PUBLIC_RECORD_NUM', ''),
-      adminUrl: readEnvValue('NUXT_PUBLIC_ADMIN_URL', 'http://localhost:3001')
+      adminUrl: readEnvValue('NUXT_PUBLIC_ADMIN_URL', 'http://localhost:3001'),
+      documentTaskPollingEnabled: readEnvValue('NUXT_PUBLIC_AI_DOCUMENT_POLLING_ENABLED', 'false') === 'true'
     }
   },
   routeRules: {},

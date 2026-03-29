@@ -28,7 +28,7 @@ public class ApiAccessLogInterceptor implements HandlerInterceptor {
         // 记录 HandlerMethod，提供给 ApiAccessLogFilter 使用
         HandlerMethod handlerMethod = handler instanceof HandlerMethod ? (HandlerMethod) handler : null;
 
-        if (!SpringUtil.getActiveProfile().equals("prod")) {
+        if (!Objects.equals(SpringUtil.getActiveProfile(), "prod")) {
             String method = request.getMethod();
             Map<String, String> params = getParameters(request);
             if (params.isEmpty()) {
@@ -49,7 +49,7 @@ public class ApiAccessLogInterceptor implements HandlerInterceptor {
 
     @Override
     public void afterCompletion(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull Object handler, Exception ex) throws Exception {
-        if (!SpringUtil.getActiveProfile().equals("prod")) {
+        if (!Objects.equals(SpringUtil.getActiveProfile(), "prod")) {
             StopWatch stopWatch = (StopWatch) request.getAttribute(ATTRIBUTE_STOP_WATCH);
             stopWatch.stop();
             logger.info("<== [请求完毕 URL({}) 耗时({} ms)]",

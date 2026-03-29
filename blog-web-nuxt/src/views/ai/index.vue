@@ -1049,6 +1049,10 @@ function getRoleLabel(role: string) {
             <div class="chat-subtitle">{{ currentConversation.summary || chatSubtitle }}</div>
           </div>
           <div class="chat-meta">
+            <NuxtLink to="/ai" class="chat-back-btn">
+              <i class="fas fa-arrow-left"></i>
+              <span>返回 AI</span>
+            </NuxtLink>
             <button class="theme-toggle-btn" type="button" :title="isDarkMode ? '切到亮色' : '切到暗色'" @click="toggleTheme">
               <i :class="['fas', isDarkMode ? 'fa-sun' : 'fa-moon']"></i>
             </button>
@@ -1549,13 +1553,35 @@ function getRoleLabel(role: string) {
   gap: 8px;
 }
 
-.theme-toggle-btn {
-  width: 34px;
-  height: 34px;
-  border: 1px solid rgba(var(--border-color-rgb), 0.14);
-  border-radius: 10px;
-  background: rgba(var(--border-color-rgb), 0.08);
+.chat-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid rgba(var(--border-color-rgb), 0.12);
+  border-radius: 999px;
+  background: rgba(var(--border-color-rgb), 0.1);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.chat-back-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(var(--border-color-rgb), 0.14);
   color: var(--text-primary);
+}
+
+.theme-toggle-btn {
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(var(--border-color-rgb), 0.12);
+  border-radius: 999px;
+  background: rgba(var(--border-color-rgb), 0.1);
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -1563,6 +1589,7 @@ function getRoleLabel(role: string) {
 .theme-toggle-btn:hover {
   transform: translateY(-1px);
   background: rgba(var(--border-color-rgb), 0.14);
+  color: var(--text-primary);
 }
 
 .message-list {

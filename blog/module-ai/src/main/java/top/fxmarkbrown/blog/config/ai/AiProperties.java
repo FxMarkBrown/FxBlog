@@ -27,6 +27,8 @@ public class AiProperties {
 
     private VectorStore vectorStore = new VectorStore();
 
+    private Document document = new Document();
+
     private Map<String, OpenAiCompatibleProvider> providers = new LinkedHashMap<>();
 
     public OpenAiCompatibleProvider requireProvider(String providerName) {
@@ -125,6 +127,44 @@ public class AiProperties {
         private String baseUrl;
 
         private String apiKey;
+    }
+
+    @Data
+    public static class Document {
+
+        private boolean enabled = true;
+
+        private int retentionDays = 1;
+
+        private Mineru mineru = new Mineru();
+    }
+
+    @Data
+    public static class Mineru {
+
+        private boolean enabled = false;
+
+        private boolean mockMode = true;
+
+        private String baseUrl;
+
+        private String apiKey;
+
+        private String language;
+
+        private Boolean ocr;
+
+        private Boolean enableFormula = true;
+
+        private Boolean enableTable = true;
+
+        private String callbackUrl;
+
+        private String submitPath = "/api/v4/extract/task";
+
+        private String taskDetailPath = "/api/v4/extract/task/{taskId}";
+
+        private int timeoutMillis = 30000;
     }
 
     public ChatModelConfig requireChatModel(String modelId) {

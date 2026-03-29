@@ -47,6 +47,22 @@ blog:
       siliconflow:
         base-url: ${BLOG_AI_SILICONFLOW_BASE_URL:https://api.siliconflow.cn}
         api-key: ${BLOG_AI_SILICONFLOW_API_KEY:}
+    document:
+      enabled: ${BLOG_AI_DOCUMENT_ENABLED:true}
+      retention-days: ${BLOG_AI_DOCUMENT_RETENTION_DAYS:1}
+      mineru:
+        enabled: ${BLOG_AI_MINERU_ENABLED:false}
+        mock-mode: ${BLOG_AI_MINERU_MOCK_MODE:true}
+        base-url: ${BLOG_AI_MINERU_BASE_URL:}
+        api-key: ${BLOG_AI_MINERU_API_KEY:}
+        language: ${BLOG_AI_MINERU_LANGUAGE:}
+        ocr: ${BLOG_AI_MINERU_OCR:}
+        enable-formula: ${BLOG_AI_MINERU_ENABLE_FORMULA:true}
+        enable-table: ${BLOG_AI_MINERU_ENABLE_TABLE:true}
+        callback-url: ${BLOG_AI_MINERU_CALLBACK_URL:}
+        submit-path: ${BLOG_AI_MINERU_SUBMIT_PATH:/api/v4/extract/task}
+        task-detail-path: ${BLOG_AI_MINERU_TASK_DETAIL_PATH:/api/v4/extract/task/{taskId}}
+        timeout-millis: ${BLOG_AI_MINERU_TIMEOUT_MILLIS:30000}
     vector-store:
       provider: qdrant
       qdrant:

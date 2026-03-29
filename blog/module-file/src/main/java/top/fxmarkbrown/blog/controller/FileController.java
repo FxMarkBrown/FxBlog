@@ -85,7 +85,7 @@ public class FileController {
     @SaCheckLogin
     @PostMapping("/upload")
     @Operation(summary = "上传文件")
-    public Result<String> upload(@RequestParam("file") MultipartFile file, String source) {
+    public Result<FileDetail> upload(@RequestParam("file") MultipartFile file, String source) {
         if (file == null || file.isEmpty()) {
             throw new ServiceException("请选择要上传的文件");
         }
@@ -112,7 +112,13 @@ public class FileController {
         if (fileInfo == null) {
             throw new ServiceException("上传文件失败");
         }
-        return Result.success(FileUrlUtil.toRelativeUrl(fileInfo.getUrl()));
+        FileDetail detail = fileDetailService.getById(String.valueOf(fileInfo.getId()));
+        if (detail == null) {
+            throw new ServiceException("上传成功但文件记录不存在");
+        }
+        detail.setUrl(FileUrlUtil.toRelativeUrl(detail.getUrl()));
+        detail.setThUrl(FileUrlUtil.toRelativeUrl(detail.getThUrl()));
+        return Result.success(detail);
     }
 
     @SaCheckLogin

@@ -5,8 +5,8 @@ const runtimeConfig = useRuntimeConfig()
 const authStore = useAuthStore()
 
 useNoIndexSeo({
-  title: () => `AI工作台 - ${runtimeConfig.public.siteName}`,
-  description: '统一进入一般对话任务与文档任务的 AI 工作台'
+  title: () => `AI - ${runtimeConfig.public.siteName}`,
+  description: '统一进入一般对话任务与文档任务的 AI 页面'
 })
 
 const taskCards = computed(() => [
@@ -22,10 +22,10 @@ const taskCards = computed(() => [
   {
     key: 'document',
     title: '文档任务',
-    subtitle: '即将接入文档解析、双栏对照、上下文注入与问答工作流',
+    subtitle: '上传文档后进入全屏结构画布，围绕节点展开、原文预览和上下文问答',
     path: '/ai/document',
     icon: 'fas fa-file-lines',
-    badge: '规划中',
+    badge: '已接入',
     available: true
   }
 ])
@@ -36,10 +36,10 @@ const taskCards = computed(() => [
     <div class="ai-workbench-shell">
       <header class="hero-card">
         <div class="hero-copy">
-          <span class="hero-badge">AI 工作台</span>
+          <span class="hero-badge">AI</span>
           <h1>把对话任务和文档任务拆开管理</h1>
           <p>
-            这里不再直接落到单一对话页，而是先进入工作台。一般对话任务继续承载现有聊天能力，文档任务后续承载解析、对照阅读与问答。
+            这里不再直接落到单一对话页，而是先进入 AI 页面。一般对话任务继续承载现有聊天能力，文档任务后续承载解析、对照阅读与问答。
           </p>
         </div>
         <div class="hero-meta">
@@ -143,12 +143,16 @@ const taskCards = computed(() => [
 .meta-item {
   display: inline-flex;
   align-items: center;
-  padding: 10px 14px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(148, 163, 184, 0.18);
+  justify-content: center;
+  min-height: 42px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--card-bg) 74%, rgba(34, 197, 94, 0.2));
+  border: 1px solid color-mix(in srgb, var(--border-color) 64%, rgba(45, 212, 191, 0.36));
   color: var(--text-secondary);
   white-space: nowrap;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(12px);
 }
 
 .task-grid {
@@ -227,9 +231,42 @@ const taskCards = computed(() => [
 .task-card__action {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 10px;
+  min-width: 110px;
+  min-height: 46px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(34, 211, 238, 0.22);
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.18), rgba(45, 212, 191, 0.18));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
   color: #0891b2;
   font-weight: 600;
+  transition: transform 0.24s ease, border-color 0.24s ease, background 0.24s ease;
+}
+
+.task-card:hover .task-card__action {
+  transform: translateX(2px);
+  border-color: rgba(14, 165, 233, 0.34);
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.24), rgba(45, 212, 191, 0.24));
+}
+
+:global(:root[data-theme='dark'] .meta-item) {
+  background: color-mix(in srgb, var(--card-bg) 82%, rgba(34, 197, 94, 0.12));
+  border-color: rgba(56, 189, 248, 0.22);
+  color: rgba(226, 232, 240, 0.92);
+  box-shadow: 0 16px 34px rgba(2, 6, 23, 0.34);
+}
+
+:global(:root[data-theme='dark'] .task-card__action) {
+  color: #67e8f9;
+  border-color: rgba(103, 232, 249, 0.24);
+  background: linear-gradient(135deg, rgba(8, 145, 178, 0.22), rgba(20, 184, 166, 0.2));
+}
+
+:global(:root[data-theme='dark'] .task-card:hover .task-card__action) {
+  border-color: rgba(103, 232, 249, 0.4);
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.28), rgba(45, 212, 191, 0.24));
 }
 
 @media (max-width: 900px) {
@@ -243,6 +280,16 @@ const taskCards = computed(() => [
 
   .task-grid {
     grid-template-columns: 1fr;
+  }
+
+  .task-card {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .task-card__action {
+    min-width: 96px;
+    margin-left: 76px;
   }
 }
 </style>

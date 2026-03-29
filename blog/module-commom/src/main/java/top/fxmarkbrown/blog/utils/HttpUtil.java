@@ -34,6 +34,18 @@ public final class HttpUtil {
         return send(url, "GET", null, DEFAULT_TIMEOUT_MILLIS, mergeHeaders(defaultHeaders(), headers));
     }
 
+    public static byte[] getBytes(String url) {
+        return getBytes(url, DEFAULT_TIMEOUT_MILLIS, defaultHeaders());
+    }
+
+    public static byte[] getBytes(String url, int timeoutMillis) {
+        return getBytes(url, timeoutMillis, defaultHeaders());
+    }
+
+    public static byte[] getBytes(String url, Map<String, String> headers) {
+        return getBytes(url, DEFAULT_TIMEOUT_MILLIS, mergeHeaders(defaultHeaders(), headers));
+    }
+
     public static String postJson(String url, String body) {
         return postJson(url, body, DEFAULT_TIMEOUT_MILLIS);
     }
@@ -50,6 +62,27 @@ public final class HttpUtil {
     public static String postJson(String url, String body, int timeoutMillis, Map<String, String> headers) {
         return send(url, "POST", body, timeoutMillis,
                 mergeHeaders(mergeHeaders(defaultHeaders(), Map.of("Content-Type", "application/json")), headers));
+    }
+
+    private static byte[] getBytes(String url, int timeoutMillis, Map<String, String> headers) {
+        try {
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .timeout(Duration.ofMillis(Math.max(timeoutMillis, 1000L)));
+
+            headers.forEach(requestBuilder::header);
+
+            HttpResponse<byte[]> response = HTTP_CLIENT.send(requestBuilder.GET().build(), HttpResponse.BodyHandlers.ofByteArray());
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                throw new IllegalStateException("HTTP request failed with status " + response.statusCode() + ": " + url);
+            }
+            return response.body();
+        } catch (IOException | InterruptedException exception) {
+            if (exception instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            throw new IllegalStateException("HTTP request failed: " + url, exception);
+        }
     }
 
     private static String send(String url, String method, String body, int timeoutMillis, Map<String, String> headers) {

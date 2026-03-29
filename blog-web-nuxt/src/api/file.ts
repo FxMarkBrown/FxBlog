@@ -1,8 +1,9 @@
 import type { ApiResponse } from '@/types/common'
+import type { AnyRecord } from '@/types/common'
 
 // 上传文件。
 export function uploadFileApi(data: FormData, source: string) {
-  return useApiClient()<ApiResponse<string>>('/file/upload', {
+  return useApiClient()<ApiResponse<AnyRecord>>('/file/upload', {
     method: 'POST',
     body: data,
     query: { source }
