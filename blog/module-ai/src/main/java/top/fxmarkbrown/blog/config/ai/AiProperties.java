@@ -116,7 +116,9 @@ public class AiProperties {
 
         private String apiKey;
 
-        private String collectionName = "blog_markdown_chunk";
+        private String siteCollectionName = "blog_markdown_chunk";
+
+        private String documentTaskCollectionPrefix = "blog_document_task_";
 
         private boolean initializeSchema = true;
     }

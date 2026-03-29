@@ -61,7 +61,8 @@ public class AiConfigurationValidator {
         if (qdrant.getPort() <= 0) {
             throw new IllegalStateException("blog.ai.vector-store.qdrant.port 必须大于 0");
         }
-        requireText(qdrant.getCollectionName(), "blog.ai.vector-store.qdrant.collection-name 未配置");
+        requireText(qdrant.getSiteCollectionName(), "blog.ai.vector-store.qdrant.site-collection-name 未配置");
+        requireText(qdrant.getDocumentTaskCollectionPrefix(), "blog.ai.vector-store.qdrant.document-task-collection-prefix 未配置");
     }
 
     private void validateDocument(AiProperties aiProperties) {

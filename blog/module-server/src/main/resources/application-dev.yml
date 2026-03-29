@@ -71,7 +71,8 @@ blog:
         host: ${BLOG_QDRANT_HOST:127.0.0.1}
         port: ${BLOG_QDRANT_PORT:6334}
         use-tls: ${BLOG_QDRANT_USE_TLS:false}
-        collection-name: ${BLOG_QDRANT_COLLECTION_NAME:blog_markdown_chunk}
+        site-collection-name: ${BLOG_QDRANT_SITE_COLLECTION_NAME:blog_markdown_chunk}
+        document-task-collection-prefix: ${BLOG_QDRANT_DOCUMENT_TASK_COLLECTION_PREFIX:blog_document_task_}
         initialize-schema: ${BLOG_QDRANT_INITIALIZE_SCHEMA:true}
     rag:
       enabled: true

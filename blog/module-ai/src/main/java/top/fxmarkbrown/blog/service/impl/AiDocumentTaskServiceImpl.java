@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;
@@ -24,6 +25,7 @@ import top.fxmarkbrown.blog.model.ai.AiResolvedChatModel;
 import top.fxmarkbrown.blog.service.AiChatModelService;
 import top.fxmarkbrown.blog.service.AiQuotaCoreService;
 import top.fxmarkbrown.blog.service.AiDocumentTaskService;
+import top.fxmarkbrown.blog.service.AiVectorStoreCollectionService;
 import top.fxmarkbrown.blog.utils.HttpUtil;
 import top.fxmarkbrown.blog.utils.JsonUtil;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentNodeAnswerVo;
@@ -52,6 +54,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
@@ -70,6 +73,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
     private final AiProperties aiProperties;
     private final AiChatModelService aiChatModelService;
     private final AiQuotaCoreService aiQuotaCoreService;
+    private final ObjectProvider<AiVectorStoreCollectionService> vectorStoreCollectionServiceProvider;
     private final SysAiDocumentTaskMapper documentTaskMapper;
     private final SysAiDocumentResultMapper documentResultMapper;
 
@@ -163,8 +167,27 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
     @Override
     public void deleteTask(Long taskId) {
         DocumentTaskAggregate aggregate = requireAggregate(taskId);
-        documentResultMapper.deleteById(aggregate.detail().getTaskId());
-        documentTaskMapper.deleteById(aggregate.detail().getTaskId());
+        deletePersistedTask(aggregate.taskEntity());
+    }
+
+    @Override
+    public int cleanupExpiredTasks() {
+        LocalDateTime now = LocalDateTime.now();
+        List<SysAiDocumentTask> expiredTasks = documentTaskMapper.selectList(new LambdaQueryWrapper<SysAiDocumentTask>()
+                .isNotNull(SysAiDocumentTask::getExpireAt)
+                .lt(SysAiDocumentTask::getExpireAt, now)
+                .orderByAsc(SysAiDocumentTask::getExpireAt)
+                .orderByAsc(SysAiDocumentTask::getId));
+        int deleted = 0;
+        for (SysAiDocumentTask expiredTask : expiredTasks) {
+            try {
+                deletePersistedTask(expiredTask);
+                deleted++;
+            } catch (Exception ex) {
+                log.warn("清理过期文档任务失败, taskId={}", expiredTask.getId(), ex);
+            }
+        }
+        return deleted;
     }
 
     @Override
@@ -406,6 +429,21 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         } else {
             documentResultMapper.updateById(resultEntity);
         }
+    }
+
+    private void deletePersistedTask(SysAiDocumentTask taskEntity) {
+        if (taskEntity == null || taskEntity.getId() == null) {
+            throw new IllegalStateException("待删除文档任务不存在");
+        }
+        deleteTaskVectorCollection(taskEntity.getId());
+        documentResultMapper.deleteById(taskEntity.getId());
+        documentTaskMapper.deleteById(taskEntity.getId());
+    }
+
+    private void deleteTaskVectorCollection(Long taskId) {
+        Optional.ofNullable(vectorStoreCollectionServiceProvider.getIfAvailable())
+                .filter(AiVectorStoreCollectionService::isReady)
+                .ifPresent(service -> service.deleteDocumentTaskCollection(taskId));
     }
 
     private AiDocumentTaskListVo toListVo(SysAiDocumentTask task) {
@@ -1138,7 +1176,6 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         return switch (queryMode) {
             case "summarize" -> 3;
             case "compare", "locate" -> 1;
-            case "reason" -> 2;
             default -> 2;
         };
     }
@@ -1202,17 +1239,6 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
             }
         }
         return descendants;
-    }
-
-    private List<AiDocumentTreeNodeVo> collectAncestors(AiDocumentTreeNodeVo root, String nodeId) {
-        List<AiDocumentTreeNodeVo> trail = new ArrayList<>();
-        if (collectNodeTrail(root, nodeId, trail)) {
-            if (!trail.isEmpty()) {
-                trail.removeLast();
-            }
-            return trail;
-        }
-        return List.of();
     }
 
     private boolean collectNodeTrail(AiDocumentTreeNodeVo current, String nodeId, List<AiDocumentTreeNodeVo> trail) {

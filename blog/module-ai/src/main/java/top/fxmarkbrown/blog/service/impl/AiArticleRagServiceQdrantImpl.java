@@ -21,6 +21,7 @@ import top.fxmarkbrown.blog.model.ai.AiChunkTaxonomyLink;
 import top.fxmarkbrown.blog.service.AiArticleRagService;
 import top.fxmarkbrown.blog.service.AiMarkdownChunkService;
 import top.fxmarkbrown.blog.service.AiRerankService;
+import top.fxmarkbrown.blog.service.AiVectorStoreCollectionService;
 import top.fxmarkbrown.blog.utils.JsonUtil;
 import top.fxmarkbrown.blog.vo.ai.AiRetrievedChunkVo;
 
@@ -55,18 +56,18 @@ public class AiArticleRagServiceQdrantImpl implements AiArticleRagService {
     private static final int PUBLISHED_FLAG = 1;
     private static final int UNPUBLISHED_FLAG = 0;
 
-    private final ObjectProvider<VectorStore> vectorStoreProvider;
+    private final ObjectProvider<AiVectorStoreCollectionService> vectorStoreCollectionServiceProvider;
     private final AiRagProperties aiRagProperties;
     private final AiMarkdownChunkService aiMarkdownChunkService;
     private final AiRerankService aiRerankService;
     private final Executor ragTaskExecutor;
 
-    public AiArticleRagServiceQdrantImpl(ObjectProvider<VectorStore> vectorStoreProvider,
+    public AiArticleRagServiceQdrantImpl(ObjectProvider<AiVectorStoreCollectionService> vectorStoreCollectionServiceProvider,
                                          AiRagProperties aiRagProperties,
                                          AiMarkdownChunkService aiMarkdownChunkService,
                                          AiRerankService aiRerankService,
                                          @Qualifier("ragTaskExecutor") Executor ragTaskExecutor) {
-        this.vectorStoreProvider = vectorStoreProvider;
+        this.vectorStoreCollectionServiceProvider = vectorStoreCollectionServiceProvider;
         this.aiRagProperties = aiRagProperties;
         this.aiMarkdownChunkService = aiMarkdownChunkService;
         this.aiRerankService = aiRerankService;
@@ -75,7 +76,10 @@ public class AiArticleRagServiceQdrantImpl implements AiArticleRagService {
 
     @Override
     public boolean isReady() {
-        return aiRagProperties.isEnabled() && vectorStoreProvider.getIfAvailable() != null;
+        AiVectorStoreCollectionService vectorStoreCollectionService = vectorStoreCollectionServiceProvider.getIfAvailable();
+        return aiRagProperties.isEnabled()
+                && vectorStoreCollectionService != null
+                && vectorStoreCollectionService.isReady();
     }
 
     @Override
@@ -83,7 +87,7 @@ public class AiArticleRagServiceQdrantImpl implements AiArticleRagService {
         if (article == null || article.getId() == null || !isReady()) {
             return;
         }
-        VectorStore vectorStore = vectorStoreProvider.getIfAvailable();
+        VectorStore vectorStore = resolveSiteVectorStore();
         if (vectorStore == null) {
             return;
         }
@@ -107,7 +111,7 @@ public class AiArticleRagServiceQdrantImpl implements AiArticleRagService {
         if (articleId == null || !isReady()) {
             return;
         }
-        VectorStore vectorStore = vectorStoreProvider.getIfAvailable();
+        VectorStore vectorStore = resolveSiteVectorStore();
         if (vectorStore == null) {
             return;
         }
@@ -202,7 +206,7 @@ public class AiArticleRagServiceQdrantImpl implements AiArticleRagService {
                                             int targetTopK,
                                             int configuredRecallTopK,
                                             double similarityThreshold) {
-        VectorStore vectorStore = vectorStoreProvider.getIfAvailable();
+        VectorStore vectorStore = resolveSiteVectorStore();
         if (vectorStore == null) {
             return List.of();
         }
@@ -248,6 +252,19 @@ public class AiArticleRagServiceQdrantImpl implements AiArticleRagService {
         } catch (Exception ex) {
             log.warn("文章 RAG 并发检索任务失败", ex);
             return List.of();
+        }
+    }
+
+    private VectorStore resolveSiteVectorStore() {
+        AiVectorStoreCollectionService vectorStoreCollectionService = vectorStoreCollectionServiceProvider.getIfAvailable();
+        if (vectorStoreCollectionService == null || !vectorStoreCollectionService.isReady()) {
+            return null;
+        }
+        try {
+            return vectorStoreCollectionService.getSiteVectorStore();
+        } catch (Exception ex) {
+            log.warn("站内 RAG collection 初始化失败", ex);
+            return null;
         }
     }
 
@@ -636,7 +653,7 @@ public class AiArticleRagServiceQdrantImpl implements AiArticleRagService {
     private String safeKey(Object... values) {
         StringBuilder builder = new StringBuilder();
         for (Object value : values) {
-            if (builder.length() > 0) {
+            if (!builder.isEmpty()) {
                 builder.append('|');
             }
             builder.append(value == null ? "" : value);

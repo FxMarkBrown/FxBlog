@@ -9,8 +9,6 @@ import org.springframework.ai.model.tool.ToolCallingManager;
 import org.springframework.ai.openai.OpenAiEmbeddingModel;
 import org.springframework.ai.openai.OpenAiEmbeddingOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
-import org.springframework.ai.vectorstore.VectorStore;
-import org.springframework.ai.vectorstore.qdrant.QdrantVectorStore;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.util.StringUtils;
@@ -39,7 +37,7 @@ public class AiModelConfiguration {
 
     @Bean
     @ConditionalOnProperty(prefix = "blog.ai.rag", name = "enabled", havingValue = "true")
-    public VectorStore vectorStore(AiProperties aiProperties, EmbeddingModel embeddingModel) {
+    public QdrantClient qdrantClient(AiProperties aiProperties) {
         AiProperties.Qdrant qdrantConfig = aiProperties.getVectorStore().getQdrant();
         QdrantGrpcClient.Builder grpcBuilder = QdrantGrpcClient.newBuilder(
                 qdrantConfig.getHost(),
@@ -50,11 +48,7 @@ public class AiModelConfiguration {
             grpcBuilder.withApiKey(qdrantConfig.getApiKey().trim());
         }
         grpcBuilder.withTimeout(Duration.ofSeconds(10));
-        QdrantClient qdrantClient = new QdrantClient(grpcBuilder.build());
-        return QdrantVectorStore.builder(qdrantClient, embeddingModel)
-                .collectionName(qdrantConfig.getCollectionName())
-                .initializeSchema(qdrantConfig.isInitializeSchema())
-                .build();
+        return new QdrantClient(grpcBuilder.build());
     }
 
     private OpenAiApi buildOpenAiApi(AiProperties.OpenAiCompatibleProvider provider) {
