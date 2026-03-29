@@ -17,6 +17,8 @@ public class AiDocumentNodeAnswerVo {
 
     private String answer;
 
+    private String reasoningContent;
+
     private String modelId;
 
     private List<String> contextNodeIds;

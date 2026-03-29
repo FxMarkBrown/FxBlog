@@ -111,6 +111,7 @@ export interface DocumentNodeAnswer {
   nodeId: string
   question: string
   answer?: string
+  reasoningContent?: string
   modelId?: string
   contextNodeIds?: string[]
   citations?: DocumentNodeCitation[]
@@ -141,6 +142,7 @@ export interface DocumentNodeMessage {
   threadId: number
   role: string
   content: string
+  reasoningContent?: string
   modelId?: string
   tokensIn?: number
   tokensOut?: number

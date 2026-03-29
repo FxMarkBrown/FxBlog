@@ -21,6 +21,7 @@ type CanvasNodeData = {
   sourceUrl?: string
   question?: string
   answer?: string
+  reasoningContent?: string
   helperLines?: string[]
   modelId?: string
   modelOptions?: Array<{ id: string; displayName?: string; quotaMultiplier?: number }>
@@ -56,6 +57,7 @@ const markdownTheme = computed(() => props.data.themeMode === 'dark' ? 'dark' : 
 const selectedContextSet = computed(() => new Set((props.data.selectedContextNodes || []).map((node) => String(node.nodeId || '')).filter(Boolean)))
 const showContextSocket = computed(() => isChat.value && Boolean(props.data.showContextSocket))
 const selectedModelOption = computed(() => (props.data.modelOptions || []).find((item) => item.id === props.data.modelId) || null)
+const messageListRef = ref<HTMLElement | null>(null)
 
 function handleToggleExpand() {
   if (!props.data.nodeId || !props.data.onToggleExpand) {
@@ -108,6 +110,13 @@ function handleSubmitQuestion() {
   props.data.onSubmitQuestion(props.data.nodeId)
 }
 
+function handleQuestionKeydown(event: KeyboardEvent) {
+  if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+    event.preventDefault()
+    handleSubmitQuestion()
+  }
+}
+
 function handleCitationSelect(nodeId?: string) {
   if (!nodeId || !props.data.onSelectCitation) {
     return
@@ -157,6 +166,32 @@ function buildModelOptionLabel(model?: { id: string; displayName?: string; quota
   }
   return `${model.displayName || model.id} · x${formatQuotaMultiplier(model.quotaMultiplier)}`
 }
+
+function scrollMessagesToBottom() {
+  const element = messageListRef.value
+  if (!element) {
+    return
+  }
+  element.scrollTop = element.scrollHeight
+}
+
+watch(
+  () => [
+    props.data.question || '',
+    props.data.answer || '',
+    props.data.reasoningContent || '',
+    props.data.sending ? '1' : '0',
+    String(props.data.citations?.length || 0)
+  ].join('|'),
+  async () => {
+    if (!isChat.value) {
+      return
+    }
+    await nextTick()
+    scrollMessagesToBottom()
+  },
+  { flush: 'post' }
+)
 </script>
 
 <template>
@@ -255,7 +290,7 @@ function buildModelOptionLabel(model?: { id: string; displayName?: string; quota
       </a>
 
       <div v-if="isChat" class="node-ask">
-        <div class="node-message-list">
+        <div ref="messageListRef" class="node-message-list">
           <div v-if="!data.answer && data.helperLines?.length" class="node-message-item system">
             <div class="node-message-role">使用说明</div>
             <div class="node-chat-helper">
@@ -284,6 +319,18 @@ function buildModelOptionLabel(model?: { id: string; displayName?: string; quota
                 code-theme="github"
               />
             </div>
+
+            <details v-if="data.reasoningContent" class="node-message-reasoning">
+              <summary>思考过程</summary>
+              <div class="reasoning-content markdown-preview reasoning-preview">
+                <MdPreview
+                  :model-value="data.reasoningContent"
+                  :theme="markdownTheme"
+                  preview-theme="github"
+                  code-theme="github"
+                />
+              </div>
+            </details>
 
             <div v-if="data.contextSummary" class="node-message-activities">
               <div class="node-message-activity completed">
@@ -425,9 +472,10 @@ function buildModelOptionLabel(model?: { id: string; displayName?: string; quota
             :value="data.question || ''"
             placeholder="输入你想围绕当前节点追问的问题"
             @input="handleQuestionInput"
+            @keydown="handleQuestionKeydown"
           ></textarea>
           <div class="node-composer-footer">
-            <span class="node-composer-hint">{{ data.contextSummary || '支持显式上下文与知识流回跳' }}</span>
+            <span class="node-composer-hint">{{ data.contextSummary || 'Ctrl+Enter 发送，支持显式上下文与知识流回跳' }}</span>
             <button type="button" class="node-composer-btn" :disabled="data.sending" @click.stop="handleSubmitQuestion">
               <i :class="['fas', data.sending ? 'fa-spinner fa-spin' : 'fa-paper-plane']"></i>
               <span>{{ data.sending ? '发送中...' : '发送' }}</span>
@@ -781,6 +829,28 @@ function buildModelOptionLabel(model?: { id: string; displayName?: string; quota
   color: #0ea5e9;
   font-size: 0.8rem;
   font-weight: 700;
+}
+
+.node-message-reasoning {
+  margin-top: 12px;
+  border-top: 1px dashed rgba(148, 163, 184, 0.18);
+  padding-top: 12px;
+}
+
+.node-message-reasoning summary {
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+}
+
+.reasoning-content {
+  margin-top: 10px;
+}
+
+.reasoning-preview :deep(.md-editor-preview) {
+  font-size: 13px;
 }
 
 .node-chat-helper {
@@ -1295,6 +1365,14 @@ function buildModelOptionLabel(model?: { id: string; displayName?: string; quota
 
 .document-canvas-node.is-dark .node-message-item.assistant {
   background: rgba(20, 184, 166, 0.12);
+}
+
+.document-canvas-node.is-dark .node-message-reasoning {
+  border-top-color: rgba(100, 116, 139, 0.24);
+}
+
+.document-canvas-node.is-dark .node-message-reasoning summary {
+  color: #cbd5e1;
 }
 
 .document-canvas-node.is-dark .node-message-role,

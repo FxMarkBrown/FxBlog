@@ -252,6 +252,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         SseEmitter emitter = new SseEmitter(0L);
         AtomicBoolean emitterClosed = new AtomicBoolean(false);
         AtomicReference<StringBuilder> answerBuilder = new AtomicReference<>(new StringBuilder());
+        AtomicReference<StringBuilder> reasoningBuilder = new AtomicReference<>(new StringBuilder());
         AtomicInteger tokensIn = new AtomicInteger(0);
         AtomicInteger tokensOut = new AtomicInteger(0);
         AtomicInteger totalTokens = new AtomicInteger(0);
@@ -266,7 +267,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
                 emitterClosed,
                 disposableRef,
                 "meta",
-                nodeStreamEvent("meta", null, buildNodeAnswerVo(preparation, thread.getId(), null), null, null, null, null)
+                nodeStreamEvent("meta", null, null, buildNodeAnswerVo(preparation, thread.getId(), null, null), null, null, null, null)
         );
 
         Disposable disposable = chatClient.prompt()
@@ -291,6 +292,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
                                 disposableRef,
                                 chatResponse,
                                 answerBuilder,
+                                reasoningBuilder,
                                 tokensIn,
                                 tokensOut,
                                 totalTokens
@@ -302,7 +304,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
                                     emitterClosed,
                                     disposableRef,
                                     "error",
-                                    nodeStreamEvent("error", null, null, error.getMessage(), null, null, null)
+                                    nodeStreamEvent("error", null, null, null, error.getMessage(), null, null, null)
                             );
                             emitter.complete();
                         },
@@ -313,6 +315,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
                                 preparation,
                                 thread,
                                 answerBuilder,
+                                reasoningBuilder,
                                 tokensIn,
                                 tokensOut,
                                 totalTokens
@@ -1783,12 +1786,17 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
                                           AtomicReference<Disposable> disposableRef,
                                           ChatResponse chatResponse,
                                           AtomicReference<StringBuilder> answerBuilder,
+                                          AtomicReference<StringBuilder> reasoningBuilder,
                                           AtomicInteger tokensIn,
                                           AtomicInteger tokensOut,
                                           AtomicInteger totalTokens) {
         String answerDelta = extractAnswer(chatResponse);
+        String reasoningDelta = aiChatService.extractReasoning(chatResponse);
         if (StringUtils.hasText(answerDelta)) {
             answerBuilder.get().append(answerDelta);
+        }
+        if (StringUtils.hasText(reasoningDelta)) {
+            reasoningBuilder.get().append(reasoningDelta);
         }
         Usage usage = aiChatService.extractUsage(chatResponse);
         if (usage != null) {
@@ -1796,7 +1804,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
             tokensOut.set(defaultInt(usage.getCompletionTokens()));
             totalTokens.set(defaultInt(usage.getTotalTokens()));
         }
-        if (!StringUtils.hasText(answerDelta)) {
+        if (!StringUtils.hasText(answerDelta) && !StringUtils.hasText(reasoningDelta)) {
             return;
         }
         sendNodeAskStreamEvent(
@@ -1804,7 +1812,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
                 emitterClosed,
                 disposableRef,
                 "delta",
-                nodeStreamEvent("delta", answerDelta, null, null, zeroToNull(tokensIn.get()), zeroToNull(tokensOut.get()), zeroToNull(totalTokens.get()))
+                nodeStreamEvent("delta", answerDelta, reasoningDelta, null, null, zeroToNull(tokensIn.get()), zeroToNull(tokensOut.get()), zeroToNull(totalTokens.get()))
         );
     }
 
@@ -1814,10 +1822,12 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
                                        NodeAskPreparation preparation,
                                        SysAiDocumentNodeThread thread,
                                        AtomicReference<StringBuilder> answerBuilder,
+                                       AtomicReference<StringBuilder> reasoningBuilder,
                                        AtomicInteger tokensIn,
                                        AtomicInteger tokensOut,
                                        AtomicInteger totalTokens) {
         String answer = answerBuilder.get().toString().trim();
+        String reasoningContent = reasoningBuilder.get().toString().trim();
         if (!StringUtils.hasText(answer)) {
             answer = "模型未返回有效内容";
         }
@@ -1830,7 +1840,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
                 preparation.aggregate().detail().getTitle(),
                 "文档节点问答消耗"
         );
-        AiDocumentNodeAnswerVo answerVo = buildNodeAnswerVo(preparation, thread.getId(), answer);
+        AiDocumentNodeAnswerVo answerVo = buildNodeAnswerVo(preparation, thread.getId(), answer, reasoningContent);
         saveNodeAssistantMessage(
                 thread.getId(),
                 answerVo,
@@ -1844,6 +1854,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
                 "done",
                 nodeStreamEvent(
                         "done",
+                        null,
                         null,
                         answerVo,
                         null,
@@ -1949,6 +1960,9 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         if (StringUtils.hasText(answerVo.getModelId())) {
             payload.put("modelId", answerVo.getModelId());
         }
+        if (StringUtils.hasText(answerVo.getReasoningContent())) {
+            payload.put("reasoningContent", answerVo.getReasoningContent());
+        }
         if (answerVo.getContextNodeIds() != null && !answerVo.getContextNodeIds().isEmpty()) {
             payload.put("contextNodeIds", answerVo.getContextNodeIds());
         }
@@ -2025,6 +2039,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
 
     private AiDocumentNodeStreamEventVo nodeStreamEvent(String type,
                                                         String content,
+                                                        String reasoningContent,
                                                         AiDocumentNodeAnswerVo answer,
                                                         String errorMessage,
                                                         Integer tokensIn,
@@ -2033,6 +2048,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         AiDocumentNodeStreamEventVo event = new AiDocumentNodeStreamEventVo();
         event.setType(type);
         event.setContent(content);
+        event.setReasoningContent(reasoningContent);
         event.setAnswer(answer);
         event.setErrorMessage(errorMessage);
         event.setTokensIn(tokensIn);
@@ -2041,13 +2057,14 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         return event;
     }
 
-    private AiDocumentNodeAnswerVo buildNodeAnswerVo(NodeAskPreparation preparation, Long threadId, String answer) {
+    private AiDocumentNodeAnswerVo buildNodeAnswerVo(NodeAskPreparation preparation, Long threadId, String answer, String reasoningContent) {
         AiDocumentNodeAnswerVo vo = new AiDocumentNodeAnswerVo();
         vo.setTaskId(preparation.aggregate().detail().getTaskId());
         vo.setThreadId(threadId);
         vo.setNodeId(preparation.currentNode().getId());
         vo.setQuestion(preparation.question());
         vo.setAnswer(answer);
+        vo.setReasoningContent(reasoningContent);
         vo.setModelId(preparation.resolvedChatModel().modelId());
         vo.setContextNodeIds(preparation.contextCompilation().usedCandidates().stream().map(ContextCandidate::nodeId).toList());
         vo.setCitations(buildCitations(preparation.contextCompilation().usedCandidates(), preparation.currentNode()));
@@ -2089,6 +2106,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         vo.setTokensOut(message.getTokensOut());
         vo.setQuotePayload(message.getQuotePayload());
         JsonNode quotePayload = parseNodeQuotePayload(message.getQuotePayload());
+        vo.setReasoningContent(textAt(quotePayload, "reasoningContent"));
         vo.setModelId(textAt(quotePayload, "modelId"));
         vo.setSelectedNodeIds(parseNodeQuoteList(quotePayload, "selectedNodeIds", new TypeReference<>() {
         }));

@@ -50,6 +50,7 @@ type ChatState = {
   selectedNodeIds?: string[]
   modelId?: string
   answer?: string
+  reasoningContent?: string
   error?: string
   citations?: DocumentNodeAnswer['citations']
   usedNodes?: DocumentNodeAnswer['usedNodes']
@@ -77,6 +78,7 @@ type CanvasNodeData = {
   sourceUrl?: string
   question?: string
   answer?: string
+  reasoningContent?: string
   helperLines?: string[]
   modelId?: string
   modelOptions?: Array<{ id: string; displayName?: string; quotaMultiplier?: number }>
@@ -652,7 +654,7 @@ function appendAttachmentNodes(
 
     if (previewOpenIds.value.has(node.id)) {
       const previewId = `${node.id}__preview`
-      const sourceAnchor = node.sourceAnchors?.[0]
+      const sourceAnchor = resolvePreviewSourceAnchor(node)
       const previewPosition = isMobileViewport.value
         ? {
             x: anchor.x,
@@ -676,7 +678,7 @@ function appendAttachmentNodes(
           themeMode: isDarkMode.value ? 'dark' : 'light',
           title: `${node.title || '节点'} · 原文预览`,
           subtitle: sourceAnchor?.textSnippet || '已定位到当前节点对应的原文片段。',
-          markdown: normalizeMarkdownContent(String(node.markdown || node.summary || '暂无原文预览内容')),
+          markdown: normalizeMarkdownContent(buildPreviewMarkdown(node), true),
           pageLabel: sourceAnchor?.page ? `第 ${sourceAnchor.page} 页` : '未提供页码',
           anchorBox: normalizeAnchorBox(sourceAnchor?.bbox),
           sourceUrl: taskDetail.value?.sourceUrl || '',
@@ -739,6 +741,7 @@ function appendAttachmentNodes(
           })),
           question: chatState.question,
           answer: chatState.answer,
+          reasoningContent: chatState.reasoningContent,
           citations: chatState.citations,
           queryMode: chatState.mode,
           contextSummary: buildContextSummary(chatState),
@@ -1122,6 +1125,51 @@ function normalizeAnchorBox(rawBbox?: number[]) {
   ]
 }
 
+function resolvePreviewSourceAnchor(node: DocumentTreeNode) {
+  for (const candidate of flattenTree(node)) {
+    const sourceAnchor = candidate.sourceAnchors?.[0]
+    if (sourceAnchor) {
+      return sourceAnchor
+    }
+  }
+  return undefined
+}
+
+function buildPreviewMarkdown(node: DocumentTreeNode) {
+  if (!node) {
+    return '暂无原文预览内容'
+  }
+
+  const sections: string[] = []
+  const normalizedNodeMarkdown = String(node.markdown || '').trim()
+  if (normalizedNodeMarkdown) {
+    sections.push(normalizedNodeMarkdown)
+  }
+
+  const descendantBlocks = flattenTree(node)
+    .slice(1)
+    .filter((item) => ['content', 'table', 'image'].includes(String(item.type || '').toLowerCase()))
+    .map((item) => String(item.markdown || item.summary || '').trim())
+    .filter(Boolean)
+
+  for (const block of descendantBlocks) {
+    const candidate = [...sections, block].join('\n\n').trim()
+    if (candidate.length > 3200) {
+      break
+    }
+    sections.push(block)
+    if (sections.length >= 6) {
+      break
+    }
+  }
+
+  if (!sections.length) {
+    return String(node.summary || node.title || '暂无原文预览内容')
+  }
+
+  return sections.join('\n\n')
+}
+
 function handleToggleExpand(nodeId: string) {
   const wasExpanded = expandedNodeIds.value.has(nodeId)
   const next = new Set(expandedNodeIds.value)
@@ -1214,6 +1262,7 @@ async function handleSubmitQuestion(nodeId: string) {
       modelId: currentState.modelId || selectedModelId.value || '',
       error: '',
       answer: '',
+      reasoningContent: '',
       citations: [],
       usedNodes: [],
       candidateNodes: [],
@@ -1249,6 +1298,7 @@ async function handleSubmitQuestion(nodeId: string) {
             error: '',
             selectedNodeIds,
             modelId: String(metaAnswer?.modelId || selectedModelId.value || ''),
+            reasoningContent: normalizeMarkdownContent(String(metaAnswer?.reasoningContent || ''), true),
             citations: metaAnswer?.citations || [],
             usedNodes: metaAnswer?.usedNodes || [],
             candidateNodes: metaAnswer?.candidateNodes || [],
@@ -1265,7 +1315,8 @@ async function handleSubmitQuestion(nodeId: string) {
           [nodeId]: {
             ...current,
             sending: true,
-            answer: normalizeMarkdownContent(`${current.answer || ''}${String(event?.content || '')}`, true)
+            answer: normalizeMarkdownContent(`${current.answer || ''}${String(event?.content || '')}`, true),
+            reasoningContent: normalizeMarkdownContent(`${current.reasoningContent || ''}${String(event?.reasoningContent || '')}`, true)
           }
         }
       },
@@ -1283,6 +1334,7 @@ async function handleSubmitQuestion(nodeId: string) {
             selectedNodeIds,
             modelId: String(answer?.modelId || selectedModelId.value || ''),
             answer: normalizeMarkdownContent(answer?.answer || '', true),
+            reasoningContent: normalizeMarkdownContent(answer?.reasoningContent || '', true),
             citations: answer?.citations || [],
             usedNodes: answer?.usedNodes || [],
             candidateNodes: answer?.candidateNodes || [],
@@ -1366,6 +1418,7 @@ async function loadNodeThreadState(nodeId: string) {
         historyLoaded: true,
         question: String(userMessage?.content || currentState.question || ''),
         answer: assistantMessage?.content ? normalizeMarkdownContent(String(assistantMessage.content), true) : '',
+        reasoningContent: assistantMessage?.reasoningContent ? normalizeMarkdownContent(String(assistantMessage.reasoningContent), true) : '',
         modelId: String(assistantMessage?.modelId || thread.modelId || currentState.modelId || ''),
         error: '',
         citations: assistantMessage?.citations || [],
@@ -1797,6 +1850,7 @@ function createDefaultChatState(): ChatState {
     historyLoaded: false,
     modelId: '',
     answer: '',
+    reasoningContent: '',
     error: '',
     citations: [],
     usedNodes: [],

@@ -9,6 +9,8 @@ public class AiDocumentNodeStreamEventVo {
 
     private String content;
 
+    private String reasoningContent;
+
     private String errorMessage;
 
     private AiDocumentNodeAnswerVo answer;

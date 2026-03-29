@@ -18,6 +18,8 @@ public class AiDocumentNodeMessageVo {
 
     private String content;
 
+    private String reasoningContent;
+
     private String modelId;
 
     private Integer tokensIn;
