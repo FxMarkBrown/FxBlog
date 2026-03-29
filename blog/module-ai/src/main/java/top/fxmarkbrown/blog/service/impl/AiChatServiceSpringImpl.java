@@ -27,7 +27,6 @@ import top.fxmarkbrown.blog.entity.SysAiMessage;
 import top.fxmarkbrown.blog.entity.SysArticle;
 import top.fxmarkbrown.blog.exception.ServiceException;
 import top.fxmarkbrown.blog.mapper.SysArticleMapper;
-import top.fxmarkbrown.blog.model.ai.AiCallDisplayNameResolver;
 import top.fxmarkbrown.blog.model.ai.AiChatInvocation;
 import top.fxmarkbrown.blog.model.ai.AiChunkInternalLink;
 import top.fxmarkbrown.blog.model.ai.AiChunkMediaRef;
@@ -41,6 +40,7 @@ import top.fxmarkbrown.blog.service.AiArticleToolService;
 import top.fxmarkbrown.blog.service.AiChatService;
 import top.fxmarkbrown.blog.service.AiChatModelService;
 import top.fxmarkbrown.blog.service.AiConversationRoutingService;
+import top.fxmarkbrown.blog.service.AiToolDisplayNameService;
 import top.fxmarkbrown.blog.vo.ai.AiRetrievedChunkVo;
 import top.fxmarkbrown.blog.vo.ai.AiToolCallVo;
 
@@ -94,6 +94,7 @@ public class AiChatServiceSpringImpl implements AiChatService {
     private final AiArticleToolService aiArticleToolService;
     private final AiChatModelService aiChatModelService;
     private final AiConversationRoutingService aiConversationRoutingService;
+    private final AiToolDisplayNameService aiToolDisplayNameService;
     private final ToolCallingManager toolCallingManager;
 
     public List<AiRetrievedChunkVo> retrieveCitations(SysAiConversation conversation, List<SysAiMessage> historyMessages) {
@@ -414,7 +415,7 @@ public class AiChatServiceSpringImpl implements AiChatService {
         vo.setId(toolCall.id());
         vo.setType(toolCall.type());
         vo.setName(toolCall.name());
-        vo.setDisplayName(AiCallDisplayNameResolver.resolveToolDisplayName(toolCall.name()));
+        vo.setDisplayName(aiToolDisplayNameService.resolveToolDisplayName(toolCall.name()));
         vo.setArguments(toolCall.arguments());
         vo.setStatus("requested");
         return vo;

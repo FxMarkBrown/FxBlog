@@ -13,6 +13,8 @@ import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import reactor.core.Disposable;
 import top.fxmarkbrown.blog.config.ai.AiProperties;
 import top.fxmarkbrown.blog.dto.ai.AiDocumentNodeAskDto;
 import top.fxmarkbrown.blog.dto.ai.AiDocumentTaskCreateDto;
@@ -21,12 +23,14 @@ import top.fxmarkbrown.blog.entity.SysAiDocumentResult;
 import top.fxmarkbrown.blog.entity.SysAiDocumentTask;
 import top.fxmarkbrown.blog.mapper.SysAiDocumentResultMapper;
 import top.fxmarkbrown.blog.mapper.SysAiDocumentTaskMapper;
+import top.fxmarkbrown.blog.model.ai.AiDocumentChunkHit;
 import top.fxmarkbrown.blog.model.ai.AiResolvedChatModel;
+import top.fxmarkbrown.blog.service.AiChatService;
 import top.fxmarkbrown.blog.service.AiChatModelService;
 import top.fxmarkbrown.blog.service.AiDocumentVectorIndexService;
-import top.fxmarkbrown.blog.service.AiQuotaCoreService;
 import top.fxmarkbrown.blog.service.AiDocumentTaskService;
-import top.fxmarkbrown.blog.model.ai.AiDocumentChunkHit;
+import top.fxmarkbrown.blog.service.AiModelQuotaBillingService;
+import top.fxmarkbrown.blog.service.AiQuotaCoreService;
 import top.fxmarkbrown.blog.utils.HttpUtil;
 import top.fxmarkbrown.blog.utils.JsonUtil;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentNodeAnswerVo;
@@ -35,6 +39,7 @@ import top.fxmarkbrown.blog.vo.ai.AiDocumentContextNodeVo;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentContextPlanVo;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentKnowledgeFlowEdgeVo;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentNodeCitationVo;
+import top.fxmarkbrown.blog.vo.ai.AiDocumentNodeStreamEventVo;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentParseResultVo;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentSourceAnchorVo;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentTaskDetailVo;
@@ -57,6 +62,9 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -72,7 +80,9 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
     private static final String MOCK_FIXTURE_PAYLOAD = "mock/mineru/current/task-detail.json";
 
     private final AiProperties aiProperties;
+    private final AiChatService aiChatService;
     private final AiChatModelService aiChatModelService;
+    private final AiModelQuotaBillingService aiModelQuotaBillingService;
     private final AiQuotaCoreService aiQuotaCoreService;
     private final ObjectProvider<AiDocumentVectorIndexService> documentVectorIndexServiceProvider;
     private final SysAiDocumentTaskMapper documentTaskMapper;
@@ -239,30 +249,21 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         if (!aiProperties.isEnabled()) {
             throw new IllegalStateException("AI 功能未启用");
         }
-        String question = normalizeQuestion(askDto);
-        DocumentTaskAggregate aggregate = requireAggregate(taskId);
-        AiDocumentTreeNodeVo root = aggregate.result().getRoot();
-        AiDocumentTreeNodeVo currentNode = findNode(root, nodeId);
-        if (currentNode == null) {
-            throw new IllegalStateException("未找到目标节点: " + nodeId);
-        }
-
-        long currentUserId = StpUtil.getLoginIdAsLong();
-        aiQuotaCoreService.assertRequestQuota(currentUserId);
-
-        ContextCompilation contextCompilation = compileContextFlow(aggregate.detail(), root, currentNode, question, askDto);
-        String contextPayload = buildContextPayload(aggregate.detail(), currentNode, contextCompilation);
-
-        AiResolvedChatModel resolvedChatModel = aiChatModelService.getDefaultModel();
-        ChatClient chatClient = aiChatModelService.getChatClient(resolvedChatModel);
+        NodeAskPreparation preparation = prepareNodeAsk(taskId, nodeId, askDto);
+        ChatClient chatClient = aiChatModelService.getChatClient(preparation.resolvedChatModel());
 
         try {
             ChatResponse chatResponse = chatClient.prompt()
                     .system(buildNodeAskSystemPrompt())
-                    .user(buildNodeAskUserPrompt(aggregate.detail(), currentNode, question, contextPayload))
+                    .user(buildNodeAskUserPrompt(
+                            preparation.aggregate().detail(),
+                            preparation.currentNode(),
+                            preparation.question(),
+                            preparation.contextPayload()
+                    ))
                     .options(OpenAiChatOptions.builder()
-                            .model(resolvedChatModel.modelName())
-                            .temperature(Math.min(resolvedChatModel.temperature(), 0.35D))
+                            .model(preparation.resolvedChatModel().modelName())
+                            .temperature(Math.min(preparation.resolvedChatModel().temperature(), 0.35D))
                             .build())
                     .call()
                     .chatResponse();
@@ -273,28 +274,101 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
             }
 
             Usage usage = chatResponse.getMetadata().getUsage();
-            aiQuotaCoreService.consumeTokens(currentUserId, resolveConsumedTokens(question, answer, usage));
-
-            AiDocumentNodeAnswerVo vo = new AiDocumentNodeAnswerVo();
-            vo.setTaskId(taskId);
-            vo.setNodeId(currentNode.getId());
-            vo.setQuestion(question);
-            vo.setAnswer(answer.trim());
-            vo.setModelId(resolvedChatModel.modelId());
-            vo.setContextNodeIds(contextCompilation.usedCandidates().stream().map(ContextCandidate::nodeId).toList());
-            vo.setCitations(buildCitations(contextCompilation.usedCandidates(), currentNode));
-            vo.setContextPlan(contextCompilation.contextPlan());
-            vo.setBudgetReport(contextCompilation.budgetReport());
-            vo.setUsedNodes(contextCompilation.usedCandidates().stream().map(this::toContextNodeVo).toList());
-            vo.setCandidateNodes(contextCompilation.candidates().stream().map(this::toContextNodeVo).toList());
-            vo.setKnowledgeFlowEdges(contextCompilation.knowledgeFlowEdges());
-            return vo;
+            aiQuotaCoreService.consumeTokens(
+                    preparation.currentUserId(),
+                    aiModelQuotaBillingService.resolveBilledTokens(
+                            resolveConsumedTokens(preparation.question(), answer, usage),
+                            preparation.resolvedChatModel()
+                    ),
+                    preparation.aggregate().detail().getTitle(),
+                    "文档节点问答消耗"
+            );
+            return buildNodeAnswerVo(preparation, answer.trim());
         } catch (IllegalStateException ex) {
             throw ex;
         } catch (Exception ex) {
             log.error("文档节点问答失败, taskId={}, nodeId={}", taskId, nodeId, ex);
             throw new IllegalStateException("文档节点问答失败，请稍后重试");
         }
+    }
+
+    @Override
+    public SseEmitter streamAskNode(Long taskId, String nodeId, AiDocumentNodeAskDto askDto) {
+        if (!aiProperties.isEnabled()) {
+            throw new IllegalStateException("AI 功能未启用");
+        }
+        NodeAskPreparation preparation = prepareNodeAsk(taskId, nodeId, askDto);
+        ChatClient chatClient = aiChatModelService.getChatClient(preparation.resolvedChatModel());
+        SseEmitter emitter = new SseEmitter(0L);
+        AtomicBoolean emitterClosed = new AtomicBoolean(false);
+        AtomicReference<StringBuilder> answerBuilder = new AtomicReference<>(new StringBuilder());
+        AtomicInteger tokensIn = new AtomicInteger(0);
+        AtomicInteger tokensOut = new AtomicInteger(0);
+        AtomicInteger totalTokens = new AtomicInteger(0);
+        AtomicReference<Disposable> disposableRef = new AtomicReference<>();
+
+        emitter.onCompletion(() -> closeNodeAskStream(emitterClosed, disposableRef));
+        emitter.onTimeout(() -> closeNodeAskStream(emitterClosed, disposableRef));
+        emitter.onError(error -> closeNodeAskStream(emitterClosed, disposableRef));
+
+        sendNodeAskStreamEvent(
+                emitter,
+                emitterClosed,
+                disposableRef,
+                "meta",
+                nodeStreamEvent("meta", null, buildNodeAnswerVo(preparation, null), null, null, null, null)
+        );
+
+        Disposable disposable = chatClient.prompt()
+                .system(buildNodeAskSystemPrompt())
+                .user(buildNodeAskUserPrompt(
+                        preparation.aggregate().detail(),
+                        preparation.currentNode(),
+                        preparation.question(),
+                        preparation.contextPayload()
+                ))
+                .options(OpenAiChatOptions.builder()
+                        .model(preparation.resolvedChatModel().modelName())
+                        .temperature(Math.min(preparation.resolvedChatModel().temperature(), 0.35D))
+                        .streamUsage(true)
+                        .build())
+                .stream()
+                .chatResponse()
+                .subscribe(
+                        chatResponse -> handleNodeAskStreamChunk(
+                                emitter,
+                                emitterClosed,
+                                disposableRef,
+                                chatResponse,
+                                answerBuilder,
+                                tokensIn,
+                                tokensOut,
+                                totalTokens
+                        ),
+                        error -> {
+                            log.error("文档节点流式问答失败, taskId={}, nodeId={}", taskId, nodeId, error);
+                            sendNodeAskStreamEvent(
+                                    emitter,
+                                    emitterClosed,
+                                    disposableRef,
+                                    "error",
+                                    nodeStreamEvent("error", null, null, error.getMessage(), null, null, null)
+                            );
+                            emitter.complete();
+                        },
+                        () -> completeNodeAskStream(
+                                emitter,
+                                emitterClosed,
+                                disposableRef,
+                                preparation,
+                                answerBuilder,
+                                tokensIn,
+                                tokensOut,
+                                totalTokens
+                        )
+                );
+        disposableRef.set(disposable);
+        return emitter;
     }
 
     private AiDocumentTaskDetailVo createRealMineruTask(AiDocumentTaskCreateDto createDto) {
@@ -421,6 +495,30 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         }
         SysAiDocumentResult result = documentResultMapper.selectById(taskId);
         return toAggregate(task, result);
+    }
+
+    private NodeAskPreparation prepareNodeAsk(Long taskId, String nodeId, AiDocumentNodeAskDto askDto) {
+        String question = normalizeQuestion(askDto);
+        DocumentTaskAggregate aggregate = requireAggregate(taskId);
+        AiDocumentTreeNodeVo root = aggregate.result().getRoot();
+        AiDocumentTreeNodeVo currentNode = findNode(root, nodeId);
+        if (currentNode == null) {
+            throw new IllegalStateException("未找到目标节点: " + nodeId);
+        }
+        long currentUserId = StpUtil.getLoginIdAsLong();
+        aiQuotaCoreService.assertRequestQuota(currentUserId);
+        ContextCompilation contextCompilation = compileContextFlow(aggregate.detail(), root, currentNode, question, askDto);
+        String contextPayload = buildContextPayload(aggregate.detail(), currentNode, contextCompilation);
+        return new NodeAskPreparation(
+                aggregate,
+                root,
+                currentNode,
+                question,
+                currentUserId,
+                contextCompilation,
+                contextPayload,
+                resolveNodeAskModel(askDto)
+        );
     }
 
     private void persistAggregate(DocumentTaskAggregate aggregate, boolean insertResultIfAbsent) {
@@ -1001,6 +1099,14 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         node.getSourceAnchors().add(anchor(page, bbox, summarizeText(text)));
     }
 
+    private AiResolvedChatModel resolveNodeAskModel(AiDocumentNodeAskDto askDto) {
+        String modelId = askDto == null ? null : askDto.getModelId();
+        if (!StringUtils.hasText(modelId)) {
+            return aiChatModelService.getDefaultModel();
+        }
+        return aiChatModelService.requireModel(modelId.trim());
+    }
+
     private String buildNodeAskSystemPrompt() {
         return """
                 你是博客文档工作台内的节点问答助手。
@@ -1377,6 +1483,134 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         return normalized;
     }
 
+    private void handleNodeAskStreamChunk(SseEmitter emitter,
+                                          AtomicBoolean emitterClosed,
+                                          AtomicReference<Disposable> disposableRef,
+                                          ChatResponse chatResponse,
+                                          AtomicReference<StringBuilder> answerBuilder,
+                                          AtomicInteger tokensIn,
+                                          AtomicInteger tokensOut,
+                                          AtomicInteger totalTokens) {
+        String answerDelta = extractAnswer(chatResponse);
+        if (StringUtils.hasText(answerDelta)) {
+            answerBuilder.get().append(answerDelta);
+        }
+        Usage usage = aiChatService.extractUsage(chatResponse);
+        if (usage != null) {
+            tokensIn.set(defaultInt(usage.getPromptTokens()));
+            tokensOut.set(defaultInt(usage.getCompletionTokens()));
+            totalTokens.set(defaultInt(usage.getTotalTokens()));
+        }
+        if (!StringUtils.hasText(answerDelta)) {
+            return;
+        }
+        sendNodeAskStreamEvent(
+                emitter,
+                emitterClosed,
+                disposableRef,
+                "delta",
+                nodeStreamEvent("delta", answerDelta, null, null, zeroToNull(tokensIn.get()), zeroToNull(tokensOut.get()), zeroToNull(totalTokens.get()))
+        );
+    }
+
+    private void completeNodeAskStream(SseEmitter emitter,
+                                       AtomicBoolean emitterClosed,
+                                       AtomicReference<Disposable> disposableRef,
+                                       NodeAskPreparation preparation,
+                                       AtomicReference<StringBuilder> answerBuilder,
+                                       AtomicInteger tokensIn,
+                                       AtomicInteger tokensOut,
+                                       AtomicInteger totalTokens) {
+        String answer = answerBuilder.get().toString().trim();
+        if (!StringUtils.hasText(answer)) {
+            answer = "模型未返回有效内容";
+        }
+        aiQuotaCoreService.consumeTokens(
+                preparation.currentUserId(),
+                aiModelQuotaBillingService.resolveBilledTokens(
+                        resolveConsumedTokens(preparation.question(), answer, tokensIn.get(), tokensOut.get(), totalTokens.get()),
+                        preparation.resolvedChatModel()
+                ),
+                preparation.aggregate().detail().getTitle(),
+                "文档节点问答消耗"
+        );
+        sendNodeAskStreamEvent(
+                emitter,
+                emitterClosed,
+                disposableRef,
+                "done",
+                nodeStreamEvent(
+                        "done",
+                        null,
+                        buildNodeAnswerVo(preparation, answer),
+                        null,
+                        zeroToNull(tokensIn.get()),
+                        zeroToNull(tokensOut.get()),
+                        zeroToNull(totalTokens.get())
+                )
+        );
+        emitter.complete();
+    }
+
+    private void sendNodeAskStreamEvent(SseEmitter emitter,
+                                        AtomicBoolean emitterClosed,
+                                        AtomicReference<Disposable> disposableRef,
+                                        String eventName,
+                                        AiDocumentNodeStreamEventVo event) {
+        if (emitterClosed.get()) {
+            return;
+        }
+        try {
+            emitter.send(SseEmitter.event().name(eventName).data(event));
+        } catch (IOException | IllegalStateException ex) {
+            closeNodeAskStream(emitterClosed, disposableRef);
+            log.warn("文档节点流事件发送失败, event={}", eventName, ex);
+        }
+    }
+
+    private void closeNodeAskStream(AtomicBoolean emitterClosed, AtomicReference<Disposable> disposableRef) {
+        emitterClosed.set(true);
+        Disposable disposable = disposableRef.get();
+        if (disposable != null && !disposable.isDisposed()) {
+            disposable.dispose();
+        }
+    }
+
+    private AiDocumentNodeStreamEventVo nodeStreamEvent(String type,
+                                                        String content,
+                                                        AiDocumentNodeAnswerVo answer,
+                                                        String errorMessage,
+                                                        Integer tokensIn,
+                                                        Integer tokensOut,
+                                                        Integer totalTokens) {
+        AiDocumentNodeStreamEventVo event = new AiDocumentNodeStreamEventVo();
+        event.setType(type);
+        event.setContent(content);
+        event.setAnswer(answer);
+        event.setErrorMessage(errorMessage);
+        event.setTokensIn(tokensIn);
+        event.setTokensOut(tokensOut);
+        event.setTotalTokens(totalTokens);
+        return event;
+    }
+
+    private AiDocumentNodeAnswerVo buildNodeAnswerVo(NodeAskPreparation preparation, String answer) {
+        AiDocumentNodeAnswerVo vo = new AiDocumentNodeAnswerVo();
+        vo.setTaskId(preparation.aggregate().detail().getTaskId());
+        vo.setNodeId(preparation.currentNode().getId());
+        vo.setQuestion(preparation.question());
+        vo.setAnswer(answer);
+        vo.setModelId(preparation.resolvedChatModel().modelId());
+        vo.setContextNodeIds(preparation.contextCompilation().usedCandidates().stream().map(ContextCandidate::nodeId).toList());
+        vo.setCitations(buildCitations(preparation.contextCompilation().usedCandidates(), preparation.currentNode()));
+        vo.setContextPlan(preparation.contextCompilation().contextPlan());
+        vo.setBudgetReport(preparation.contextCompilation().budgetReport());
+        vo.setUsedNodes(preparation.contextCompilation().usedCandidates().stream().map(this::toContextNodeVo).toList());
+        vo.setCandidateNodes(preparation.contextCompilation().candidates().stream().map(this::toContextNodeVo).toList());
+        vo.setKnowledgeFlowEdges(preparation.contextCompilation().knowledgeFlowEdges());
+        return vo;
+    }
+
     private String extractAnswer(ChatResponse chatResponse) {
         if (chatResponse == null || chatResponse.getResult() == null) {
             return null;
@@ -1388,13 +1622,36 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
 
     private long resolveConsumedTokens(String question, String answer, Usage usage) {
         if (usage != null) {
-            usage.getTotalTokens();
-            if (usage.getTotalTokens() > 0) {
-                return usage.getTotalTokens();
+            int totalTokens = defaultInt(usage.getTotalTokens());
+            if (totalTokens > 0) {
+                return totalTokens;
             }
+            int combined = defaultInt(usage.getPromptTokens()) + defaultInt(usage.getCompletionTokens());
+            if (combined > 0) {
+                return combined;
+            }
+        }
+        return resolveConsumedTokens(question, answer, 0, 0, 0);
+    }
+
+    private long resolveConsumedTokens(String question, String answer, int tokensIn, int tokensOut, int totalTokens) {
+        if (totalTokens > 0) {
+            return totalTokens;
+        }
+        int combined = tokensIn + tokensOut;
+        if (combined > 0) {
+            return combined;
         }
         int estimatedChars = safeText(question, "").length() + safeText(answer, "").length();
         return Math.max(estimatedChars / 2L, 400L);
+    }
+
+    private Integer zeroToNull(int value) {
+        return value > 0 ? value : null;
+    }
+
+    private int defaultInt(Integer value) {
+        return value == null ? 0 : value;
     }
 
     private AiDocumentContextNodeVo toContextNodeVo(ContextCandidate candidate) {
@@ -2148,5 +2405,15 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
                                       String contentListJson,
                                       String rawPayloadJson,
                                       int pageCount) {
+    }
+
+    private record NodeAskPreparation(DocumentTaskAggregate aggregate,
+                                      AiDocumentTreeNodeVo root,
+                                      AiDocumentTreeNodeVo currentNode,
+                                      String question,
+                                      long currentUserId,
+                                      ContextCompilation contextCompilation,
+                                      String contextPayload,
+                                      AiResolvedChatModel resolvedChatModel) {
     }
 }

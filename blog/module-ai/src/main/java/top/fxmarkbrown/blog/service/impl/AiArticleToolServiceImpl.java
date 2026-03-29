@@ -14,13 +14,13 @@ import top.fxmarkbrown.blog.common.Constants;
 import top.fxmarkbrown.blog.entity.SysAiConversation;
 import top.fxmarkbrown.blog.mapper.SysArticleMapper;
 import top.fxmarkbrown.blog.mapper.SysCommentMapper;
-import top.fxmarkbrown.blog.model.ai.AiCallDisplayNameResolver;
 import top.fxmarkbrown.blog.model.ai.AiArticleHistoryToolInput;
 import top.fxmarkbrown.blog.model.ai.AiArticleSearchToolInput;
 import top.fxmarkbrown.blog.model.ai.AiToolBundle;
 import top.fxmarkbrown.blog.service.AiArticleRagService;
 import top.fxmarkbrown.blog.service.AiArticleToolService;
 import top.fxmarkbrown.blog.service.AiQuotaCoreService;
+import top.fxmarkbrown.blog.service.AiToolTraceService;
 import top.fxmarkbrown.blog.utils.JsonUtil;
 import top.fxmarkbrown.blog.vo.ai.AiQuotaSnapshotVo;
 import top.fxmarkbrown.blog.vo.ai.AiRetrievedChunkVo;
@@ -56,6 +56,7 @@ public class AiArticleToolServiceImpl implements AiArticleToolService {
     private final SysCommentMapper commentMapper;
     private final AiArticleRagService aiArticleRagService;
     private final AiQuotaCoreService aiQuotaCoreService;
+    private final AiToolTraceService aiToolTraceService;
 
     @Override
     public AiToolBundle buildToolBundle(SysAiConversation conversation, List<AiRetrievedChunkVo> citations) {
@@ -236,23 +237,7 @@ public class AiArticleToolServiceImpl implements AiArticleToolService {
                                             String arguments,
                                             List<AiToolCallVo> recorder,
                                             ToolExecutor executor) {
-        AiToolCallVo trace = new AiToolCallVo();
-        trace.setType("function");
-        trace.setName(toolName);
-        trace.setDisplayName(AiCallDisplayNameResolver.resolveToolDisplayName(toolName));
-        trace.setArguments(arguments);
-        trace.setStatus("running");
-        recorder.add(trace);
-        try {
-            Map<String, Object> result = executor.execute();
-            trace.setStatus("completed");
-            trace.setResult(toJsonArguments(result));
-            return result;
-        } catch (Exception ex) {
-            trace.setStatus("failed");
-            trace.setErrorMessage(ex.getMessage());
-            throw ex;
-        }
+        return aiToolTraceService.execute(toolName, arguments, recorder, executor::execute);
     }
 
     private long resolveUserId(SysAiConversation conversation) {

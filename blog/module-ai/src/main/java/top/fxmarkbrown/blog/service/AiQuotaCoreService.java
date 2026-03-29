@@ -54,6 +54,11 @@ public interface AiQuotaCoreService {
     void consumeTokens(Long userId, long tokens, Long conversationId, String conversationTitle);
 
     /**
+     * 按 token 数消耗用户额度，并记录通用来源信息。
+     */
+    void consumeTokens(Long userId, long tokens, String sourceTitle, String remark);
+
+    /**
      * 更新用户的后台手动额度。
      */
     void updateManualBonusTokens(Long userId, Long manualBonusTokens);

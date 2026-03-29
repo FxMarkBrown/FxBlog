@@ -7,6 +7,7 @@ import top.fxmarkbrown.blog.vo.ai.AiDocumentNodeAnswerVo;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentParseResultVo;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentTaskDetailVo;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentTaskListVo;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 
@@ -61,4 +62,9 @@ public interface AiDocumentTaskService {
      * 在指定文档节点上下文内执行问答。
      */
     AiDocumentNodeAnswerVo askNode(Long taskId, String nodeId, AiDocumentNodeAskDto askDto);
+
+    /**
+     * 在指定文档节点上下文内执行流式问答。
+     */
+    SseEmitter streamAskNode(Long taskId, String nodeId, AiDocumentNodeAskDto askDto);
 }

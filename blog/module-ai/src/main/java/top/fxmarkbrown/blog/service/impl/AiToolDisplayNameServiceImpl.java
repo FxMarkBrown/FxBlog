@@ -1,10 +1,13 @@
-package top.fxmarkbrown.blog.model.ai;
+package top.fxmarkbrown.blog.service.impl;
 
+import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import top.fxmarkbrown.blog.service.AiToolDisplayNameService;
 
 import java.util.Map;
 
-public final class AiCallDisplayNameResolver {
+@Service
+public class AiToolDisplayNameServiceImpl implements AiToolDisplayNameService {
 
     private static final Map<String, String> TOOL_DISPLAY_NAMES = Map.of(
             "getCurrentArticleContext", "读取当前文章上下文",
@@ -15,10 +18,8 @@ public final class AiCallDisplayNameResolver {
             "getMyAiUsageSnapshot", "读取我的 AI 使用情况"
     );
 
-    private AiCallDisplayNameResolver() {
-    }
-
-    public static String resolveToolDisplayName(String toolName) {
+    @Override
+    public String resolveToolDisplayName(String toolName) {
         if (!StringUtils.hasText(toolName)) {
             return "未命名工具";
         }

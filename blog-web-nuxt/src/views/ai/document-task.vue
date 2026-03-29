@@ -5,7 +5,8 @@ import { ElMessage } from 'element-plus'
 import type { Connection, Edge, Node, OnConnectStartParams } from '@vue-flow/core'
 import { ConnectionMode, MarkerType, VueFlow } from '@vue-flow/core'
 import DocumentCanvasNode from '@/components/ai-document/DocumentCanvasNode.vue'
-import { askDocumentNodeApi, getDocumentTaskDetailApi, getDocumentTaskResultApi } from '@/api/ai-document'
+import { getConversationModelOptionsApi } from '@/api/ai'
+import { getDocumentTaskDetailApi, getDocumentTaskResultApi, streamDocumentNodeApi } from '@/api/ai-document'
 import type {
   DocumentContextNode,
   DocumentKnowledgeFlowEdge,
@@ -14,16 +15,20 @@ import type {
   DocumentTaskDetail,
   DocumentTreeNode
 } from '@/types/ai-document'
+import { normalizeMarkdownContent } from '@/utils/ai-markdown'
 import { unwrapResponseData } from '@/utils/response'
 import { getThemeMode, initTheme, setThemeMode } from '@/utils/theme'
 
 type QueryModePreset = 'strict' | 'balanced' | 'explore'
+type AnyRecord = Record<string, any>
+const AI_DOCUMENT_MODEL_STORAGE_KEY = 'BLOG_AI_DOCUMENT_SELECTED_MODEL_ID'
 
 type ChatState = {
   mode: QueryModePreset
   question: string
   sending: boolean
   selectedNodeIds?: string[]
+  modelId?: string
   answer?: string
   error?: string
   citations?: DocumentNodeAnswer['citations']
@@ -111,9 +116,13 @@ const outlineSearch = ref('')
 const flowRef = ref<InstanceType<typeof VueFlow> | null>(null)
 const isDarkMode = ref(false)
 const isMobileViewport = ref(false)
+const modelOptionsLoading = ref(false)
+const chatModels = ref<AnyRecord[]>([])
+const selectedModelId = ref('')
 const activeAnswerNodeId = ref('')
 const connectingSocketChatNodeId = ref('')
 const elkEngine = shallowRef<any | null>(null)
+const streamAbortControllerMap = new Map<string, AbortController>()
 let layoutRequestId = 0
 let pendingViewportAction: ViewportAction = 'none'
 let pendingViewportNodeId = ''
@@ -130,6 +139,7 @@ const documentNodeLookup = computed<Record<string, DocumentTreeNode>>(() => {
   return lookup
 })
 const activeAnswerState = computed(() => (activeAnswerNodeId.value ? chatStateMap.value[activeAnswerNodeId.value] : undefined))
+const selectedModelOption = computed(() => chatModels.value.find((item) => item.id === selectedModelId.value) || null)
 const contextControlState = computed(() => {
   if (connectingSocketChatNodeId.value) {
     return chatStateMap.value[connectingSocketChatNodeId.value]
@@ -201,6 +211,51 @@ async function loadTask(silent = false) {
       loading.value = false
     }
   }
+}
+
+async function loadChatModels() {
+  modelOptionsLoading.value = true
+  try {
+    const response = await getConversationModelOptionsApi()
+    const models = unwrapResponseData<AnyRecord[] | null>(response)
+    chatModels.value = Array.isArray(models) ? models : []
+    ensureSelectedModel()
+  } finally {
+    modelOptionsLoading.value = false
+  }
+}
+
+function ensureSelectedModel() {
+  if (!import.meta.client) {
+    return
+  }
+  if (!chatModels.value.length) {
+    selectedModelId.value = ''
+    window.localStorage.removeItem(AI_DOCUMENT_MODEL_STORAGE_KEY)
+    return
+  }
+  const availableIds = new Set(chatModels.value.map((item) => item.id))
+  const storedModelId = window.localStorage.getItem(AI_DOCUMENT_MODEL_STORAGE_KEY) || ''
+  if (storedModelId && !availableIds.has(storedModelId)) {
+    window.localStorage.removeItem(AI_DOCUMENT_MODEL_STORAGE_KEY)
+  }
+  const defaultModel = chatModels.value.find((item) => item.defaultModel) ?? chatModels.value[0]
+  if (!defaultModel) {
+    selectedModelId.value = ''
+    return
+  }
+  const nextModelId = availableIds.has(selectedModelId.value)
+    ? selectedModelId.value
+    : (availableIds.has(storedModelId) ? storedModelId : defaultModel.id)
+  selectedModelId.value = nextModelId
+  persistSelectedModel(nextModelId)
+}
+
+function persistSelectedModel(modelId = selectedModelId.value) {
+  if (!import.meta.client || !modelId) {
+    return
+  }
+  window.localStorage.setItem(AI_DOCUMENT_MODEL_STORAGE_KEY, modelId)
 }
 
 function isStructureNode(node?: DocumentTreeNode | null) {
@@ -559,7 +614,7 @@ function appendAttachmentNodes(
           themeMode: isDarkMode.value ? 'dark' : 'light',
           title: `${node.title || '节点'} · 原文预览`,
           subtitle: sourceAnchor?.textSnippet || '已定位到当前节点对应的原文片段。',
-          markdown: String(node.markdown || node.summary || '暂无原文预览内容'),
+          markdown: normalizeMarkdownContent(String(node.markdown || node.summary || '暂无原文预览内容')),
           pageLabel: sourceAnchor?.page ? `第 ${sourceAnchor.page} 页` : '未提供页码',
           anchorBox: normalizeAnchorBox(sourceAnchor?.bbox),
           sourceUrl: taskDetail.value?.sourceUrl || '',
@@ -613,7 +668,7 @@ function appendAttachmentNodes(
           themeMode: isDarkMode.value ? 'dark' : 'light',
           title: `${node.title || '节点'} · 节点对话`,
           subtitle: buildChatSubtitle(chatState),
-          markdown: chatState.answer ? '' : buildChatHint(node),
+          markdown: chatState.answer ? '' : normalizeMarkdownContent(buildChatHint(node)),
           question: chatState.question,
           answer: chatState.answer,
           citations: chatState.citations,
@@ -914,10 +969,14 @@ function buildKnowledgeEdgeLabel(edge?: DocumentKnowledgeFlowEdge) {
 }
 
 function buildChatSubtitle(chatState?: ChatState) {
-  if (!chatState?.answer) {
-    return '当前问题将绑定到所选节点，并可叠加显式上下文。'
+  const modelLabel = resolveModelDisplayName(chatState?.modelId) || selectedModelOption.value?.displayName || '默认模型'
+  if (chatState?.sending) {
+    return `正在生成回答 · ${modelLabel}`
   }
-  return `已完成一次节点问答 · ${describeMode(chatState.mode)}模式`
+  if (!chatState?.answer) {
+    return `当前问题将绑定到所选节点，并可叠加显式上下文 · ${modelLabel}`
+  }
+  return `已完成一次节点问答 · ${describeMode(chatState.mode)}模式 · ${modelLabel}`
 }
 
 function buildContextSummary(chatState?: ChatState) {
@@ -945,6 +1004,25 @@ function describeMode(mode?: QueryModePreset) {
     default:
       return '平衡'
   }
+}
+
+function buildModelOptionLabel(model: AnyRecord) {
+  return `${model.displayName} · x${formatQuotaMultiplier(model.quotaMultiplier)}`
+}
+
+function resolveModelDisplayName(modelId?: string) {
+  if (!modelId) {
+    return ''
+  }
+  return String(chatModels.value.find((item) => item.id === modelId)?.displayName || '')
+}
+
+function formatQuotaMultiplier(value: unknown) {
+  const normalized = Number(value || 1)
+  if (Number.isNaN(normalized) || normalized <= 0) {
+    return '1'
+  }
+  return Number.isInteger(normalized) ? String(normalized) : normalized.toFixed(1).replace(/\.0$/, '')
 }
 
 function resolveNodeHighlightRole(nodeId: string) {
@@ -1071,7 +1149,9 @@ async function handleSubmitQuestion(nodeId: string) {
     [nodeId]: {
       ...currentState,
       sending: true,
+      modelId: selectedModelId.value || currentState.modelId || '',
       error: '',
+      answer: '',
       citations: [],
       usedNodes: [],
       candidateNodes: [],
@@ -1079,40 +1159,95 @@ async function handleSubmitQuestion(nodeId: string) {
     }
   }
   activeAnswerNodeId.value = nodeId
+  abortNodeStream(nodeId)
+  const abortController = new AbortController()
+  streamAbortControllerMap.set(nodeId, abortController)
 
   try {
     const selectedNodeIds = Array.from(new Set([
       ...(currentState.selectedNodeIds || []),
       selectedOutlineNodeId.value
     ].filter((id) => id && id !== nodeId)))
-    const response = await askDocumentNodeApi(taskId.value, nodeId, {
+    await streamDocumentNodeApi(taskId.value, nodeId, {
       question,
+      modelId: selectedModelId.value || undefined,
       selectedNodeIds,
       ...buildAskPayloadByMode(currentState.mode)
-    })
-    const answer = unwrapResponseData<DocumentNodeAnswer | null>(response)
-    chatStateMap.value = {
-      ...chatStateMap.value,
-      [nodeId]: {
-        ...currentState,
-        question,
-        sending: false,
-        error: '',
-        selectedNodeIds,
-        answer: answer?.answer || '',
-        citations: answer?.citations || [],
-        usedNodes: answer?.usedNodes || [],
-        candidateNodes: answer?.candidateNodes || [],
-        knowledgeFlowEdges: answer?.knowledgeFlowEdges || [],
-        contextPlan: answer?.contextPlan,
-        budgetReport: answer?.budgetReport
+    }, {
+      onMeta: (event) => {
+        const metaAnswer = event?.answer as DocumentNodeAnswer | undefined
+        chatStateMap.value = {
+          ...chatStateMap.value,
+          [nodeId]: {
+            ...getChatState(nodeId),
+            question,
+            sending: true,
+            error: '',
+            selectedNodeIds,
+            modelId: String(metaAnswer?.modelId || selectedModelId.value || ''),
+            citations: metaAnswer?.citations || [],
+            usedNodes: metaAnswer?.usedNodes || [],
+            candidateNodes: metaAnswer?.candidateNodes || [],
+            knowledgeFlowEdges: metaAnswer?.knowledgeFlowEdges || [],
+            contextPlan: metaAnswer?.contextPlan,
+            budgetReport: metaAnswer?.budgetReport
+          }
+        }
+      },
+      onDelta: (event) => {
+        const current = getChatState(nodeId)
+        chatStateMap.value = {
+          ...chatStateMap.value,
+          [nodeId]: {
+            ...current,
+            sending: true,
+            answer: normalizeMarkdownContent(`${current.answer || ''}${String(event?.content || '')}`, true)
+          }
+        }
+      },
+      onDone: (event) => {
+        const answer = event?.answer as DocumentNodeAnswer | undefined
+        chatStateMap.value = {
+          ...chatStateMap.value,
+          [nodeId]: {
+            ...getChatState(nodeId),
+            question,
+            sending: false,
+            error: '',
+            selectedNodeIds,
+            modelId: String(answer?.modelId || selectedModelId.value || ''),
+            answer: normalizeMarkdownContent(answer?.answer || '', true),
+            citations: answer?.citations || [],
+            usedNodes: answer?.usedNodes || [],
+            candidateNodes: answer?.candidateNodes || [],
+            knowledgeFlowEdges: answer?.knowledgeFlowEdges || [],
+            contextPlan: answer?.contextPlan,
+            budgetReport: answer?.budgetReport
+          }
+        }
+      },
+      onError: (error) => {
+        chatStateMap.value = {
+          ...chatStateMap.value,
+          [nodeId]: {
+            ...getChatState(nodeId),
+            question,
+            sending: false,
+            error: error.message || '节点问答失败'
+          }
+        }
       }
-    }
+    }, abortController.signal)
+    streamAbortControllerMap.delete(nodeId)
   } catch (error) {
+    if ((error as Error)?.name === 'AbortError') {
+      return
+    }
+    streamAbortControllerMap.delete(nodeId)
     chatStateMap.value = {
       ...chatStateMap.value,
       [nodeId]: {
-        ...currentState,
+        ...getChatState(nodeId),
         question,
         sending: false,
         error: (error as Error)?.message || '节点问答失败'
@@ -1514,6 +1649,7 @@ function createDefaultChatState(): ChatState {
     question: '',
     mode: 'balanced',
     sending: false,
+    modelId: '',
     answer: '',
     error: '',
     citations: [],
@@ -1526,6 +1662,20 @@ function createDefaultChatState(): ChatState {
 
 function getChatState(nodeId: string): ChatState {
   return chatStateMap.value[nodeId] || createDefaultChatState()
+}
+
+function abortNodeStream(nodeId: string) {
+  const controller = streamAbortControllerMap.get(nodeId)
+  if (!controller) {
+    return
+  }
+  controller.abort()
+  streamAbortControllerMap.delete(nodeId)
+}
+
+function abortAllNodeStreams() {
+  streamAbortControllerMap.forEach((controller) => controller.abort())
+  streamAbortControllerMap.clear()
 }
 
 function ensureChatState(nodeId: string) {
@@ -1580,10 +1730,12 @@ onMounted(() => {
     return
   }
 
+  void loadChatModels()
   void loadTask()
 })
 
 onBeforeUnmount(() => {
+  abortAllNodeStreams()
   window.removeEventListener('theme-change', syncThemeState)
   window.removeEventListener('resize', syncViewportState)
 })
@@ -1606,6 +1758,32 @@ onBeforeUnmount(() => {
         </div>
       </div>
       <div class="task-toolbar__right">
+        <div class="toolbar-model">
+          <span class="toolbar-model__label">当前模型</span>
+          <ClientOnly>
+            <ElSelect
+              v-model="selectedModelId"
+              class="model-select"
+              popper-class="ai-model-select-dropdown"
+              placeholder="请选择模型"
+              :disabled="modelOptionsLoading || !chatModels.length"
+              @change="persistSelectedModel"
+            >
+              <ElOption
+                v-for="model in chatModels"
+                :key="model.id"
+                :label="buildModelOptionLabel(model)"
+                :value="model.id"
+              />
+            </ElSelect>
+            <template #fallback>
+              <div class="model-select-fallback">
+                {{ selectedModelOption ? buildModelOptionLabel(selectedModelOption) : '请选择模型' }}
+              </div>
+            </template>
+          </ClientOnly>
+          <small v-if="selectedModelOption">倍率 x{{ formatQuotaMultiplier(selectedModelOption.quotaMultiplier) }}</small>
+        </div>
         <div class="toolbar-meta">
           <span>状态：{{ taskDetail?.status || 'LOADING' }}</span>
           <span>页数：{{ taskDetail?.pageCount || 0 }}</span>
@@ -1758,6 +1936,12 @@ onBeforeUnmount(() => {
   gap: 18px;
 }
 
+.task-toolbar__right {
+  margin-left: auto;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
 .task-headline {
   min-width: 0;
 }
@@ -1804,6 +1988,67 @@ onBeforeUnmount(() => {
   color: #475569;
   font-size: 0.84rem;
   min-width: 78px;
+}
+
+.toolbar-model {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 220px;
+  max-width: 280px;
+
+  small {
+    color: #64748b;
+    font-size: 0.78rem;
+  }
+}
+
+.toolbar-model__label {
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.model-select {
+  width: 100%;
+}
+
+.model-select-fallback {
+  width: 100%;
+  min-height: 40px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: rgba(148, 163, 184, 0.08);
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.16) inset;
+  color: #0f172a;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.model-select :deep(.el-input__wrapper),
+.model-select :deep(.el-select__wrapper),
+.model-select :deep(.el-input__inner) {
+  background: rgba(148, 163, 184, 0.08) !important;
+  color: #0f172a !important;
+}
+
+.model-select :deep(.el-input__wrapper),
+.model-select :deep(.el-select__wrapper) {
+  border-radius: 16px !important;
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.16) inset !important;
+}
+
+.model-select :deep(.el-select__selection),
+.model-select :deep(.el-select__selected-item),
+.model-select :deep(.el-select__placeholder) {
+  border-radius: 16px !important;
+}
+
+.model-select :deep(.el-select__placeholder),
+.model-select :deep(.el-select__selected-item),
+.model-select :deep(.el-select__caret),
+.model-select :deep(.el-input__icon) {
+  color: #0f172a !important;
 }
 
 .toolbar-btn {
@@ -2202,6 +2447,36 @@ onBeforeUnmount(() => {
   color: #94a3b8;
 }
 
+.document-task-page.is-dark .toolbar-model__label,
+.document-task-page.is-dark .toolbar-model small {
+  color: #94a3b8;
+}
+
+.document-task-page.is-dark .model-select-fallback {
+  background: rgba(15, 23, 42, 0.9);
+  box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.28) inset;
+  color: #e2e8f0;
+}
+
+.document-task-page.is-dark .model-select :deep(.el-input__wrapper),
+.document-task-page.is-dark .model-select :deep(.el-select__wrapper),
+.document-task-page.is-dark .model-select :deep(.el-input__inner) {
+  background: rgba(15, 23, 42, 0.9) !important;
+  color: #e2e8f0 !important;
+}
+
+.document-task-page.is-dark .model-select :deep(.el-input__wrapper),
+.document-task-page.is-dark .model-select :deep(.el-select__wrapper) {
+  box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.28) inset !important;
+}
+
+.document-task-page.is-dark .model-select :deep(.el-select__placeholder),
+.document-task-page.is-dark .model-select :deep(.el-select__selected-item),
+.document-task-page.is-dark .model-select :deep(.el-select__caret),
+.document-task-page.is-dark .model-select :deep(.el-input__icon) {
+  color: #e2e8f0 !important;
+}
+
 .document-task-page.is-dark .toolbar-btn.secondary {
   background: rgba(15, 23, 42, 0.9);
   color: #e2e8f0;
@@ -2314,6 +2589,61 @@ onBeforeUnmount(() => {
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14) !important;
 }
 
+:global(.ai-model-select-dropdown.el-popper) {
+  max-width: min(420px, calc(100vw - 24px));
+}
+
+:global(.ai-model-select-dropdown .el-select-dropdown__wrap),
+:global(.ai-model-select-dropdown .el-scrollbar),
+:global(.ai-model-select-dropdown .el-scrollbar__view),
+:global(.ai-model-select-dropdown .el-select-dropdown__list) {
+  width: 100%;
+}
+
+:global(.ai-model-select-dropdown .el-select-dropdown__list) {
+  max-width: 100%;
+}
+
+:global(.ai-model-select-dropdown .el-select-dropdown__item) {
+  white-space: normal;
+  line-height: 1.4;
+  height: auto;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+:global(:root[data-theme='dark'] .ai-model-select-dropdown) {
+  background: rgba(15, 23, 42, 0.96) !important;
+  border-color: rgba(100, 116, 139, 0.32) !important;
+  box-shadow: 0 18px 40px rgba(2, 6, 23, 0.4) !important;
+}
+
+:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-popper__arrow::before) {
+  background: rgba(15, 23, 42, 0.96) !important;
+  border-color: rgba(100, 116, 139, 0.32) !important;
+}
+
+:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__wrap),
+:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-scrollbar),
+:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-scrollbar__view),
+:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__list) {
+  background: transparent !important;
+}
+
+:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__item) {
+  color: #e2e8f0 !important;
+}
+
+:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__item.hover),
+:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__item:hover) {
+  background: rgba(59, 130, 246, 0.12) !important;
+}
+
+:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__item.selected) {
+  color: #93c5fd !important;
+  font-weight: 700;
+}
+
 :deep(.document-theme-tooltip.el-popper .el-popper__arrow::before) {
   background: var(--card-bg) !important;
   border-color: var(--border-color) !important;
@@ -2343,6 +2673,13 @@ onBeforeUnmount(() => {
   .task-toolbar__right {
     width: 100%;
     align-items: stretch;
+    justify-content: flex-start;
+  }
+
+  .toolbar-model {
+    min-width: 0;
+    width: 100%;
+    max-width: none;
   }
 
   .toolbar-btn {

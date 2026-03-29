@@ -12,6 +12,9 @@ public class AiDocumentNodeAskDto {
     @Schema(description = "用户问题")
     private String question;
 
+    @Schema(description = "本轮显式选择的模型 ID，为空时使用默认模型")
+    private String modelId;
+
     @Schema(description = "问答模式，可选 explain / compare / locate / reason / summarize")
     private String queryMode;
 

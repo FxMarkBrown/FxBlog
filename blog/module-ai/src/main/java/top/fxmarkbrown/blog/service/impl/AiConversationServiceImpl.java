@@ -29,6 +29,7 @@ import top.fxmarkbrown.blog.mapper.SysArticleMapper;
 import top.fxmarkbrown.blog.service.AiConversationService;
 import top.fxmarkbrown.blog.service.AiChatService;
 import top.fxmarkbrown.blog.service.AiChatModelService;
+import top.fxmarkbrown.blog.service.AiModelQuotaBillingService;
 import top.fxmarkbrown.blog.service.AiQuotaCoreService;
 import top.fxmarkbrown.blog.utils.JsonUtil;
 import top.fxmarkbrown.blog.utils.PageUtil;
@@ -72,6 +73,7 @@ public class AiConversationServiceImpl implements AiConversationService {
     private final SysArticleMapper articleMapper;
     private final AiChatService aiChatService;
     private final AiChatModelService aiChatModelService;
+    private final AiModelQuotaBillingService aiModelQuotaBillingService;
     private final AiQuotaCoreService aiQuotaService;
 
     @Override
@@ -305,7 +307,10 @@ public class AiConversationServiceImpl implements AiConversationService {
         messageMapper.insert(assistantMessage);
         aiQuotaService.consumeTokens(
                 conversation.getUserId(),
-                applyModelQuotaMultiplier(resolveConsumedTokens(question, answer, reasoningContent, tokensIn.get(), tokensOut.get(), totalTokens.get()), conversation),
+                aiModelQuotaBillingService.resolveBilledTokens(
+                        resolveConsumedTokens(question, answer, reasoningContent, tokensIn.get(), tokensOut.get(), totalTokens.get()),
+                        conversation
+                ),
                 conversation.getId(),
                 conversation.getTitle()
         );
@@ -502,15 +507,6 @@ public class AiConversationServiceImpl implements AiConversationService {
             return aiChatModelService.getDefaultModel();
         }
         return aiChatModelService.requireModel(modelId.trim());
-    }
-
-    private long applyModelQuotaMultiplier(long baseTokens, SysAiConversation conversation) {
-        if (baseTokens <= 0) {
-            return 0L;
-        }
-        double multiplier = aiChatModelService.resolveConversationModel(conversation).quotaMultiplier();
-        double normalizedMultiplier = multiplier > 0 ? multiplier : 1D;
-        return Math.max(1L, (long) Math.ceil(baseTokens * normalizedMultiplier));
     }
 
     private AiConversationListVo toListVo(SysAiConversation conversation) {

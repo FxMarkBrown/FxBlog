@@ -3,7 +3,9 @@ package top.fxmarkbrown.blog.controller.ai;
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import top.fxmarkbrown.blog.common.Result;
 import top.fxmarkbrown.blog.dto.ai.AiDocumentNodeAskDto;
 import top.fxmarkbrown.blog.dto.ai.AiDocumentTaskCreateDto;
@@ -77,5 +80,16 @@ public class AiDocumentTaskController {
                                                   @PathVariable String nodeId,
                                                   @RequestBody AiDocumentNodeAskDto askDto) {
         return Result.success(aiDocumentTaskService.askNode(taskId, nodeId, askDto));
+    }
+
+    @PostMapping(value = "/tasks/{taskId}/nodes/{nodeId}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "对文档节点发起流式问答")
+    public SseEmitter streamAskNode(@PathVariable Long taskId,
+                                    @PathVariable String nodeId,
+                                    @RequestBody AiDocumentNodeAskDto askDto,
+                                    HttpServletResponse response) {
+        response.setHeader("Cache-Control", "no-cache");
+        response.setHeader("X-Accel-Buffering", "no");
+        return aiDocumentTaskService.streamAskNode(taskId, nodeId, askDto);
     }
 }

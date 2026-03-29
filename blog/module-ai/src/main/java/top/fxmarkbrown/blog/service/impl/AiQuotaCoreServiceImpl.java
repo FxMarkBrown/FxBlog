@@ -234,7 +234,7 @@ public class AiQuotaCoreServiceImpl implements AiQuotaCoreService {
 
     @Transactional(rollbackFor = Exception.class)
     public void consumeTokens(Long userId, long tokens) {
-        consumeTokens(userId, tokens, null, null);
+        consumeTokens(userId, tokens, (Long) null, null);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -251,6 +251,30 @@ public class AiQuotaCoreServiceImpl implements AiQuotaCoreService {
         quota.setLastConsumeAt(LocalDateTime.now());
         aiQuotaMapper.updateById(quota);
         saveQuotaLog(userId, BIZ_TYPE_CONSUME, -tokens, null, conversationId, safeTitle(conversationTitle, "AI 对话"), "AI 对话消耗");
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void consumeTokens(Long userId, long tokens, String sourceTitle, String remark) {
+        if (tokens <= 0) {
+            return;
+        }
+        AiQuotaRuleVo rule = getRule();
+        if (!Boolean.TRUE.equals(rule.getEnabled())) {
+            return;
+        }
+        SysAiQuota quota = getOrCreateQuota(userId);
+        quota.setUsedTokens(defaultLong(quota.getUsedTokens()) + tokens);
+        quota.setLastConsumeAt(LocalDateTime.now());
+        aiQuotaMapper.updateById(quota);
+        saveQuotaLog(
+                userId,
+                BIZ_TYPE_CONSUME,
+                -tokens,
+                null,
+                null,
+                safeTitle(sourceTitle, "文档问答"),
+                safeTitle(remark, "文档节点问答消耗")
+        );
     }
 
     @Transactional(rollbackFor = Exception.class)
