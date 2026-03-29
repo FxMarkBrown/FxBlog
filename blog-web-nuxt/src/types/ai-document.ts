@@ -61,6 +61,48 @@ export interface DocumentNodeCitation {
   relation?: string
 }
 
+export interface DocumentContextNode {
+  nodeId: string
+  title?: string
+  level?: number
+  type?: string
+  relation?: string
+  weight?: number
+  reason?: string
+  summary?: string
+  page?: number
+}
+
+export interface DocumentKnowledgeFlowEdge {
+  fromNodeId: string
+  toNodeId: string
+  edgeType?: string
+  weight?: number
+  reason?: string
+}
+
+export interface DocumentContextPlan {
+  queryMode?: string
+  currentNodeId?: string
+  descendantDepth?: number
+  maxBridgeNodes?: number
+  ancestorCount?: number
+  descendantCount?: number
+  ancestorSiblingCount?: number
+  selectedCount?: number
+  semanticBridgeCount?: number
+  totalCandidateCount?: number
+  totalUsedCount?: number
+}
+
+export interface DocumentContextBudget {
+  maxChars?: number
+  candidateChars?: number
+  usedChars?: number
+  remainingChars?: number
+  truncatedNodeCount?: number
+}
+
 export interface DocumentNodeAnswer {
   taskId: number
   nodeId: string
@@ -69,4 +111,9 @@ export interface DocumentNodeAnswer {
   modelId?: string
   contextNodeIds?: string[]
   citations?: DocumentNodeCitation[]
+  contextPlan?: DocumentContextPlan
+  budgetReport?: DocumentContextBudget
+  usedNodes?: DocumentContextNode[]
+  candidateNodes?: DocumentContextNode[]
+  knowledgeFlowEdges?: DocumentKnowledgeFlowEdge[]
 }

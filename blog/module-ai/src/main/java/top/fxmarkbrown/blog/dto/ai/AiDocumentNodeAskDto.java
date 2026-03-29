@@ -12,6 +12,21 @@ public class AiDocumentNodeAskDto {
     @Schema(description = "用户问题")
     private String question;
 
+    @Schema(description = "问答模式，可选 explain / compare / locate / reason / summarize")
+    private String queryMode;
+
     @Schema(description = "额外显式选中的节点 ID 集合")
     private List<String> selectedNodeIds;
+
+    @Schema(description = "子树展开深度，默认按 queryMode 自动决定")
+    private Integer descendantDepth;
+
+    @Schema(description = "是否补充祖先节点的关键兄弟节点")
+    private Boolean includeAncestorSiblings;
+
+    @Schema(description = "是否补充语义桥接节点")
+    private Boolean includeSemanticBridges;
+
+    @Schema(description = "语义桥接节点数量上限，默认按 queryMode 自动决定")
+    private Integer maxBridgeNodes;
 }

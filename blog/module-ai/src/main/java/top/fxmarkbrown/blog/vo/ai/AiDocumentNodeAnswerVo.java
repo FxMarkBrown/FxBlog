@@ -20,4 +20,14 @@ public class AiDocumentNodeAnswerVo {
     private List<String> contextNodeIds;
 
     private List<AiDocumentNodeCitationVo> citations;
+
+    private AiDocumentContextPlanVo contextPlan;
+
+    private AiDocumentContextBudgetVo budgetReport;
+
+    private List<AiDocumentContextNodeVo> usedNodes;
+
+    private List<AiDocumentContextNodeVo> candidateNodes;
+
+    private List<AiDocumentKnowledgeFlowEdgeVo> knowledgeFlowEdges;
 }
