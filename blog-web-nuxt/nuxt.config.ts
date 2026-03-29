@@ -133,9 +133,7 @@ export default defineNuxtConfig({
       siteName,
       siteDescription,
       seoImage,
-      recordNum: readEnvValue('NUXT_PUBLIC_RECORD_NUM', ''),
-      adminUrl: readEnvValue('NUXT_PUBLIC_ADMIN_URL', 'http://localhost:3001'),
-      documentTaskPollingEnabled: readEnvValue('NUXT_PUBLIC_AI_DOCUMENT_POLLING_ENABLED', 'false') === 'true'
+      recordNum: readEnvValue('NUXT_PUBLIC_RECORD_NUM', ''), adminUrl: readEnvValue('NUXT_PUBLIC_ADMIN_URL', 'http://localhost:3001')
     }
   },
   routeRules: {},

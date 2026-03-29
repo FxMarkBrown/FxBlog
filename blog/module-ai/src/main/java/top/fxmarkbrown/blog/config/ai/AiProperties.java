@@ -160,6 +160,10 @@ public class AiProperties {
 
         private String callbackUrl;
 
+        private String callbackSeed;
+
+        private String callbackUid;
+
         private String submitPath = "/api/v4/extract/task";
 
         private String taskDetailPath = "/api/v4/extract/task/{taskId}";

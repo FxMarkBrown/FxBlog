@@ -60,6 +60,8 @@ blog:
         enable-formula: ${BLOG_AI_MINERU_ENABLE_FORMULA:true}
         enable-table: ${BLOG_AI_MINERU_ENABLE_TABLE:true}
         callback-url: ${BLOG_AI_MINERU_CALLBACK_URL:}
+        callback-seed: ${BLOG_AI_MINERU_CALLBACK_SEED:}
+        callback-uid: ${BLOG_AI_MINERU_CALLBACK_UID:}
         submit-path: ${BLOG_AI_MINERU_SUBMIT_PATH:/api/v4/extract/task}
         task-detail-path: ${BLOG_AI_MINERU_TASK_DETAIL_PATH:/api/v4/extract/task/{taskId}}
         timeout-millis: ${BLOG_AI_MINERU_TIMEOUT_MILLIS:30000}

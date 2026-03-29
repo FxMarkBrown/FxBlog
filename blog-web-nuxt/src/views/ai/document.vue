@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { createDocumentTaskApi, deleteDocumentTaskApi, getDocumentTaskListApi, renameDocumentTaskApi } from '@/api/ai-document'
+import { createDocumentTaskApi, createMockDocumentTaskApi, deleteDocumentTaskApi, getDocumentTaskListApi, renameDocumentTaskApi } from '@/api/ai-document'
 import { uploadFileApi } from '@/api/file'
 import { useNoIndexSeo } from '@/composables/useSeo'
 import { unwrapResponseData } from '@/utils/response'
@@ -9,13 +9,13 @@ import type { DocumentTaskDetail, DocumentTaskListItem } from '@/types/ai-docume
 const runtimeConfig = useRuntimeConfig()
 const router = useRouter()
 const authStore = useAuthStore()
-const documentTaskPollingEnabled = Boolean(runtimeConfig.public.documentTaskPollingEnabled)
+const localMockEnabled = import.meta.dev
 
 const loading = ref(false)
 const creating = ref(false)
 const tasks = ref<DocumentTaskListItem[]>([])
 const uploadInputRef = ref<HTMLInputElement | null>(null)
-let taskListPollTimer: ReturnType<typeof setTimeout> | null = null
+const createMode = ref<'real' | 'mock'>('real')
 
 useNoIndexSeo({
   title: () => `文档任务 - ${runtimeConfig.public.siteName}`,
@@ -28,45 +28,10 @@ async function loadPageData() {
     const listResponse = await getDocumentTaskListApi()
     const records = unwrapResponseData<DocumentTaskListItem[] | null>(listResponse)
     tasks.value = Array.isArray(records) ? records : []
-    queueTaskListPoll()
   } catch (error) {
     ElMessage.error((error as Error)?.message || '文档任务加载失败')
   } finally {
     loading.value = false
-  }
-}
-
-function clearTaskListPoll() {
-  if (taskListPollTimer) {
-    clearTimeout(taskListPollTimer)
-    taskListPollTimer = null
-  }
-}
-
-function queueTaskListPoll() {
-  clearTaskListPoll()
-  if (!documentTaskPollingEnabled) {
-    return
-  }
-  const hasPendingTask = tasks.value.some(task => {
-    const status = String(task.status || '').toUpperCase()
-    return status === 'SUBMITTED' || status === 'PROCESSING'
-  })
-  if (!hasPendingTask) {
-    return
-  }
-  taskListPollTimer = setTimeout(() => {
-    void refreshTaskListSilently()
-  }, 4000)
-}
-
-async function refreshTaskListSilently() {
-  try {
-    const listResponse = await getDocumentTaskListApi()
-    const records = unwrapResponseData<DocumentTaskListItem[] | null>(listResponse)
-    tasks.value = Array.isArray(records) ? records : []
-  } finally {
-    queueTaskListPoll()
   }
 }
 
@@ -111,20 +76,18 @@ async function handleRenameTask(task: DocumentTaskListItem) {
       inputValue: task.title || task.fileName || '',
       inputPlaceholder: '请输入任务名称',
       confirmButtonText: '保存',
-      cancelButtonText: '取消',
-      inputValidator: (value) => {
-        const normalized = value.trim()
-        if (!normalized) {
-          return '任务名称不能为空'
-        }
-        if (normalized.length > 255) {
-          return '任务名称不能超过 255 个字符'
-        }
-        return true
-      }
+      cancelButtonText: '取消'
     })
 
     const nextTitle = value.trim()
+    if (!nextTitle) {
+      ElMessage.warning('任务名称不能为空')
+      return
+    }
+    if (nextTitle.length > 255) {
+      ElMessage.warning('任务名称不能超过 255 个字符')
+      return
+    }
     if (nextTitle === (task.title || '').trim()) {
       return
     }
@@ -158,8 +121,30 @@ async function handleDeleteTask(task: DocumentTaskListItem) {
   }
 }
 
-function triggerDocumentUpload() {
+function triggerDocumentUpload(mode: 'real' | 'mock' = 'real') {
+  createMode.value = mode
   uploadInputRef.value?.click()
+}
+
+async function createFixtureMockTask() {
+  try {
+    creating.value = true
+    createMode.value = 'mock'
+    const createResponse = await createMockDocumentTaskApi({
+      title: 'MinerU Fixture Mock'
+    })
+    const created = unwrapResponseData<DocumentTaskDetail | null>(createResponse)
+    ElMessage.success('Fixture Mock 文档任务已创建')
+    await loadPageData()
+    const nextTaskId = created?.taskId || tasks.value[0]?.taskId
+    if (nextTaskId) {
+      await router.push(`/ai/document/${nextTaskId}`)
+    }
+  } catch (error) {
+    ElMessage.error((error as Error)?.message || '创建 Fixture Mock 任务失败')
+  } finally {
+    creating.value = false
+  }
 }
 
 async function handleDocumentUpload(event: Event) {
@@ -179,15 +164,17 @@ async function handleDocumentUpload(event: Event) {
     const sourceUrl = String(uploaded?.url || '')
     const sourceFileId = String(uploaded?.id || '')
     if (!sourceUrl || !sourceFileId) {
-      throw new Error('文件上传成功，但缺少文件记录信息')
+      ElMessage.error('文件上传成功，但缺少文件记录信息')
+      return
     }
 
-    const createResponse = await createDocumentTaskApi({
+    const requestBody = {
       title: file.name.replace(/\.[^.]+$/, '') || file.name,
       fileName: file.name,
       sourceUrl,
       sourceFileId
-    })
+    }
+    const createResponse = await createDocumentTaskApi(requestBody)
     const created = unwrapResponseData<DocumentTaskDetail | null>(createResponse)
     ElMessage.success('文档任务已创建')
     await loadPageData()
@@ -213,10 +200,6 @@ onMounted(() => {
 
   void loadPageData()
 })
-
-onBeforeUnmount(() => {
-  clearTaskListPoll()
-})
 </script>
 
 <template>
@@ -235,9 +218,19 @@ onBeforeUnmount(() => {
             <span class="meta-label">任务数量</span>
             <strong class="meta-value">{{ tasks.length }}</strong>
           </div>
-          <button type="button" class="hero-create-btn" :disabled="creating" @click="triggerDocumentUpload">
+          <button type="button" class="hero-create-btn" :disabled="creating" @click="triggerDocumentUpload('real')">
             <i :class="['fas', creating ? 'fa-spinner fa-spin' : 'fa-cloud-arrow-up']"></i>
-            <span>{{ creating ? '处理中' : '上传并创建任务' }}</span>
+            <span>{{ creating && createMode === 'real' ? '处理中' : '上传并创建真实任务' }}</span>
+          </button>
+          <button
+            v-if="localMockEnabled"
+            type="button"
+            class="hero-create-btn is-secondary"
+            :disabled="creating"
+            @click="createFixtureMockTask"
+          >
+            <i :class="['fas', creating ? 'fa-spinner fa-spin' : 'fa-flask']"></i>
+            <span>{{ creating && createMode === 'mock' ? '处理中' : '创建 Fixture Mock' }}</span>
           </button>
         </div>
       </header>
@@ -253,9 +246,12 @@ onBeforeUnmount(() => {
         <div class="document-section__header">
           <div>
             <h2>最近文档任务</h2>
-            <p>上传文档后，这里会展示真实解析任务，并进入结构化画布查看结果。</p>
+            <p>真实任务通过上传创建；开发环境下的 Mock 任务直接基于现有 MinerU fixture 生成，不再走本地上传。</p>
           </div>
-          <NuxtLink to="/ai" class="back-link">返回 AI</NuxtLink>
+          <div class="document-section__actions">
+            <button type="button" class="back-link as-button" @click="loadPageData">刷新列表</button>
+            <NuxtLink to="/ai" class="back-link">返回 AI</NuxtLink>
+          </div>
         </div>
 
         <div v-loading="loading" class="task-list">
@@ -264,10 +260,13 @@ onBeforeUnmount(() => {
             :key="task.taskId"
             class="task-item"
           >
-            <button
-              type="button"
+            <div
+              role="button"
+              tabindex="0"
               class="task-item__surface"
               @click="openTask(task.taskId)"
+              @keydown.enter.prevent="openTask(task.taskId)"
+              @keydown.space.prevent="openTask(task.taskId)"
             >
               <div class="task-item__main">
                 <div class="task-item__top">
@@ -283,7 +282,7 @@ onBeforeUnmount(() => {
                 <span v-if="task.expireAt">保留至 {{ task.expireAt }}</span>
                 <span>{{ task.updateTime || task.createTime || '-' }}</span>
               </div>
-            </button>
+            </div>
             <div class="task-item__actions">
               <button type="button" class="task-action" @click="handleRenameTask(task)">
                 <i class="fas fa-pen"></i>
@@ -405,6 +404,10 @@ onBeforeUnmount(() => {
     opacity: 0.7;
     cursor: not-allowed;
   }
+
+  &.is-secondary {
+    background: linear-gradient(135deg, #0f172a, #334155);
+  }
 }
 
 .meta-label {
@@ -474,6 +477,17 @@ onBeforeUnmount(() => {
   border: 1px solid var(--border-color);
   color: var(--text-primary);
   text-decoration: none;
+}
+
+.document-section__actions {
+  display: flex;
+  gap: 10px;
+}
+
+.back-link.as-button {
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
 }
 
 .task-list {

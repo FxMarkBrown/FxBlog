@@ -9,8 +9,7 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.openai.OpenAiChatOptions;
-import org.springframework.core.env.Environment;
-import org.springframework.core.env.Profiles;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import top.fxmarkbrown.blog.config.ai.AiProperties;
@@ -37,7 +36,10 @@ import top.fxmarkbrown.blog.vo.ai.AiDocumentTreeNodeVo;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -55,13 +57,15 @@ import java.util.zip.ZipInputStream;
 public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
 
     private static final Pattern HEADING_PATTERN = Pattern.compile("^(#{1,6})\\s+(.*)$");
+    private static final String MOCK_FIXTURE_MARKDOWN = "mock/mineru/current/full.md";
+    private static final String MOCK_FIXTURE_CONTENT_LIST = "mock/mineru/current/content_list.json";
+    private static final String MOCK_FIXTURE_PAYLOAD = "mock/mineru/current/task-detail.json";
 
     private final AiProperties aiProperties;
     private final AiChatModelService aiChatModelService;
     private final AiQuotaCoreService aiQuotaCoreService;
     private final SysAiDocumentTaskMapper documentTaskMapper;
     private final SysAiDocumentResultMapper documentResultMapper;
-    private final Environment environment;
 
     @Override
     public List<AiDocumentTaskListVo> listTasks() {
@@ -78,14 +82,12 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
     @Override
     public AiDocumentTaskDetailVo getTaskDetail(Long taskId) {
         DocumentTaskAggregate aggregate = requireAggregate(taskId);
-        refreshAggregateIfNecessary(aggregate);
         return copyDetail(aggregate.detail());
     }
 
     @Override
     public AiDocumentParseResultVo getTaskResult(Long taskId) {
         DocumentTaskAggregate aggregate = requireAggregate(taskId);
-        refreshAggregateIfNecessary(aggregate);
         return copyResult(aggregate.result());
     }
 
@@ -101,6 +103,34 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
             throw new IllegalStateException("文档真实解析尚未启用，请先完成 MinerU 配置");
         }
         return createRealMineruTask(createDto);
+    }
+
+    @Override
+    public AiDocumentTaskDetailVo createLocalMockTask(AiDocumentTaskCreateDto createDto) {
+        LocalDateTime now = LocalDateTime.now();
+        String title = safeText(createDto == null ? null : createDto.getTitle(), "本地 Mock 文档任务");
+        String fileName = safeText(createDto == null ? null : createDto.getFileName(), "mock-document.pdf");
+        String sourceUrl = safeText(createDto == null ? null : createDto.getSourceUrl(), null);
+
+        SysAiDocumentTask task = SysAiDocumentTask.builder()
+                .userId(StpUtil.getLoginIdAsLong())
+                .sourceFileId(safeText(createDto == null ? null : createDto.getSourceFileId(), null))
+                .title(title)
+                .status("PARSED")
+                .provider("local-mock")
+                .fileName(fileName)
+                .sourceUrl(sourceUrl)
+                .expireAt(resolveExpireAt(now))
+                .createTime(now)
+                .updateTime(now)
+                .build();
+        documentTaskMapper.insert(task);
+
+        DocumentTaskAggregate aggregate = buildDynamicAggregate(task.getId(), title, fileName, sourceUrl, now);
+        applyMockParseResult(aggregate);
+        persistAggregate(aggregate, true);
+        log.info("本地 Mock 文档任务已创建, taskId={}, title={}", task.getId(), title);
+        return getTaskDetail(task.getId());
     }
 
     @Override
@@ -132,24 +162,43 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
     }
 
     @Override
-    public void syncPendingTasks() {
-        if (!isDocumentPollingEnabled()) {
-            return;
+    public void handleMineruCallback(String checksum, String content) {
+        AiProperties.Document document = aiProperties.getDocument();
+        if (document == null || !document.isEnabled()) {
+            throw new IllegalStateException("文档任务未启用");
         }
-        List<SysAiDocumentTask> pendingTasks = documentTaskMapper.selectList(new LambdaQueryWrapper<SysAiDocumentTask>()
-                .in(SysAiDocumentTask::getStatus, "SUBMITTED", "PROCESSING")
-                .isNotNull(SysAiDocumentTask::getRemoteTaskId)
-                .orderByAsc(SysAiDocumentTask::getUpdateTime)
-                .last("limit 20"));
-        for (SysAiDocumentTask pendingTask : pendingTasks) {
-            try {
-                SysAiDocumentResult result = documentResultMapper.selectById(pendingTask.getId());
-                DocumentTaskAggregate aggregate = toAggregate(pendingTask, result);
-                refreshAggregateIfNecessary(aggregate);
-            } catch (Exception ex) {
-                log.warn("后台同步 AI 文档任务失败, taskId={}", pendingTask.getId(), ex);
-            }
+        AiProperties.Mineru mineru = document.getMineru();
+        if (mineru == null || !mineru.isEnabled()) {
+            throw new IllegalStateException("MinerU 未启用");
         }
+        if (!StringUtils.hasText(content)) {
+            throw new IllegalStateException("callback content 不能为空");
+        }
+        verifyCallbackSignature(mineru, checksum, content);
+
+        JsonNode payloadRoot = JsonUtil.readTree(content);
+        JsonNode dataNode = payloadRoot != null && payloadRoot.has("data") ? payloadRoot.get("data") : payloadRoot;
+        String remoteTaskId = firstText(dataNode,
+                path("task_id"),
+                path("taskId"),
+                path("id"));
+        if (!StringUtils.hasText(remoteTaskId)) {
+            throw new IllegalStateException("callback content 缺少 task_id");
+        }
+
+        SysAiDocumentTask task = documentTaskMapper.selectOne(new LambdaQueryWrapper<SysAiDocumentTask>()
+                .eq(SysAiDocumentTask::getRemoteTaskId, remoteTaskId)
+                .last("limit 1"));
+        if (task == null) {
+            throw new IllegalStateException("未找到对应文档任务, remoteTaskId=" + remoteTaskId);
+        }
+
+        SysAiDocumentResult result = documentResultMapper.selectById(task.getId());
+        DocumentTaskAggregate aggregate = toAggregate(task, result);
+        applyMineruPayload(aggregate, dataNode, content, mineru);
+        persistAggregate(aggregate, false);
+        log.info("MinerU callback 已处理, taskId={}, remoteTaskId={}, status={}",
+                aggregate.detail().getTaskId(), remoteTaskId, aggregate.detail().getStatus());
     }
 
     @Override
@@ -159,7 +208,6 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         }
         String question = normalizeQuestion(askDto);
         DocumentTaskAggregate aggregate = requireAggregate(taskId);
-        refreshAggregateIfNecessary(aggregate);
         AiDocumentTreeNodeVo root = aggregate.result().getRoot();
         AiDocumentTreeNodeVo currentNode = findNode(root, nodeId);
         if (currentNode == null) {
@@ -217,6 +265,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         if (!StringUtils.hasText(sourceUrl)) {
             throw new IllegalStateException("真实 MinerU 任务要求 sourceUrl 可用");
         }
+        validateMineruSourceUrl(sourceUrl);
         Map<String, Object> requestBody = new LinkedHashMap<>();
         requestBody.put("url", sourceUrl);
         requestBody.put("is_ocr", mineru.getOcr());
@@ -227,6 +276,10 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         }
         if (StringUtils.hasText(mineru.getCallbackUrl())) {
             requestBody.put("callback", mineru.getCallbackUrl().trim());
+            if (!StringUtils.hasText(mineru.getCallbackSeed())) {
+                throw new IllegalStateException("已配置 MinerU callback-url，但缺少 callback-seed");
+            }
+            requestBody.put("seed", mineru.getCallbackSeed().trim());
         }
         if (StringUtils.hasText(createDto == null ? null : createDto.getFileName())) {
             requestBody.put("filename", createDto.getFileName().trim());
@@ -244,11 +297,21 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
             String response = HttpUtil.postJson(buildMineruSubmitUrl(mineru), JsonUtil.toJsonString(requestBody),
                     mineru.getTimeoutMillis(), headers);
             JsonNode root = JsonUtil.readTree(response);
+            Integer responseCode = firstInt(root, path("code"));
+            if (responseCode != null && responseCode != 0) {
+                throw new IllegalStateException("MinerU 创建任务失败: " + safeText(firstText(root, path("msg")), "未知错误"));
+            }
             String remoteTaskId = firstText(root,
                     path("data", "task_id"),
                     path("data", "taskId"),
+                    path("data", "id"),
+                    path("data"),
                     path("task_id"),
-                    path("taskId"));
+                    path("taskId"),
+                    path("id"));
+            if (!StringUtils.hasText(remoteTaskId)) {
+                throw new IllegalStateException("MinerU 创建任务失败: 未返回 task_id");
+            }
 
             LocalDateTime now = LocalDateTime.now();
             SysAiDocumentTask task = SysAiDocumentTask.builder()
@@ -280,173 +343,17 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
             aggregate.result().setMarkdown("""
                     # %s
 
-                    文档已提交至 MinerU，当前等待异步解析完成。
+                    文档已提交，当前等待解析完成。
 
                     远端任务号：%s
                     """.formatted(aggregate.detail().getTitle(), safeText(remoteTaskId, "-")));
             persistAggregate(aggregate, true);
+            log.info("MinerU 文档任务已创建, taskId={}, remoteTaskId={}, title={}",
+                    task.getId(), safeText(task.getRemoteTaskId(), "<empty>"), task.getTitle());
             return getTaskDetail(task.getId());
         } catch (Exception ex) {
             log.error("MinerU 文档任务创建失败, title={}", createDto == null ? null : createDto.getTitle(), ex);
             throw new IllegalStateException("MinerU 文档任务创建失败: " + ex.getMessage(), ex);
-        }
-    }
-
-    private void refreshAggregateIfNecessary(DocumentTaskAggregate aggregate) {
-        if (aggregate == null) {
-            return;
-        }
-        if (!isDocumentPollingEnabled()) {
-            return;
-        }
-        AiProperties.Document document = aiProperties.getDocument();
-        if (document == null || !document.isEnabled()) {
-            return;
-        }
-        AiProperties.Mineru mineru = document.getMineru();
-        if (mineru == null || !mineru.isEnabled() || mineru.isMockMode()) {
-            return;
-        }
-        if (!shouldSyncRemoteResult(aggregate)) {
-            return;
-        }
-        if (!StringUtils.hasText(aggregate.detail().getRemoteTaskId())) {
-            return;
-        }
-        refreshAggregateFromMineru(aggregate, mineru);
-    }
-
-    private void refreshAggregateFromMineru(DocumentTaskAggregate aggregate, AiProperties.Mineru mineru) {
-        try {
-            Map<String, String> headers = new LinkedHashMap<>();
-            if (StringUtils.hasText(mineru.getApiKey())) {
-                headers.put("Authorization", "Bearer " + mineru.getApiKey().trim());
-            }
-
-            String response = HttpUtil.get(buildMineruTaskDetailUrl(mineru, aggregate.detail().getRemoteTaskId()), headers);
-            JsonNode root = JsonUtil.readTree(response);
-            String normalizedStatus = normalizeRemoteStatus(firstText(root,
-                    path("data", "state"),
-                    path("data", "status"),
-                    path("data", "task", "status"),
-                    path("state"),
-                    path("status")));
-
-            String markdown = firstText(root,
-                    path("data", "full_md"),
-                    path("data", "result", "full_md"),
-                    path("data", "result", "fullMd"),
-                    path("data", "result", "markdown"),
-                    path("data", "markdown"),
-                    path("full_md"),
-                    path("result", "full_md"),
-                    path("result", "markdown"));
-            if (StringUtils.hasText(markdown)) {
-                aggregate.result().setMarkdown(markdown.trim());
-            }
-
-            JsonNode contentListNode = firstNode(root,
-                    path("data", "content_list"),
-                    path("data", "result", "content_list"),
-                    path("data", "result", "contentList"),
-                    path("data", "content_list"),
-                    path("result", "content_list"),
-                    path("content_list"));
-
-            AiDocumentTreeNodeVo remoteTree = null;
-            if (contentListNode != null && contentListNode.isArray() && !contentListNode.isEmpty()) {
-                remoteTree = buildTreeFromContentList(aggregate.detail().getTaskId(), aggregate.detail().getTitle(), contentListNode, markdown);
-            } else if (StringUtils.hasText(markdown)) {
-                remoteTree = buildTreeFromMarkdown(aggregate.detail().getTaskId(), aggregate.detail().getTitle(), markdown);
-            }
-
-            if (remoteTree != null) {
-                aggregate.result().setRoot(remoteTree);
-                aggregate.detail().setRootNodeId(remoteTree.getId());
-            }
-            if (contentListNode != null && !contentListNode.isNull()) {
-                aggregate.resultEntity().setContentListJson(contentListNode.toString());
-            }
-            aggregate.resultEntity().setRawPayloadJson(response);
-
-            Integer pageCount = firstInt(root,
-                    path("data", "extract_progress", "total_pages"),
-                    path("data", "result", "page_count"),
-                    path("data", "result", "pageCount"),
-                    path("data", "page_count"),
-                    path("result", "page_count"));
-            if (pageCount != null && pageCount > 0) {
-                aggregate.detail().setPageCount(pageCount);
-            }
-            String fullZipUrl = firstText(root,
-                    path("data", "full_zip_url"),
-                    path("full_zip_url"));
-            if (StringUtils.hasText(fullZipUrl)
-                    && (!StringUtils.hasText(aggregate.result().getMarkdown())
-                    || !StringUtils.hasText(aggregate.resultEntity().getContentListJson()))) {
-                applyZipResultIfNecessary(aggregate, fullZipUrl, mineru);
-            }
-
-            if (!StringUtils.hasText(aggregate.result().getMarkdown()) && StringUtils.hasText(aggregate.resultEntity().getMarkdown())) {
-                aggregate.result().setMarkdown(aggregate.resultEntity().getMarkdown());
-            }
-            if ((contentListNode == null || contentListNode.isNull()) && StringUtils.hasText(aggregate.resultEntity().getContentListJson())) {
-                contentListNode = JsonUtil.readTree(aggregate.resultEntity().getContentListJson());
-            }
-            if ((remoteTree == null || aggregate.result().getRoot() == null) && contentListNode != null && contentListNode.isArray() && !contentListNode.isEmpty()) {
-                remoteTree = buildTreeFromContentList(aggregate.detail().getTaskId(), aggregate.detail().getTitle(),
-                        contentListNode, aggregate.result().getMarkdown());
-                aggregate.result().setRoot(remoteTree);
-                aggregate.detail().setRootNodeId(remoteTree.getId());
-            }
-            if ((remoteTree == null || aggregate.result().getRoot() == null)
-                    && isParsedMarkdownAvailable(aggregate.result().getMarkdown())) {
-                remoteTree = buildTreeFromMarkdown(aggregate.detail().getTaskId(), aggregate.detail().getTitle(),
-                        aggregate.result().getMarkdown());
-                aggregate.result().setRoot(remoteTree);
-                aggregate.detail().setRootNodeId(remoteTree.getId());
-            }
-            if (StringUtils.hasText(fullZipUrl)) {
-                aggregate.resultEntity().setRawPayloadJson(
-                        mergeRawPayloadWithZipUrl(aggregate.resultEntity().getRawPayloadJson(), response, fullZipUrl)
-                );
-            }
-            aggregate.detail().setExpireAt(resolveExpireAt(aggregate.detail().getUpdateTime() == null
-                    ? LocalDateTime.now()
-                    : aggregate.detail().getUpdateTime()));
-            aggregate.detail().setMarkdownUrl(resolveMarkdownResultPath(aggregate.detail().getTaskId()));
-            boolean materializedResult = hasMaterializedParseResult(aggregate);
-            if ("FAILED".equals(normalizedStatus)) {
-                aggregate.detail().setStatus("FAILED");
-            } else if ("PARSED".equals(normalizedStatus)) {
-                aggregate.detail().setStatus(materializedResult ? "PARSED" : "PROCESSING");
-                if (!materializedResult) {
-                    log.info("MinerU 任务远端已完成但本地结果尚未就绪，继续等待下一轮同步, taskId={}, remoteTaskId={}, hasMarkdown={}, hasContentList={}, hasRoot={}, hasZipUrl={}",
-                            aggregate.detail().getTaskId(),
-                            aggregate.detail().getRemoteTaskId(),
-                            isParsedMarkdownAvailable(aggregate.result().getMarkdown()),
-                            StringUtils.hasText(aggregate.resultEntity().getContentListJson()),
-                            hasNonPlaceholderTree(aggregate.result().getRoot()),
-                            StringUtils.hasText(fullZipUrl));
-                }
-            } else if (StringUtils.hasText(normalizedStatus)) {
-                aggregate.detail().setStatus(normalizedStatus);
-            }
-            aggregate.detail().setUpdateTime(LocalDateTime.now());
-            aggregate.taskEntity().setLastPolledAt(LocalDateTime.now());
-            persistAggregate(aggregate, false);
-        } catch (Exception ex) {
-            log.warn("同步 MinerU 文档任务失败, taskId={}, remoteTaskId={}",
-                    aggregate.detail().getTaskId(), aggregate.detail().getRemoteTaskId(), ex);
-            aggregate.detail().setStatus("FAILED");
-            aggregate.detail().setUpdateTime(LocalDateTime.now());
-            aggregate.taskEntity().setLastPolledAt(LocalDateTime.now());
-            aggregate.resultEntity().setRawPayloadJson(JsonUtil.toJsonString(Map.of(
-                    "syncError", safeText(ex.getMessage(), ex.getClass().getSimpleName()),
-                    "taskId", aggregate.detail().getTaskId(),
-                    "remoteTaskId", safeText(aggregate.detail().getRemoteTaskId(), "")
-            )));
-            persistAggregate(aggregate, false);
         }
     }
 
@@ -463,22 +370,6 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
             return baseUrl + "/" + submitPath;
         }
         return baseUrl + submitPath;
-    }
-
-    private String buildMineruTaskDetailUrl(AiProperties.Mineru mineru, String remoteTaskId) {
-        String baseUrl = safeText(mineru.getBaseUrl(), "");
-        String detailPath = safeText(mineru.getTaskDetailPath(), "/api/v4/extract/task/{taskId}")
-                .replace("{taskId}", safeText(remoteTaskId, ""));
-        if (!StringUtils.hasText(baseUrl)) {
-            throw new IllegalStateException("blog.ai.document.mineru.base-url 未配置");
-        }
-        if (baseUrl.endsWith("/") && detailPath.startsWith("/")) {
-            return baseUrl.substring(0, baseUrl.length() - 1) + detailPath;
-        }
-        if (!baseUrl.endsWith("/") && !detailPath.startsWith("/")) {
-            return baseUrl + "/" + detailPath;
-        }
-        return baseUrl + detailPath;
     }
 
     private DocumentTaskAggregate requireAggregate(Long taskId) {
@@ -562,7 +453,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         result.setMarkdown("""
                 # %s
 
-                当前任务已创建，等待接入真实解析结果。
+                当前任务已创建，等待解析结果。
                 """.formatted(title));
         result.setRoot(root);
         return new DocumentTaskAggregate(
@@ -573,11 +464,174 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         );
     }
 
+    private void applyMockParseResult(DocumentTaskAggregate aggregate) {
+        MockFixturePayload fixturePayload = loadMockFixturePayload();
+        String markdown = fixturePayload.markdown();
+        AiDocumentTreeNodeVo root;
+        if (StringUtils.hasText(fixturePayload.contentListJson())) {
+            JsonNode contentListNode = JsonUtil.readTree(fixturePayload.contentListJson());
+            root = contentListNode != null && contentListNode.isArray() && !contentListNode.isEmpty()
+                    ? buildTreeFromContentList(aggregate.detail().getTaskId(), aggregate.detail().getTitle(), contentListNode, markdown)
+                    : buildTreeFromMarkdown(aggregate.detail().getTaskId(), aggregate.detail().getTitle(), markdown);
+        } else {
+            root = buildTreeFromMarkdown(aggregate.detail().getTaskId(), aggregate.detail().getTitle(), markdown);
+        }
+        aggregate.detail().setStatus("PARSED");
+        aggregate.detail().setPageCount(fixturePayload.pageCount());
+        aggregate.detail().setRootNodeId(root.getId());
+        aggregate.detail().setMarkdownUrl(resolveMarkdownResultPath(aggregate.detail().getTaskId()));
+        aggregate.detail().setUpdateTime(LocalDateTime.now());
+        aggregate.result().setTitle(aggregate.detail().getTitle());
+        aggregate.result().setMarkdown(markdown);
+        aggregate.result().setRoot(root);
+        aggregate.resultEntity().setMarkdown(markdown);
+        aggregate.resultEntity().setRootJson(JsonUtil.toJsonString(root));
+        aggregate.resultEntity().setContentListJson(fixturePayload.contentListJson());
+        aggregate.resultEntity().setRawPayloadJson(fixturePayload.rawPayloadJson());
+    }
+
+    private MockFixturePayload loadMockFixturePayload() {
+        String markdown = readClasspathText(MOCK_FIXTURE_MARKDOWN);
+        String contentListJson = readClasspathText(MOCK_FIXTURE_CONTENT_LIST);
+        String rawPayloadJson = readClasspathText(MOCK_FIXTURE_PAYLOAD);
+
+        if (!StringUtils.hasText(markdown) && !StringUtils.hasText(contentListJson)) {
+            throw new IllegalStateException("本地 Mock fixture 不存在，请先执行 tools/fetch_mineru_fixture.py 拉取真实 MinerU 数据");
+        }
+
+        Integer pageCount = firstInt(JsonUtil.readTree(rawPayloadJson),
+                path("data", "extract_progress", "total_pages"),
+                path("extract_progress", "total_pages"),
+                path("data", "result", "page_count"),
+                path("data", "page_count"),
+                path("page_count"));
+
+        return new MockFixturePayload(
+                StringUtils.hasText(markdown) ? markdown.trim() : "",
+                StringUtils.hasText(contentListJson) ? contentListJson : null,
+                StringUtils.hasText(rawPayloadJson)
+                        ? rawPayloadJson
+                        : JsonUtil.toJsonString(Map.of("provider", "local-mock", "fixture", "external-mineru")),
+                pageCount != null && pageCount > 0 ? pageCount : 6
+        );
+    }
+
+    private String readClasspathText(String classpathLocation) {
+        try {
+            ClassPathResource resource = new ClassPathResource(classpathLocation);
+            if (!resource.exists()) {
+                return null;
+            }
+            try (InputStream inputStream = resource.getInputStream()) {
+                return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+            }
+        } catch (IOException ex) {
+            throw new IllegalStateException("读取 Mock fixture 失败: " + classpathLocation, ex);
+        }
+    }
+
+    private void applyMineruPayload(DocumentTaskAggregate aggregate, JsonNode payloadRoot, String rawPayload, AiProperties.Mineru mineru) {
+        JsonNode dataNode = payloadRoot != null && payloadRoot.has("data") ? payloadRoot.get("data") : payloadRoot;
+        String normalizedStatus = normalizeRemoteStatus(firstText(dataNode,
+                path("state"),
+                path("status"),
+                path("task", "status")));
+
+        String markdown = firstText(dataNode,
+                path("full_md"),
+                path("result", "full_md"),
+                path("result", "fullMd"),
+                path("result", "markdown"),
+                path("markdown"));
+        if (StringUtils.hasText(markdown)) {
+            aggregate.result().setMarkdown(markdown.trim());
+        }
+
+        JsonNode contentListNode = firstNode(dataNode,
+                path("content_list"),
+                path("result", "content_list"),
+                path("result", "contentList"));
+
+        AiDocumentTreeNodeVo remoteTree = null;
+        if (contentListNode != null && contentListNode.isArray() && !contentListNode.isEmpty()) {
+            remoteTree = buildTreeFromContentList(aggregate.detail().getTaskId(), aggregate.detail().getTitle(), contentListNode, markdown);
+        } else if (isParsedMarkdownAvailable(markdown)) {
+            remoteTree = buildTreeFromMarkdown(aggregate.detail().getTaskId(), aggregate.detail().getTitle(), markdown);
+        }
+
+        if (remoteTree != null) {
+            aggregate.result().setRoot(remoteTree);
+            aggregate.detail().setRootNodeId(remoteTree.getId());
+        }
+        if (contentListNode != null && !contentListNode.isNull()) {
+            aggregate.resultEntity().setContentListJson(contentListNode.toString());
+        }
+        aggregate.resultEntity().setRawPayloadJson(rawPayload);
+
+        Integer pageCount = firstInt(dataNode,
+                path("extract_progress", "total_pages"),
+                path("result", "page_count"),
+                path("result", "pageCount"),
+                path("page_count"));
+        if (pageCount != null && pageCount > 0) {
+            aggregate.detail().setPageCount(pageCount);
+        }
+
+        String fullZipUrl = firstText(dataNode, path("full_zip_url"));
+        if (StringUtils.hasText(fullZipUrl)
+                && (!StringUtils.hasText(aggregate.result().getMarkdown())
+                || !StringUtils.hasText(aggregate.resultEntity().getContentListJson()))) {
+            applyZipResultIfNecessary(aggregate, fullZipUrl, mineru);
+        }
+
+        if (!StringUtils.hasText(aggregate.result().getMarkdown()) && StringUtils.hasText(aggregate.resultEntity().getMarkdown())) {
+            aggregate.result().setMarkdown(aggregate.resultEntity().getMarkdown());
+        }
+        if ((contentListNode == null || contentListNode.isNull()) && StringUtils.hasText(aggregate.resultEntity().getContentListJson())) {
+            contentListNode = JsonUtil.readTree(aggregate.resultEntity().getContentListJson());
+        }
+        if ((remoteTree == null || aggregate.result().getRoot() == null) && contentListNode != null && contentListNode.isArray() && !contentListNode.isEmpty()) {
+            remoteTree = buildTreeFromContentList(aggregate.detail().getTaskId(), aggregate.detail().getTitle(),
+                    contentListNode, aggregate.result().getMarkdown());
+            aggregate.result().setRoot(remoteTree);
+            aggregate.detail().setRootNodeId(remoteTree.getId());
+        }
+        if ((remoteTree == null || aggregate.result().getRoot() == null)
+                && isParsedMarkdownAvailable(aggregate.result().getMarkdown())) {
+            remoteTree = buildTreeFromMarkdown(aggregate.detail().getTaskId(), aggregate.detail().getTitle(),
+                    aggregate.result().getMarkdown());
+            aggregate.result().setRoot(remoteTree);
+            aggregate.detail().setRootNodeId(remoteTree.getId());
+        }
+        if (StringUtils.hasText(fullZipUrl)) {
+            aggregate.resultEntity().setRawPayloadJson(
+                    mergeRawPayloadWithZipUrl(aggregate.resultEntity().getRawPayloadJson(), rawPayload, fullZipUrl)
+            );
+        }
+
+        aggregate.detail().setExpireAt(resolveExpireAt(LocalDateTime.now()));
+        aggregate.detail().setMarkdownUrl(resolveMarkdownResultPath(aggregate.detail().getTaskId()));
+        aggregate.detail().setUpdateTime(LocalDateTime.now());
+        aggregate.taskEntity().setLastPolledAt(LocalDateTime.now());
+
+        if ("FAILED".equals(normalizedStatus)) {
+            aggregate.detail().setStatus("FAILED");
+        } else if ("PARSED".equals(normalizedStatus)) {
+            boolean materialized = hasMaterializedParseResult(aggregate);
+            aggregate.detail().setStatus(materialized ? "PARSED" : "PROCESSING");
+            if (!materialized) {
+                throw new IllegalStateException("MinerU 回调已完成，但结果文件尚未成功落盘");
+            }
+        } else if (StringUtils.hasText(normalizedStatus)) {
+            aggregate.detail().setStatus(normalizedStatus);
+        }
+    }
+
     private void applyZipResultIfNecessary(DocumentTaskAggregate aggregate, String fullZipUrl, AiProperties.Mineru mineru) {
         try {
             ZipDocumentPayload payload = downloadZipPayload(fullZipUrl, mineru);
             if (payload == null) {
-                return;
+                throw new IllegalStateException("MinerU 结果压缩包为空");
             }
             if (StringUtils.hasText(payload.markdown())) {
                 aggregate.result().setMarkdown(payload.markdown().trim());
@@ -589,6 +643,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         } catch (Exception ex) {
             log.warn("下载 MinerU full_zip_url 失败, taskId={}, zipUrl={}",
                     aggregate.detail().getTaskId(), fullZipUrl, ex);
+            throw new IllegalStateException("下载 MinerU 结果压缩包失败", ex);
         }
     }
 
@@ -621,69 +676,6 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
             throw new IllegalStateException("解析 MinerU 结果压缩包失败", ex);
         }
         return new ZipDocumentPayload(markdown, contentListJson);
-    }
-
-    private AiDocumentTreeNodeVo buildMineruTree() {
-        AiDocumentTreeNodeVo root = createNode("doc-mineru-root", null, "document", "MinerU 工作台设计稿", 0,
-                "围绕文档解析、结构树画布和节点问答展开。", """
-                        # MinerU 工作台设计稿
-
-                        目标是构建一个以文档结构树为中心的全屏画布工作区。
-                        """, true);
-
-        AiDocumentTreeNodeVo overview = createNode("doc-mineru-overview", root.getId(), "section", "整体目标", 1,
-                "解释为什么采用全屏画布，而不是传统双栏阅读器。", """
-                        ## 整体目标
-
-                        使用全屏 Vue Flow 画布承载文档结构，而不是将文档任务做成 PDF + Markdown 双栏工具。
-                        """, true);
-        overview.getSourceAnchors().add(anchor(1, List.of(0.12, 0.08, 0.84, 0.24), "使用全屏画布承载文档结构"));
-
-        AiDocumentTreeNodeVo interaction = createNode("doc-mineru-interaction", root.getId(), "section", "交互原则", 1,
-                "节点展开、虚线选中、查看原文和对话附着节点。", """
-                        ## 交互原则
-
-                        节点默认按层级逐步展开，选中后显示虚线边框与节点操作。
-                        """, true);
-        interaction.getSourceAnchors().add(anchor(2, List.of(0.1, 0.18, 0.8, 0.36), "节点默认按层级逐步展开"));
-
-        AiDocumentTreeNodeVo runtime = createNode("doc-mineru-rag", root.getId(), "section", "运行时 RAG", 1,
-                "围绕当前节点和子树构建上下文。", """
-                        ## 运行时 RAG
-
-                        第一阶段仅在当前文档内做节点级上下文拼装与问答。
-                        """, true);
-        runtime.getSourceAnchors().add(anchor(4, List.of(0.08, 0.42, 0.76, 0.58), "第一阶段仅在当前文档内做节点级上下文"));
-
-        overview.getChildren().add(createNode("doc-mineru-overview-1", overview.getId(), "subsection", "为什么不是双栏", 2,
-                "双栏布局会把上下文组织过程隐藏掉。", """
-                        ### 为什么不是双栏
-
-                        双栏布局会让文档理解过程继续停留在隐式状态，不利于展示节点关系和引用链路。
-                        """, false));
-
-        interaction.getChildren().add(createNode("doc-mineru-interaction-1", interaction.getId(), "subsection", "节点操作", 2,
-                "选中后显示对话与查看原文。", """
-                        ### 节点操作
-
-                        选中节点后，底部出现 `对话` 与 `查看原文` 两个主操作。
-                        """, false));
-        interaction.getChildren().add(createNode("doc-mineru-interaction-2", interaction.getId(), "subsection", "附着节点", 2,
-                "原文预览和对话应该作为附着节点挂在主树旁边。", """
-                        ### 附着节点
-
-                        原文预览节点与对话节点是附着节点，不直接混入主结构树。
-                        """, false));
-
-        runtime.getChildren().add(createNode("doc-mineru-rag-1", runtime.getId(), "subsection", "上下文来源", 2,
-                "当前节点、当前子树、显式选中和隐式召回。", """
-                        ### 上下文来源
-
-                        上下文由当前节点、当前子树、用户显式选中节点与隐式召回节点共同组成。
-                        """, false));
-
-        root.getChildren().addAll(List.of(overview, interaction, runtime));
-        return root;
     }
 
     private AiDocumentTreeNodeVo createNode(String id, String parentId, String type, String title, Integer level,
@@ -1172,12 +1164,50 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         return StringUtils.hasText(value) ? value.trim() : fallback;
     }
 
-    private boolean shouldSyncRemoteResult(DocumentTaskAggregate aggregate) {
-        String status = safeText(aggregate.detail().getStatus(), "").toUpperCase(Locale.ROOT);
-        if ("SUBMITTED".equals(status) || "PROCESSING".equals(status)) {
-            return true;
+    private void validateMineruSourceUrl(String sourceUrl) {
+        try {
+            URI uri = URI.create(sourceUrl.trim());
+            String scheme = safeText(uri.getScheme(), "").toLowerCase(Locale.ROOT);
+            String host = safeText(uri.getHost(), "").toLowerCase(Locale.ROOT);
+            if (!"http".equals(scheme) && !"https".equals(scheme)) {
+                throw new IllegalStateException("MinerU 仅支持公网 http/https 文件 URL");
+            }
+            if (!StringUtils.hasText(host) || "localhost".equals(host) || "127.0.0.1".equals(host) || "::1".equals(host)) {
+                throw new IllegalStateException("MinerU 仅支持公网可访问的文件 URL，当前文件地址不可被官方服务访问");
+            }
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalStateException("MinerU 仅支持有效的公网文件 URL");
         }
-        return "PARSED".equals(status) && !hasMaterializedParseResult(aggregate);
+    }
+
+    private void verifyCallbackSignature(AiProperties.Mineru mineru, String checksum, String content) {
+        String uid = safeText(mineru.getCallbackUid(), null);
+        String seed = safeText(mineru.getCallbackSeed(), null);
+        if (!StringUtils.hasText(uid) || !StringUtils.hasText(seed)) {
+            log.warn("MinerU callback 验签配置不完整，已跳过 checksum 校验");
+            return;
+        }
+        if (!StringUtils.hasText(checksum)) {
+            throw new IllegalStateException("callback checksum 不能为空");
+        }
+        String expected = sha256Hex(uid + seed + content);
+        if (!expected.equalsIgnoreCase(checksum.trim())) {
+            throw new IllegalStateException("callback checksum 校验失败");
+        }
+    }
+
+    private String sha256Hex(String raw) {
+        try {
+            MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+            byte[] digest = messageDigest.digest(raw.getBytes(StandardCharsets.UTF_8));
+            StringBuilder builder = new StringBuilder(digest.length * 2);
+            for (byte value : digest) {
+                builder.append(String.format("%02x", value));
+            }
+            return builder.toString();
+        } catch (Exception ex) {
+            throw new IllegalStateException("计算 callback checksum 失败", ex);
+        }
     }
 
     private boolean hasMaterializedParseResult(DocumentTaskAggregate aggregate) {
@@ -1210,10 +1240,6 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         String normalized = markdown.trim();
         return !normalized.contains("当前任务已创建，等待接入真实解析结果")
                 && !normalized.contains("文档已提交至 MinerU，当前等待异步解析完成");
-    }
-
-    private boolean isDocumentPollingEnabled() {
-        return !environment.acceptsProfiles(Profiles.of("prod"));
     }
 
     private String[] path(String... segments) {
@@ -1259,7 +1285,6 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
             case "SUCCESS", "SUCCEEDED", "DONE", "COMPLETED", "FINISHED", "PARSED" -> "PARSED";
             case "FAILED", "ERROR", "CANCELED", "CANCELLED" -> "FAILED";
             case "PENDING", "QUEUED", "CREATED", "SUBMITTED" -> "SUBMITTED";
-            case "RUNNING", "PROCESSING", "EXTRACTING" -> "PROCESSING";
             default -> "PROCESSING";
         };
     }
@@ -1373,5 +1398,11 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
     }
 
     private record ZipDocumentPayload(String markdown, String contentListJson) {
+    }
+
+    private record MockFixturePayload(String markdown,
+                                      String contentListJson,
+                                      String rawPayloadJson,
+                                      int pageCount) {
     }
 }

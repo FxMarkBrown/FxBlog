@@ -133,7 +133,7 @@ public class AiArticleToolServiceImpl implements AiArticleToolService {
             if (item == null || item.getArticleId() == null) {
                 continue;
             }
-            Long articleId = item.getArticleId().longValue();
+            Long articleId = item.getArticleId();
             if (!seenArticleIds.add(articleId)) {
                 continue;
             }

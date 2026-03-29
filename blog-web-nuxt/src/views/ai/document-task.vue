@@ -45,8 +45,6 @@ type CanvasNodeData = {
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-const runtimeConfig = useRuntimeConfig()
-const documentTaskPollingEnabled = Boolean(runtimeConfig.public.documentTaskPollingEnabled)
 
 const taskId = computed(() => Number(route.params.taskId || 0))
 const loading = ref(false)
@@ -62,7 +60,6 @@ const flowRef = ref<InstanceType<typeof VueFlow> | null>(null)
 
 const visibleNodes = ref<Node<CanvasNodeData>[]>([])
 const visibleEdges = ref<Edge[]>([])
-let taskPollTimer: ReturnType<typeof setTimeout> | null = null
 
 const nodeTypes = {
   documentNode: DocumentCanvasNode
@@ -75,36 +72,6 @@ watch(
   },
   { deep: true }
 )
-
-function clearTaskPoll() {
-  if (taskPollTimer) {
-    clearTimeout(taskPollTimer)
-    taskPollTimer = null
-  }
-}
-
-function hasPlaceholderTree() {
-  const firstChild = parseResult.value?.root?.children?.[0]
-  return String(firstChild?.title || '') === '待解析结构'
-}
-
-function isTaskPending(status?: string) {
-  const normalized = String(status || '').toUpperCase()
-  return normalized === 'SUBMITTED' || normalized === 'PROCESSING'
-}
-
-function queueTaskPoll() {
-  clearTaskPoll()
-  if (!documentTaskPollingEnabled) {
-    return
-  }
-  if (!isTaskPending(taskDetail.value?.status) && !hasPlaceholderTree()) {
-    return
-  }
-  taskPollTimer = setTimeout(() => {
-    void loadTask(true)
-  }, 4000)
-}
 
 async function loadTask(silent = false) {
   if (!taskId.value) {
@@ -131,14 +98,11 @@ async function loadTask(silent = false) {
       selectedOutlineNodeId.value = rootNodeId
     }
 
-    queueTaskPoll()
-
     if (!silent) {
       await nextTick()
       fitCanvas()
     }
   } catch (error) {
-    clearTaskPoll()
     ElMessage.error((error as Error)?.message || '文档任务加载失败')
   } finally {
     if (!silent) {
@@ -236,7 +200,7 @@ function rebuildCanvas() {
   layoutTreeNode(root, 0, 0, result)
 
   result.nodes = result.nodes.map((node) => {
-    if (node.data.kind === 'outline') {
+    if (node.data?.kind === 'outline') {
       return {
         ...node,
         selected: node.id === selectedOutlineNodeId.value
@@ -552,10 +516,6 @@ onMounted(() => {
 
   void loadTask()
 })
-
-onBeforeUnmount(() => {
-  clearTaskPoll()
-})
 </script>
 
 <template>
@@ -577,6 +537,10 @@ onBeforeUnmount(() => {
           <span>状态：{{ taskDetail?.status || 'LOADING' }}</span>
           <span>页数：{{ taskDetail?.pageCount || 0 }}</span>
         </div>
+        <button type="button" class="toolbar-btn secondary" @click="loadTask()">
+          <i class="fas fa-rotate-right"></i>
+          <span>刷新结果</span>
+        </button>
         <button type="button" class="toolbar-btn" @click="fitCanvas">
           <i class="fas fa-expand"></i>
           <span>重新聚焦</span>

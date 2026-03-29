@@ -20,11 +20,13 @@ public interface AiDocumentTaskService {
 
     AiDocumentTaskDetailVo createTask(AiDocumentTaskCreateDto createDto);
 
+    AiDocumentTaskDetailVo createLocalMockTask(AiDocumentTaskCreateDto createDto);
+
     AiDocumentTaskDetailVo renameTask(Long taskId, AiDocumentTaskRenameDto renameDto);
 
     void deleteTask(Long taskId);
 
-    void syncPendingTasks();
+    void handleMineruCallback(String checksum, String content);
 
     AiDocumentNodeAnswerVo askNode(Long taskId, String nodeId, AiDocumentNodeAskDto askDto);
 }
