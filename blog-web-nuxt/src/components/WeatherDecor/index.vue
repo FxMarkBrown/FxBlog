@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { getWeatherEffectApi } from '@/api/site'
-import { createWeatherEngine } from '@/components/WeatherDecor/engine'
-import { unwrapResponseData } from '@/utils/response'
+import {getWeatherEffectApi} from '@/api/site'
+import {createWeatherEngine} from '@/components/WeatherDecor/engine'
+import {unwrapResponseData} from '@/utils/response'
 import {
   DEFAULT_WEATHER_EFFECT,
-  type WeatherEffect,
-  type WeatherRenderProfile,
   normalizeWeatherEffect,
   resolveRefreshMinutes,
-  resolveRenderProfile
+  resolveRenderProfile,
+  type WeatherEffect,
+  type WeatherRenderProfile
 } from '@/components/WeatherDecor/useWeatherDecor'
 
 const route = useRoute()

@@ -1,9 +1,9 @@
 package top.fxmarkbrown.blog.vo.feedback;
 
-import top.fxmarkbrown.blog.entity.SysFeedback;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import top.fxmarkbrown.blog.entity.SysFeedback;
 
 @Data
 @EqualsAndHashCode(callSuper = true)

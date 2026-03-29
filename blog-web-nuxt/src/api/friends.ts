@@ -1,5 +1,5 @@
-import type { ApiResponse } from '@/types/common'
-import type { FriendApplyPayload, FriendItem } from '@/types/article'
+import type {ApiResponse} from '@/types/common'
+import type {FriendApplyPayload, FriendItem} from '@/types/article'
 
 // 获取友链列表
 export function getFriendsApi() {

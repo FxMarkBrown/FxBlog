@@ -1,8 +1,8 @@
 package top.fxmarkbrown.blog.utils;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 import top.fxmarkbrown.blog.entity.SysJob;
-import org.apache.commons.lang3.StringUtils;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;

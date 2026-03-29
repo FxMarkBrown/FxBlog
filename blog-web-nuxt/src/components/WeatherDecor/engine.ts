@@ -1,5 +1,5 @@
-import { Mesh, Program, Renderer, Triangle } from 'ogl'
-import type { WeatherParticlePreset } from './useWeatherDecor'
+import {Mesh, Program, Renderer, Triangle} from 'ogl'
+import type {WeatherParticlePreset} from './useWeatherDecor'
 
 interface WeatherScene {
   particleEnabled?: boolean

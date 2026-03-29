@@ -1,6 +1,5 @@
 package top.fxmarkbrown.blog.config;
 
-import top.fxmarkbrown.blog.common.CacheNames;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,6 +9,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+import top.fxmarkbrown.blog.common.CacheNames;
 
 import java.time.Duration;
 import java.util.LinkedHashMap;

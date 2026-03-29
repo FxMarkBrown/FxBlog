@@ -1,4 +1,4 @@
-import type { ApiResponse } from '@/types/common'
+import type {ApiResponse} from '@/types/common'
 
 // 获取字典数据。
 export function getDictDataApi(dictType: string | string[]) {

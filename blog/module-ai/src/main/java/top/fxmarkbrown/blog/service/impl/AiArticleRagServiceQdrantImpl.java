@@ -16,8 +16,8 @@ import top.fxmarkbrown.blog.config.ai.AiRagProperties;
 import top.fxmarkbrown.blog.entity.SysArticle;
 import top.fxmarkbrown.blog.model.ai.AiChunkInternalLink;
 import top.fxmarkbrown.blog.model.ai.AiChunkMediaRef;
-import top.fxmarkbrown.blog.model.ai.AiMarkdownChunk;
 import top.fxmarkbrown.blog.model.ai.AiChunkTaxonomyLink;
+import top.fxmarkbrown.blog.model.ai.AiMarkdownChunk;
 import top.fxmarkbrown.blog.service.AiArticleRagService;
 import top.fxmarkbrown.blog.service.AiMarkdownChunkService;
 import top.fxmarkbrown.blog.service.AiRerankService;
@@ -26,15 +26,9 @@ import top.fxmarkbrown.blog.utils.JsonUtil;
 import top.fxmarkbrown.blog.vo.ai.AiRetrievedChunkVo;
 
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j

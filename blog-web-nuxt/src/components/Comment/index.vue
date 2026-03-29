@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
-import { addCommentApi, getCommentsApi } from '@/api/article'
+import {ElMessage} from 'element-plus'
+import {addCommentApi, getCommentsApi} from '@/api/article'
 import EmojiPicker from '@/components/Common/EmojiPicker.vue'
-import { getBrowserInfo } from '@/utils/browser'
-import { formatTime } from '@/utils/time'
-import type { ArticleComment, ArticleCommentPayload } from '@/types/article'
-import type { PageResult } from '@/types/common'
-import { unwrapResponseData } from '@/utils/response'
+import {getBrowserInfo} from '@/utils/browser'
+import {formatTime} from '@/utils/time'
+import type {ArticleComment, ArticleCommentPayload} from '@/types/article'
+import type {PageResult} from '@/types/common'
+import {unwrapResponseData} from '@/utils/response'
 
 const props = withDefaults(defineProps<{
   articleId: string | number

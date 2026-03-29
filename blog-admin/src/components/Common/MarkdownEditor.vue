@@ -147,16 +147,16 @@
 </template>
 
 <script setup lang="ts">
-import { Link, VideoPlay } from '@element-plus/icons-vue'
-import { ElLoading, ElMessage } from 'element-plus'
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { marked } from 'marked'
-import { allToolbar, config, DropdownToolbar, MdEditor } from 'md-editor-v3'
-import type { ExposeParam, InsertParam, ToolbarNames } from 'md-editor-v3'
+import {Link, VideoPlay} from '@element-plus/icons-vue'
+import {ElLoading, ElMessage} from 'element-plus'
+import {computed, onBeforeUnmount, onMounted, ref, watch} from 'vue'
+import {marked} from 'marked'
+import type {ExposeParam, InsertParam, ToolbarNames} from 'md-editor-v3'
+import {allToolbar, config, DropdownToolbar, MdEditor} from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 
-import { uploadApi } from '@/api/file'
-import { installMarkdownAlignPlugin } from '@/utils/markdownAlign'
+import {uploadApi} from '@/api/file'
+import {installMarkdownAlignPlugin} from '@/utils/markdownAlign'
 
 let markdownAlignConfigured = false
 

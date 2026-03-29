@@ -79,6 +79,10 @@ public class AiConfigurationValidator {
         }
         requireText(mineru.getBaseUrl(), "blog.ai.document.mineru.base-url 未配置");
         requireText(mineru.getApiKey(), "blog.ai.document.mineru.api-key 未配置");
+        if (StringUtils.hasText(mineru.getCallbackUrl())) {
+            requireText(mineru.getCallbackSeed(), "blog.ai.document.mineru.callback-seed 未配置");
+            requireText(mineru.getCallbackUid(), "blog.ai.document.mineru.callback-uid 未配置");
+        }
         if (mineru.getTimeoutMillis() <= 0) {
             throw new IllegalStateException("blog.ai.document.mineru.timeout-millis 必须大于 0");
         }

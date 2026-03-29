@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { onBeforeMount } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useTagsViewStore } from '@/store/modules/tagsView'
+import {onBeforeMount} from 'vue'
+import {useRoute, useRouter} from 'vue-router'
+import {useTagsViewStore} from '@/store/modules/tagsView'
 
 const route = useRoute()
 const router = useRouter()

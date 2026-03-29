@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { getThemeMode, initTheme, setThemeMode } from '@/utils/theme'
+import {getThemeMode, initTheme, setThemeMode} from '@/utils/theme'
 
 const route = useRoute()
 const router = useRouter()

@@ -1,9 +1,9 @@
 package top.fxmarkbrown.blog.vo.comment;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import top.fxmarkbrown.blog.utils.DateUtil;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import top.fxmarkbrown.blog.utils.DateUtil;
 
 import java.time.LocalDateTime;
 

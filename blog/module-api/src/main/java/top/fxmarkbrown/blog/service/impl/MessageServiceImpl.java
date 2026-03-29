@@ -1,15 +1,15 @@
 package top.fxmarkbrown.blog.service.impl;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
 import top.fxmarkbrown.blog.common.CacheNames;
 import top.fxmarkbrown.blog.entity.SysMessage;
 import top.fxmarkbrown.blog.mapper.SysMessageMapper;
 import top.fxmarkbrown.blog.service.MessageService;
 import top.fxmarkbrown.blog.utils.IpUtil;
 import top.fxmarkbrown.blog.utils.SensitiveUtil;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
 import java.util.List;
 

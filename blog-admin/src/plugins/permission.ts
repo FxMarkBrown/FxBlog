@@ -1,9 +1,9 @@
 import router from '@/router'
-import { usePermissionStore } from '@/store/modules/permission'
-import { useUserStore, useSettingsStore } from '@/store'
+import {usePermissionStore} from '@/store/modules/permission'
+import {useSettingsStore, useUserStore} from '@/store'
 import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'
-import { getToken, setToken } from '@/utils/auth'
+import {getToken, setToken} from '@/utils/auth'
 
 NProgress.configure({ showSpinner: false })
 

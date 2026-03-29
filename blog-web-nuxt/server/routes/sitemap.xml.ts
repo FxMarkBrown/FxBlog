@@ -1,5 +1,5 @@
-import type { AlbumSummary, ArticleSummary } from '@/types/article'
-import type { ApiResponse, PageResult } from '@/types/common'
+import type {AlbumSummary, ArticleSummary} from '@/types/article'
+import type {ApiResponse, PageResult} from '@/types/common'
 
 type SitemapEntry = {
   loc: string

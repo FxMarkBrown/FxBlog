@@ -164,19 +164,17 @@
 </template>
 
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from 'element-plus'
-import type { FormInstance, FormRules } from 'element-plus'
+import type {FormInstance, FormRules} from 'element-plus'
+import {ElMessage, ElMessageBox} from 'element-plus'
 import {
-  getRoleListApi,
   createRoleApi,
-  updateRoleApi,
   deleteRoleApi,
+  getRoleListApi,
   getRoleMenusApi,
+  updateRoleApi,
   updateRoleMenusApi
 } from '@/api/system/role'
-import {
-  getMenuListApi
-} from '@/api/system/menu'
+import {getMenuListApi} from '@/api/system/menu'
 import ButtonGroup from '@/components/ButtonGroup/index.vue'
 
 // 查询参数

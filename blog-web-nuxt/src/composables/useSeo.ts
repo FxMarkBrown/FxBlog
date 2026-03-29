@@ -1,5 +1,5 @@
-import { computed, toValue } from 'vue'
-import type { MaybeRefOrGetter } from 'vue'
+import type {MaybeRefOrGetter} from 'vue'
+import {computed, toValue} from 'vue'
 
 interface UsePageSeoOptions {
   title: MaybeRefOrGetter<string>

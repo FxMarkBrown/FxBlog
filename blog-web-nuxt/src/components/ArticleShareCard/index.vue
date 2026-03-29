@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
+import {ElMessage} from 'element-plus'
 import QRCode from 'qrcode'
-import type { ArticleDetail } from '@/types/article'
+import type {ArticleDetail} from '@/types/article'
 
 const CARD_WIDTH = 900
 const CARD_HEIGHT = 1320

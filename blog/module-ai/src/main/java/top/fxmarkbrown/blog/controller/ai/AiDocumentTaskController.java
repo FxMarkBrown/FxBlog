@@ -1,31 +1,20 @@
 package top.fxmarkbrown.blog.controller.ai;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import top.fxmarkbrown.blog.common.Result;
 import top.fxmarkbrown.blog.dto.ai.AiDocumentNodeAskDto;
 import top.fxmarkbrown.blog.dto.ai.AiDocumentTaskCreateDto;
 import top.fxmarkbrown.blog.dto.ai.AiDocumentTaskRenameDto;
 import top.fxmarkbrown.blog.service.AiDocumentTaskService;
-import top.fxmarkbrown.blog.vo.ai.AiDocumentNodeMessageVo;
-import top.fxmarkbrown.blog.vo.ai.AiDocumentNodeThreadVo;
-import top.fxmarkbrown.blog.vo.ai.AiDocumentParseResultVo;
-import top.fxmarkbrown.blog.vo.ai.AiDocumentTaskDetailVo;
-import top.fxmarkbrown.blog.vo.ai.AiDocumentTaskListVo;
+import top.fxmarkbrown.blog.vo.ai.*;
 
 import java.util.List;
 

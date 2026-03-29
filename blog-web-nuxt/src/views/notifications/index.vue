@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from 'element-plus'
+import {ElMessage, ElMessageBox} from 'element-plus'
 import {
   deleteNotificationApi,
   getNotificationsApi,
@@ -7,10 +7,10 @@ import {
   markAllNotificationsAsReadApi,
   markNotificationAsReadApi
 } from '@/api/message'
-import { useNoIndexSeo } from '@/composables/useSeo'
-import type { NotificationItem } from '@/types/article'
-import { formatTime } from '@/utils/time'
-import { unwrapResponseData } from '@/utils/response'
+import {useNoIndexSeo} from '@/composables/useSeo'
+import type {NotificationItem} from '@/types/article'
+import {formatTime} from '@/utils/time'
+import {unwrapResponseData} from '@/utils/response'
 
 interface NotificationCategory {
   type: string

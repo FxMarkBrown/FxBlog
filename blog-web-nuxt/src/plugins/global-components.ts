@@ -1,7 +1,7 @@
 import EmojiPicker from '@/components/Common/EmojiPicker.vue'
 import ImagePreview from '@/components/Common/ImagePreview.vue'
 import SvgIcon from '@/components/SvgIcon/index.vue'
-import { animateOnScroll } from '@/directives/animate'
+import {animateOnScroll} from '@/directives/animate'
 import ClickOutside from '@/directives/clickOutside'
 
 export default defineNuxtPlugin((nuxtApp) => {

@@ -82,11 +82,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
-import { useRouter } from 'vue-router'
-import { Search, ArrowRight } from '@element-plus/icons-vue'
-import { useSettingsStore } from '@/store/modules/settings'
-import { usePermissionStore } from '@/store/modules/permission'
+import {nextTick, onBeforeUnmount, onMounted, ref, watch} from 'vue'
+import {useRouter} from 'vue-router'
+import {ArrowRight, Search} from '@element-plus/icons-vue'
+import {useSettingsStore} from '@/store/modules/settings'
+import {usePermissionStore} from '@/store/modules/permission'
 
 const router = useRouter()
 const settingsStore = useSettingsStore()

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import 'md-editor-v3/lib/style.css'
-import { Handle, Position, type NodeProps } from '@vue-flow/core'
+import {Handle, type NodeProps, Position} from '@vue-flow/core'
 
 const MdPreview = defineAsyncComponent(() => import('md-editor-v3').then((module) => module.MdPreview))
 

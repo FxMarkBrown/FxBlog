@@ -1,15 +1,15 @@
 package top.fxmarkbrown.blog.quartz;
 
-import top.fxmarkbrown.blog.common.Constants;
-import top.fxmarkbrown.blog.entity.SysJob;
-import top.fxmarkbrown.blog.entity.SysJobLog;
-import top.fxmarkbrown.blog.mapper.SysJobLogMapper;
-import top.fxmarkbrown.blog.utils.SpringUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.quartz.JobExecutionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
+import top.fxmarkbrown.blog.common.Constants;
+import top.fxmarkbrown.blog.entity.SysJob;
+import top.fxmarkbrown.blog.entity.SysJobLog;
+import top.fxmarkbrown.blog.mapper.SysJobLogMapper;
+import top.fxmarkbrown.blog.utils.SpringUtil;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;

@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ElLoading, ElMessage } from 'element-plus'
-import { defineAsyncComponent } from 'vue'
-import { marked } from 'marked'
-import { allToolbar, DropdownToolbar } from 'md-editor-v3'
-import type { ToolbarNames } from 'md-editor-v3'
+import {ElLoading, ElMessage} from 'element-plus'
+import {defineAsyncComponent} from 'vue'
+import {marked} from 'marked'
+import type {ToolbarNames} from 'md-editor-v3'
+import {allToolbar, DropdownToolbar} from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
-import { uploadFileApi } from '@/api/file'
-import { unwrapResponseData } from '@/utils/response'
+import {uploadFileApi} from '@/api/file'
+import {unwrapResponseData} from '@/utils/response'
 
 interface MarkdownEditorProps {
   modelValue?: string

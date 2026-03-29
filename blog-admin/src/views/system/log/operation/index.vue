@@ -152,11 +152,8 @@
 </template>
 
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from 'element-plus'
-import {
-  getOperationLogsApi,
-  deleteOperationLogsApi,
-} from '@/api/system/operLog'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {deleteOperationLogsApi, getOperationLogsApi,} from '@/api/system/operLog'
 import {Delete, Refresh, Search} from "@element-plus/icons-vue";
 
 const loading = ref(false)

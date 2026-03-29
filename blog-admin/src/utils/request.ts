@@ -1,7 +1,7 @@
 import axios from 'axios'
-import { ElMessage } from 'element-plus'
-import { getToken } from '@/utils/auth'
-import { useUserStore } from '@/store/modules/user'
+import {ElMessage} from 'element-plus'
+import {getToken} from '@/utils/auth'
+import {useUserStore} from '@/store/modules/user'
 
 
 const service = axios.create({

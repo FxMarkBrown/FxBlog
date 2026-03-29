@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import ImagePreview from '@/components/Common/ImagePreview.vue'
-import { usePageSeo } from '@/composables/useSeo'
+import {usePageSeo} from '@/composables/useSeo'
 
 interface PreviewHandlerItem {
   image: HTMLImageElement

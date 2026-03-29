@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { getArticlesApi } from '@/api/article'
-import { getTagsApi } from '@/api/tags'
+import {getArticlesApi} from '@/api/article'
+import {getTagsApi} from '@/api/tags'
 import ArticleList from '@/components/ArticleList/index.vue'
 import Sidebar from '@/components/Sidebar/index.vue'
-import { usePageSeo } from '@/composables/useSeo'
-import type { ArticleSummary, TagSummary } from '@/types/article'
-import type { PageResult } from '@/types/common'
-import { unwrapResponseData } from '@/utils/response'
+import {usePageSeo} from '@/composables/useSeo'
+import type {ArticleSummary, TagSummary} from '@/types/article'
+import type {PageResult} from '@/types/common'
+import {unwrapResponseData} from '@/utils/response'
 
 const route = useRoute()
 const router = useRouter()

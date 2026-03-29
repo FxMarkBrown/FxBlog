@@ -118,19 +118,17 @@
 </template>
 
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from 'element-plus'
+import type {FormInstance, FormRules} from 'element-plus'
+import {ElMessage, ElMessageBox} from 'element-plus'
 import {
-    listSysFeedbackApi,
-    detailSysFeedbackApi,
-    deleteSysFeedbackApi,
-    addSysFeedbackApi,
-    updateSysFeedbackApi
+  addSysFeedbackApi,
+  deleteSysFeedbackApi,
+  detailSysFeedbackApi,
+  listSysFeedbackApi,
+  updateSysFeedbackApi
 } from '@/api/message/feedback'
 
-import {
-    getDictDataByDictTypesApi
-} from '@/api/system/dict'
-import type { FormInstance, FormRules } from 'element-plus'
+import {getDictDataByDictTypesApi} from '@/api/system/dict'
 
 // 遮罩层
 const loading = ref(true)

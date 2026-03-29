@@ -1,4 +1,4 @@
-import type { ApiResponse } from '@/types/common'
+import type {ApiResponse} from '@/types/common'
 
 export function unwrapResponseData<T>(response: ApiResponse<T> | T): T {
   if (response && typeof response === 'object' && 'data' in response) {

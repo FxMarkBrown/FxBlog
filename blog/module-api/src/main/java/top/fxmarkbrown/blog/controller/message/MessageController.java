@@ -1,13 +1,13 @@
 package top.fxmarkbrown.blog.controller.message;
 
-import top.fxmarkbrown.blog.annotation.AccessLimit;
-import top.fxmarkbrown.blog.common.Result;
-import top.fxmarkbrown.blog.entity.SysMessage;
-import top.fxmarkbrown.blog.service.MessageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import top.fxmarkbrown.blog.annotation.AccessLimit;
+import top.fxmarkbrown.blog.common.Result;
+import top.fxmarkbrown.blog.entity.SysMessage;
+import top.fxmarkbrown.blog.service.MessageService;
 
 import java.util.List;
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
-import { getThemeMode, setThemeMode } from '@/utils/theme'
+import {ElMessage} from 'element-plus'
+import {getThemeMode, setThemeMode} from '@/utils/theme'
 
 const router = useRouter()
 const visible = ref(false)

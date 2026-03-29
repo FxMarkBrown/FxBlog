@@ -29,11 +29,12 @@
 </template>
 
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
-import type { UploadProps, UploadUserFile } from 'element-plus'
-import { getToken } from '@/utils/auth'
-import { deleteFileApi } from '@/api/file'
+import type {UploadProps, UploadUserFile} from 'element-plus'
+import {ElMessage} from 'element-plus'
+import {Plus} from '@element-plus/icons-vue'
+import {getToken} from '@/utils/auth'
+import {deleteFileApi} from '@/api/file'
+
 const props = defineProps({
   modelValue: {
     type: [String, Array],

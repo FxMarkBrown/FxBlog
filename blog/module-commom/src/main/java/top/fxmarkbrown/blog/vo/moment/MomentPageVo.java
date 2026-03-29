@@ -1,8 +1,8 @@
 package top.fxmarkbrown.blog.vo.moment;
 
-import top.fxmarkbrown.blog.entity.SysMoment;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import top.fxmarkbrown.blog.entity.SysMoment;
 
 @Data
 @EqualsAndHashCode(callSuper = true)

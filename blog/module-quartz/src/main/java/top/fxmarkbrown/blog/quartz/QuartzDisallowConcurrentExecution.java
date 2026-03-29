@@ -1,8 +1,8 @@
 package top.fxmarkbrown.blog.quartz;
 
+import org.quartz.JobExecutionContext;
 import top.fxmarkbrown.blog.entity.SysJob;
 import top.fxmarkbrown.blog.utils.JobInvokeUtils;
-import org.quartz.JobExecutionContext;
 
 public class QuartzDisallowConcurrentExecution extends AbstractQuartzJob {
     @Override

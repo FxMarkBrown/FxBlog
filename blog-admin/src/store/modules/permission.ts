@@ -1,10 +1,11 @@
-import type { RouteRecordRaw } from "vue-router";
-import { constantRoutes } from "@/router";
-import { getRouters } from "@/api/system/auth";
-import { defineStore } from "pinia";
-import { ref } from "vue";
-const modules = import.meta.glob("../../views/**/**.vue");
+import type {RouteRecordRaw} from "vue-router";
+import {constantRoutes} from "@/router";
+import {getRouters} from "@/api/system/auth";
+import {defineStore} from "pinia";
+import {ref} from "vue";
 import ParentView from '@/components/ParentView/index.vue'
+
+const modules = import.meta.glob("../../views/**/**.vue");
 
 const Layout = () => import("@/layouts/index.vue");
 

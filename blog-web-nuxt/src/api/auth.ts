@@ -1,5 +1,5 @@
-import type { LoginUserInfo } from '@/types/auth'
-import type { ApiResponse } from '@/types/common'
+import type {LoginUserInfo} from '@/types/auth'
+import type {ApiResponse} from '@/types/common'
 
 // 登录
 export function loginApi(data: Record<string, unknown>) {

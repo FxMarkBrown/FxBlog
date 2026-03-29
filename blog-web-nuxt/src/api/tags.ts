@@ -1,5 +1,5 @@
-import type { ApiResponse } from '@/types/common'
-import type { TagSummary } from '@/types/article'
+import type {ApiResponse} from '@/types/common'
+import type {TagSummary} from '@/types/article'
 
 // 获取标签列表
 export function getTagsApi() {

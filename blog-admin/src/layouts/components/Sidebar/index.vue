@@ -23,14 +23,14 @@
   </template>
   
   <script setup lang="ts">
-  import { computed } from 'vue'
-  import { useRoute, useRouter } from 'vue-router'
-  import { ElMessage } from 'element-plus'
-  import { usePermissionStore } from '@/store/modules/permission'
-  import { useSettingsStore } from '@/store/modules/settings'
-  import { isExternal } from '@/utils/validate'
+  import {computed} from 'vue'
+  import {useRoute, useRouter} from 'vue-router'
+  import {ElMessage} from 'element-plus'
+  import {usePermissionStore} from '@/store/modules/permission'
+  import {useSettingsStore} from '@/store/modules/settings'
+  import {isExternal} from '@/utils/validate'
   import MenuItem from './MenuItem.vue'
-  
+
   const route = useRoute()
   const permissionStore = usePermissionStore()
   const settingsStore = useSettingsStore()

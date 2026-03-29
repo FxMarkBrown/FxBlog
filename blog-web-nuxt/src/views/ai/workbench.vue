@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useNoIndexSeo } from '@/composables/useSeo'
+import {useNoIndexSeo} from '@/composables/useSeo'
 
 const runtimeConfig = useRuntimeConfig()
 const authStore = useAuthStore()

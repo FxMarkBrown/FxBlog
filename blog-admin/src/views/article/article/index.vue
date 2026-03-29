@@ -311,18 +311,22 @@
 </template>
 
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from 'element-plus'
-import type { FormInstance, FormRules } from 'element-plus'
+import type {FormInstance, FormRules} from 'element-plus'
+import {ElMessage, ElMessageBox} from 'element-plus'
 import dayjs from 'dayjs'
 import UploadImage from '@/components/Upload/Image.vue'
 import MarkdownEditor from '@/components/Common/MarkdownEditor.vue'
-import { getCategoryListApi } from '@/api/article/category'
-import { getTagListApi } from '@/api/article/tag'
+import {getCategoryListApi} from '@/api/article/category'
+import {getTagListApi} from '@/api/article/tag'
 import {
-  getArticleListApi, getDetailApi, deleteArticleApi,
-  addArticleApi, updateArticleApi, updateStatusApi
+  addArticleApi,
+  deleteArticleApi,
+  getArticleListApi,
+  getDetailApi,
+  updateArticleApi,
+  updateStatusApi
 } from '@/api/article'
-import { getDictDataByDictTypesApi } from '@/api/system/dict'
+import {getDictDataByDictTypesApi} from '@/api/system/dict'
 
 // 模拟数据
 const categoryOptions = ref<any>([])

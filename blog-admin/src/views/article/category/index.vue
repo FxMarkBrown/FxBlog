@@ -130,16 +130,11 @@
   </template>
   
   <script setup lang="ts">
-  import { ElMessage, ElMessageBox } from 'element-plus'
-  import type { FormInstance, FormRules } from 'element-plus'
-  import {
-    getCategoryListApi,
-    addCategoryApi,
-    updateCategoryApi,
-    deleteCategoryApi
-  } from '@/api/article/category'
+  import type {FormInstance, FormRules} from 'element-plus'
+  import {ElMessage, ElMessageBox} from 'element-plus'
+  import {addCategoryApi, deleteCategoryApi, getCategoryListApi, updateCategoryApi} from '@/api/article/category'
 
-  
+
   // 查询参数
   const queryParams = reactive({
     pageNum: 1,

@@ -1,4 +1,4 @@
-import type { App } from "vue";
+import type {App} from "vue";
 import * as ElementPlusIconsVue from "@element-plus/icons-vue";
 
 // 注册所有图标

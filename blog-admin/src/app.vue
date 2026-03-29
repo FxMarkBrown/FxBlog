@@ -5,9 +5,9 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { useSettingsStore } from '@/store/modules/settings'
-import { initTheme } from '@/utils/theme'
+import {onMounted} from 'vue'
+import {useSettingsStore} from '@/store/modules/settings'
+import {initTheme} from '@/utils/theme'
 
 const settingsStore = useSettingsStore()
 

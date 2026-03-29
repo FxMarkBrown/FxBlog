@@ -120,16 +120,11 @@
 </template>
 
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from 'element-plus'
-import {
-    listSysNoticeApi,
-    deleteSysNoticeApi,
-    addSysNoticeApi,
-    updateSysNoticeApi
-} from '@/api/site/notice'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {addSysNoticeApi, deleteSysNoticeApi, listSysNoticeApi, updateSysNoticeApi} from '@/api/site/notice'
 
-import { getDictDataByDictTypesApi } from '@/api/system/dict'
-import { Editor, Toolbar } from '@wangeditor-next/editor-for-vue'
+import {getDictDataByDictTypesApi} from '@/api/system/dict'
+import {Editor, Toolbar} from '@wangeditor-next/editor-for-vue'
 import '@wangeditor-next/editor/dist/css/style.css'
 
 const editorRef = shallowRef()

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import NotFoundView from '@/views/404/index.vue'
-import { useNoIndexSeo } from '@/composables/useSeo'
+import {useNoIndexSeo} from '@/composables/useSeo'
 
 definePageMeta({
   hideAnnouncement: true

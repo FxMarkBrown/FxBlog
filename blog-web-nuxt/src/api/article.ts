@@ -1,5 +1,12 @@
-import type { ApiResponse, PageResult } from '@/types/common'
-import type { ArchiveGroup, ArticleCategoryGroup, ArticleComment, ArticleCommentPayload, ArticleDetail, ArticleSummary } from '@/types/article'
+import type {ApiResponse, PageResult} from '@/types/common'
+import type {
+    ArchiveGroup,
+    ArticleCategoryGroup,
+    ArticleComment,
+    ArticleCommentPayload,
+    ArticleDetail,
+    ArticleSummary
+} from '@/types/article'
 
 // 获取文章详情
 export function getArticleDetailApi(id: number | string) {

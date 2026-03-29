@@ -1,4 +1,4 @@
-import type { ApiResponse, PageResult } from '@/types/common'
+import type {ApiResponse, PageResult} from '@/types/common'
 import type {
   DocumentNodeMessage,
   DocumentNodeThread,
@@ -6,7 +6,7 @@ import type {
   DocumentTaskDetail,
   DocumentTaskListItem
 } from '@/types/ai-document'
-import { getToken } from '@/utils/cookie'
+import {getToken} from '@/utils/cookie'
 
 export function getDocumentTaskListApi() {
   return useApiClient()<ApiResponse<DocumentTaskListItem[]>>('/api/ai/document/tasks')

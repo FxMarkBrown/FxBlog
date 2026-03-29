@@ -6,6 +6,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import top.fxmarkbrown.blog.common.Constants;
 import top.fxmarkbrown.blog.common.RedisConstants;
 import top.fxmarkbrown.blog.dto.user.SysUserAddAndUpdateDto;
@@ -14,9 +18,9 @@ import top.fxmarkbrown.blog.entity.SysArticle;
 import top.fxmarkbrown.blog.entity.SysComment;
 import top.fxmarkbrown.blog.entity.SysUser;
 import top.fxmarkbrown.blog.exception.ServiceException;
-import top.fxmarkbrown.blog.mapper.SysRoleMapper;
 import top.fxmarkbrown.blog.mapper.SysArticleMapper;
 import top.fxmarkbrown.blog.mapper.SysCommentMapper;
+import top.fxmarkbrown.blog.mapper.SysRoleMapper;
 import top.fxmarkbrown.blog.mapper.SysUserMapper;
 import top.fxmarkbrown.blog.service.SysUserService;
 import top.fxmarkbrown.blog.utils.JsonUtil;
@@ -25,16 +29,8 @@ import top.fxmarkbrown.blog.utils.RedisUtil;
 import top.fxmarkbrown.blog.vo.user.OnlineUserVo;
 import top.fxmarkbrown.blog.vo.user.SysUserProfileVo;
 import top.fxmarkbrown.blog.vo.user.SysUserVo;
-import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor

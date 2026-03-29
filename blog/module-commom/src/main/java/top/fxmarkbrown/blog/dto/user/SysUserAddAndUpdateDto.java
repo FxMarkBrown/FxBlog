@@ -1,8 +1,8 @@
 package top.fxmarkbrown.blog.dto.user;
 
-import top.fxmarkbrown.blog.entity.SysUser;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import top.fxmarkbrown.blog.entity.SysUser;
 
 import java.util.List;
 

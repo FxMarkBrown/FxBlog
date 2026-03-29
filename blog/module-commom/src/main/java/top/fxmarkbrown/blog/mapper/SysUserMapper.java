@@ -3,10 +3,10 @@ package top.fxmarkbrown.blog.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import top.fxmarkbrown.blog.entity.SysUser;
-import top.fxmarkbrown.blog.vo.user.SysUserVo;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import top.fxmarkbrown.blog.entity.SysUser;
+import top.fxmarkbrown.blog.vo.user.SysUserVo;
 
 @Mapper
 public interface SysUserMapper extends BaseMapper<SysUser> {

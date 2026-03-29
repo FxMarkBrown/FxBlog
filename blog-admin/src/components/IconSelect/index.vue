@@ -39,9 +39,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import {computed, ref} from 'vue'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
-import { Search } from '@element-plus/icons-vue'
+import {Search} from '@element-plus/icons-vue'
 
 const props = defineProps<{
   modelValue: string

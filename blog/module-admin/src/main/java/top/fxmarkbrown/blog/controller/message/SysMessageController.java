@@ -2,13 +2,13 @@ package top.fxmarkbrown.blog.controller.message;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import top.fxmarkbrown.blog.common.Result;
-import top.fxmarkbrown.blog.entity.SysMessage;
-import top.fxmarkbrown.blog.service.SysMessageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import top.fxmarkbrown.blog.common.Result;
+import top.fxmarkbrown.blog.entity.SysMessage;
+import top.fxmarkbrown.blog.service.SysMessageService;
 
 import java.util.List;
 

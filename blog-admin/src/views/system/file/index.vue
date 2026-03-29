@@ -210,10 +210,20 @@
 </template>
 
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from 'element-plus'
-import type { FormInstance, FormRules, UploadRequestOptions } from 'element-plus'
-import { getFileListApi, getFileExtOptionsApi, deleteFileApi, getOssConfigApi, addOssApi, updateOssApi, uploadApi, renameFileApi, replaceFileApi } from '@/api/file'
-import { getDictDataByDictTypesApi } from '@/api/system/dict'
+import type {FormInstance, FormRules, UploadRequestOptions} from 'element-plus'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {
+  addOssApi,
+  deleteFileApi,
+  getFileExtOptionsApi,
+  getFileListApi,
+  getOssConfigApi,
+  renameFileApi,
+  replaceFileApi,
+  updateOssApi,
+  uploadApi
+} from '@/api/file'
+import {getDictDataByDictTypesApi} from '@/api/system/dict'
 
 const createDefaultOssConfigForm = () => ({
     id: undefined,

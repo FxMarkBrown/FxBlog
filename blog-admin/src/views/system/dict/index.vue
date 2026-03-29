@@ -175,14 +175,9 @@
 </template>
 
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from 'element-plus'
-import type { FormInstance } from 'element-plus'
-import {
-  getDictListApi,
-  addDictApi,
-  updateDictApi,
-  deleteDictApi
-} from '@/api/system/dict'
+import type {FormInstance} from 'element-plus'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {addDictApi, deleteDictApi, getDictListApi, updateDictApi} from '@/api/system/dict'
 import DictData from './components/DictData.vue'
 import ButtonGroup from '@/components/ButtonGroup/index.vue'
 import {Refresh, Search} from "@element-plus/icons-vue";

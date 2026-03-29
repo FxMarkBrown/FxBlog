@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { getArchivesApi } from '@/api/article'
+import {getArchivesApi} from '@/api/article'
 import Sidebar from '@/components/Sidebar/index.vue'
-import { usePageSeo } from '@/composables/useSeo'
-import type { ArchiveGroup, ArticleSummary } from '@/types/article'
-import { unwrapResponseData } from '@/utils/response'
+import {usePageSeo} from '@/composables/useSeo'
+import type {ArchiveGroup, ArticleSummary} from '@/types/article'
+import {unwrapResponseData} from '@/utils/response'
 
 const router = useRouter()
 const runtimeConfig = useRuntimeConfig()

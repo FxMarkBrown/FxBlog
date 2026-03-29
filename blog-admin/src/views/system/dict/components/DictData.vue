@@ -119,14 +119,9 @@
 </template>
 
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from 'element-plus'
-import type { FormInstance } from 'element-plus'
-import {
-  getDictDataListApi,
-  addDictDataApi,
-  updateDictDataApi,
-  deleteDictDataApi
-} from '@/api/system/dict'
+import type {FormInstance} from 'element-plus'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {addDictDataApi, deleteDictDataApi, getDictDataListApi, updateDictDataApi} from '@/api/system/dict'
 import {Delete, Edit} from "@element-plus/icons-vue";
 
 const props = defineProps<{

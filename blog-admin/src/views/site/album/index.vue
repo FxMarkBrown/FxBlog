@@ -89,10 +89,10 @@
 </template>
 
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from 'element-plus'
-import type { FormInstance, FormRules } from 'element-plus'
+import type {FormInstance, FormRules} from 'element-plus'
+import {ElMessage, ElMessageBox} from 'element-plus'
 import UploadImage from '@/components/Upload/Image.vue'
-import { listAlbumApi, addAlbumApi, updateAlbumApi, deleteAlbumApi, verifyAlbumPasswordApi } from '@/api/site/album'
+import {addAlbumApi, deleteAlbumApi, listAlbumApi, updateAlbumApi, verifyAlbumPasswordApi} from '@/api/site/album'
 import Photos from './Photos.vue'
 import {Lock} from "@element-plus/icons-vue";
 

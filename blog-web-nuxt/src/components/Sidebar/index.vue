@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
-import { getRecommendArticlesApi } from '@/api/article'
+import {ElMessage} from 'element-plus'
+import {getRecommendArticlesApi} from '@/api/article'
 import TagCloud from '@/components/Sidebar/components/tagCloud.vue'
-import { IMAGE_ERROR_PLACEHOLDER } from '@/utils/placeholders'
-import type { ArticleSummary } from '@/types/article'
-import { unwrapResponseData } from '@/utils/response'
+import {IMAGE_ERROR_PLACEHOLDER} from '@/utils/placeholders'
+import type {ArticleSummary} from '@/types/article'
+import {unwrapResponseData} from '@/utils/response'
 
 const router = useRouter()
 const siteStore = useSiteStore()

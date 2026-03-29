@@ -1,6 +1,6 @@
-import { cpSync, existsSync, mkdirSync, rmSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import {cpSync, existsSync, mkdirSync, rmSync} from 'node:fs'
+import {dirname, resolve} from 'node:path'
+import {fileURLToPath} from 'node:url'
 
 /**
  * 修复 Nuxt 3 开始就存在的打包软链接问题

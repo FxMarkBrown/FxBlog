@@ -1,4 +1,4 @@
-import type { ApiResponse, PageResult } from '@/types/common'
+import type {ApiResponse, PageResult} from '@/types/common'
 
 // 获取个人中心摘要信息。
 export function getUserProfileApi() {

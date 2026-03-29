@@ -139,7 +139,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ElMessage } from 'element-plus'
+import {ElMessage} from 'element-plus'
 import parser from 'cron-parser'
 import dayjs from 'dayjs'
 import {Document, DocumentCopy, Timer} from "@element-plus/icons-vue";

@@ -1,4 +1,4 @@
-import type { SettingsState } from '@/store/modules/settings'
+import type {SettingsState} from '@/store/modules/settings'
 
 const THEME_MODE_KEY = 'admin-theme-mode'
 const THEME_MODE_EXPIRE_KEY = 'admin-theme-mode-expire-at'

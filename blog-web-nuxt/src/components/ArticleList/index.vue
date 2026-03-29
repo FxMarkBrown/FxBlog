@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { ArticleSummary } from '@/types/article'
-import { IMAGE_ERROR_PLACEHOLDER } from '@/utils/placeholders'
+import type {ArticleSummary} from '@/types/article'
+import {IMAGE_ERROR_PLACEHOLDER} from '@/utils/placeholders'
 
 interface ArticleListProps {
   articles: ArticleSummary[]

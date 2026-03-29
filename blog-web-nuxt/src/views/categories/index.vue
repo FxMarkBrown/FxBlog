@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { getCategoriesApi } from '@/api/article'
+import {getCategoriesApi} from '@/api/article'
 import Sidebar from '@/components/Sidebar/index.vue'
-import { usePageSeo } from '@/composables/useSeo'
-import type { ArticleCategoryGroup, ArticleSummary } from '@/types/article'
-import { unwrapResponseData } from '@/utils/response'
+import {usePageSeo} from '@/composables/useSeo'
+import type {ArticleCategoryGroup} from '@/types/article'
+import {unwrapResponseData} from '@/utils/response'
 
 const router = useRouter()
 const route = useRoute()

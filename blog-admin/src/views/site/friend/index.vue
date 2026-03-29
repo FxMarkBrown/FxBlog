@@ -181,16 +181,11 @@
   </template>
   
   <script setup lang="ts">
-  import { ElMessage, ElMessageBox } from 'element-plus'
-  import type { FormInstance, FormRules } from 'element-plus'
-  import {
-    getFriendListApi,
-    addFriendApi,
-    updateFriendApi,
-    deleteFriendApi
-  } from '@/api/site/friend'
+  import type {FormInstance, FormRules} from 'element-plus'
+  import {ElMessage, ElMessageBox} from 'element-plus'
+  import {addFriendApi, deleteFriendApi, getFriendListApi, updateFriendApi} from '@/api/site/friend'
 
-  
+
   // 查询参数
   const queryParams = reactive<any>({
     pageNum: 1,

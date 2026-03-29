@@ -1,7 +1,7 @@
-import { ref } from 'vue'
-import { defineStore } from 'pinia'
-import { getUserInfoApi, logoutApi } from '@/api/system/auth'
-import { removeToken } from '@/utils/auth'
+import {ref} from 'vue'
+import {defineStore} from 'pinia'
+import {getUserInfoApi, logoutApi} from '@/api/system/auth'
+import {removeToken} from '@/utils/auth'
 
 export const useUserStore = defineStore('user', () => {
   interface UserState {

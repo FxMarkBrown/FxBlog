@@ -2,12 +2,6 @@ package top.fxmarkbrown.blog.controller;
 
 import cn.dev33.satoken.annotation.SaIgnore;
 import cn.dev33.satoken.stp.StpUtil;
-import top.fxmarkbrown.blog.common.Result;
-import top.fxmarkbrown.blog.dto.Captcha;
-import top.fxmarkbrown.blog.dto.EmailRegisterDto;
-import top.fxmarkbrown.blog.dto.LoginDTO;
-import top.fxmarkbrown.blog.dto.user.LoginUserInfo;
-import top.fxmarkbrown.blog.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.mail.MessagingException;
@@ -16,6 +10,12 @@ import lombok.RequiredArgsConstructor;
 import me.zhyd.oauth.model.AuthCallback;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import top.fxmarkbrown.blog.common.Result;
+import top.fxmarkbrown.blog.dto.Captcha;
+import top.fxmarkbrown.blog.dto.EmailRegisterDto;
+import top.fxmarkbrown.blog.dto.LoginDTO;
+import top.fxmarkbrown.blog.dto.user.LoginUserInfo;
+import top.fxmarkbrown.blog.service.AuthService;
 
 import java.io.IOException;
 

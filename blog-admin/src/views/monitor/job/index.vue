@@ -233,9 +233,17 @@
 </template>
 
 <script lang="ts" setup>
-import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { listJobApi, getJobApi, addJobApi, updateJobApi, delJobApi, changeJobStatusApi, runJobApi } from '@/api/monitor/job'
+import {useRouter} from 'vue-router'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {
+  addJobApi,
+  changeJobStatusApi,
+  delJobApi,
+  getJobApi,
+  listJobApi,
+  runJobApi,
+  updateJobApi
+} from '@/api/monitor/job'
 import CronTab from './components/CronTab.vue'
 import {QuestionFilled, Timer} from "@element-plus/icons-vue";
 

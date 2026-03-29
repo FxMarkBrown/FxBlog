@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { defineAsyncComponent } from 'vue'
-import { ElMessage } from 'element-plus'
+import {defineAsyncComponent} from 'vue'
+import {ElMessage} from 'element-plus'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/atom-one-dark.css'
 import 'md-editor-v3/lib/style.css'
-import { favoriteArticleApi, getArticleDetailApi, likeArticleApi, unlikeArticleApi } from '@/api/article'
+import {favoriteArticleApi, getArticleDetailApi, likeArticleApi, unlikeArticleApi} from '@/api/article'
 import ArticleShareCard from '@/components/ArticleShareCard/index.vue'
 import Comment from '@/components/Comment/index.vue'
 import ImagePreview from '@/components/Common/ImagePreview.vue'
-import { usePageSeo } from '@/composables/useSeo'
-import type { ArticleDetail } from '@/types/article'
-import { unwrapResponseData } from '@/utils/response'
+import {usePageSeo} from '@/composables/useSeo'
+import type {ArticleDetail} from '@/types/article'
+import {unwrapResponseData} from '@/utils/response'
 
 interface TocItem {
   id: string

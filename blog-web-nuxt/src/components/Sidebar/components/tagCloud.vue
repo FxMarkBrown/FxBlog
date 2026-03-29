@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { getTagsApi } from '@/api/tags'
-import type { TagSummary } from '@/types/article'
-import { unwrapResponseData } from '@/utils/response'
+import {getTagsApi} from '@/api/tags'
+import type {TagSummary} from '@/types/article'
+import {unwrapResponseData} from '@/utils/response'
 
 const router = useRouter()
 const data = ref<TagSummary[]>([])

@@ -1,12 +1,12 @@
 package top.fxmarkbrown.blog.controller.friend;
 
-import top.fxmarkbrown.blog.common.Result;
-import top.fxmarkbrown.blog.entity.SysFriend;
-import top.fxmarkbrown.blog.service.FriendService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import top.fxmarkbrown.blog.common.Result;
+import top.fxmarkbrown.blog.entity.SysFriend;
+import top.fxmarkbrown.blog.service.FriendService;
 
 import java.util.List;
 

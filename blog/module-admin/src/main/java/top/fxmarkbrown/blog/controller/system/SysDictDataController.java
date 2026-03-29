@@ -2,14 +2,14 @@ package top.fxmarkbrown.blog.controller.system;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import top.fxmarkbrown.blog.annotation.OperationLogger;
-import top.fxmarkbrown.blog.common.Result;
-import top.fxmarkbrown.blog.entity.SysDictData;
-import top.fxmarkbrown.blog.service.SysDictDataService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import top.fxmarkbrown.blog.annotation.OperationLogger;
+import top.fxmarkbrown.blog.common.Result;
+import top.fxmarkbrown.blog.entity.SysDictData;
+import top.fxmarkbrown.blog.service.SysDictDataService;
 
 import java.util.List;
 import java.util.Map;

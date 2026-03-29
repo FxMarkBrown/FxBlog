@@ -1,5 +1,5 @@
-import type { ApiResponse, PageResult } from '@/types/common'
-import type { MessageItem, NotificationItem } from '@/types/article'
+import type {ApiResponse, PageResult} from '@/types/common'
+import type {MessageItem, NotificationItem} from '@/types/article'
 
 // 获取留言列表
 export function getMessagesApi() {

@@ -68,8 +68,8 @@ import LockScreen from '@/components/LockScreen/index.vue'
 import Watermark from '@/components/Watermark/index.vue'
 import Footer from '@/components/Footer/index.vue'
 
-import { useSettingsStore, usePermissionStore } from "@/store";
-import { useTagsViewStore } from '@/store/modules/tagsView'
+import {useSettingsStore} from "@/store";
+import {useTagsViewStore} from '@/store/modules/tagsView'
 import {Setting} from "@element-plus/icons-vue";
 
 const settingsStore = useSettingsStore()

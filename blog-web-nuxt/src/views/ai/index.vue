@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { defineAsyncComponent } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import {defineAsyncComponent} from 'vue'
+import {ElMessage, ElMessageBox} from 'element-plus'
 import 'md-editor-v3/lib/style.css'
 import {
   createArticleConversationApi,
@@ -14,11 +14,11 @@ import {
   renameConversationApi,
   streamConversationMessageApi
 } from '@/api/ai'
-import { useNoIndexSeo } from '@/composables/useSeo'
-import { normalizeMarkdownContent } from '@/utils/ai-markdown'
-import { removeToken } from '@/utils/cookie'
-import { getThemeMode, initTheme, setThemeMode } from '@/utils/theme'
-import { unwrapResponseData } from '@/utils/response'
+import {useNoIndexSeo} from '@/composables/useSeo'
+import {normalizeMarkdownContent} from '@/utils/ai-markdown'
+import {removeToken} from '@/utils/cookie'
+import {getThemeMode, initTheme, setThemeMode} from '@/utils/theme'
+import {unwrapResponseData} from '@/utils/response'
 
 type AnyRecord = Record<string, any>
 

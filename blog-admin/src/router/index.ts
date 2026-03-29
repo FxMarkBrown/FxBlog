@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
+import {createRouter, createWebHistory, RouteRecordRaw} from "vue-router";
 
 export const Layout = () => import("@/layouts/index.vue");
 const SiteRedirect = () => import("@/views/redirect/site.vue");

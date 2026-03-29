@@ -141,8 +141,8 @@
 </template>
 
 <script lang="ts" setup>
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { getCacheInfoApi, getCacheKeyListApi, getCacheMemoryApi, clearCacheApi } from '@/api/monitor/cache'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {clearCacheApi, getCacheInfoApi, getCacheKeyListApi, getCacheMemoryApi} from '@/api/monitor/cache'
 import {Delete, Refresh, Search} from "@element-plus/icons-vue";
 
 // 数据定义

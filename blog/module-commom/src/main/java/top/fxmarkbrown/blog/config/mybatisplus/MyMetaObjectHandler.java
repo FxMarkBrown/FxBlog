@@ -2,10 +2,10 @@ package top.fxmarkbrown.blog.config.mybatisplus;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
-import top.fxmarkbrown.blog.common.Constants;
-import top.fxmarkbrown.blog.dto.user.LoginUserInfo;
 import org.apache.ibatis.reflection.MetaObject;
 import org.springframework.stereotype.Component;
+import top.fxmarkbrown.blog.common.Constants;
+import top.fxmarkbrown.blog.dto.user.LoginUserInfo;
 
 import java.time.LocalDateTime;
 

@@ -71,12 +71,9 @@
   </template>
   
   <script setup lang="ts">
-  import { ElMessage, ElMessageBox } from 'element-plus'
-  import {
-    getCommentListApi,
-    deleteCommentApi
-  } from '@/api/message/comment'
-  
+  import {ElMessage, ElMessageBox} from 'element-plus'
+  import {deleteCommentApi, getCommentListApi} from '@/api/message/comment'
+
   // 查询参数
   const queryParams = reactive({
     pageNum: 1,

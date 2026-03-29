@@ -1,11 +1,11 @@
 package top.fxmarkbrown.blog.quartz;
 
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 import top.fxmarkbrown.blog.common.RedisConstants;
 import top.fxmarkbrown.blog.entity.SysArticle;
 import top.fxmarkbrown.blog.mapper.SysArticleMapper;
 import top.fxmarkbrown.blog.utils.RedisUtil;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;

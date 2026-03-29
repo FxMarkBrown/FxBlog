@@ -3,9 +3,6 @@ package top.fxmarkbrown.blog.controller.monitor;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import top.fxmarkbrown.blog.common.Result;
-import top.fxmarkbrown.blog.service.SysUserService;
-import top.fxmarkbrown.blog.vo.user.OnlineUserVo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +10,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import top.fxmarkbrown.blog.common.Result;
+import top.fxmarkbrown.blog.service.SysUserService;
+import top.fxmarkbrown.blog.vo.user.OnlineUserVo;
 
 @RestController
 @RequiredArgsConstructor

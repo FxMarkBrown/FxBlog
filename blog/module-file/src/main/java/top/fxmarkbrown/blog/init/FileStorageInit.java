@@ -1,8 +1,5 @@
 package top.fxmarkbrown.blog.init;
 
-import top.fxmarkbrown.blog.entity.SysFileOss;
-import top.fxmarkbrown.blog.enums.FileOssEnum;
-import top.fxmarkbrown.blog.mapper.SysFileOssMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.dromara.x.file.storage.core.FileStorageProperties;
@@ -10,6 +7,9 @@ import org.dromara.x.file.storage.core.FileStorageService;
 import org.dromara.x.file.storage.core.FileStorageServiceBuilder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import top.fxmarkbrown.blog.entity.SysFileOss;
+import top.fxmarkbrown.blog.enums.FileOssEnum;
+import top.fxmarkbrown.blog.mapper.SysFileOssMapper;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;

@@ -1,13 +1,13 @@
 package top.fxmarkbrown.blog.controller.sign;
 
-import top.fxmarkbrown.blog.common.Result;
-import top.fxmarkbrown.blog.service.SignService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import top.fxmarkbrown.blog.common.Result;
+import top.fxmarkbrown.blog.service.SignService;
 
 import java.util.HashMap;
 import java.util.Map;

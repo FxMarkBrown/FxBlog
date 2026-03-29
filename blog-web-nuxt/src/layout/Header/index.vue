@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
+import {ElMessage} from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()

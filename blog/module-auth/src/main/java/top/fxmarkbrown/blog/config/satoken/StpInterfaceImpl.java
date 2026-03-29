@@ -1,12 +1,12 @@
 package top.fxmarkbrown.blog.config.satoken;
 
 import cn.dev33.satoken.stp.StpInterface;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 import top.fxmarkbrown.blog.common.Constants;
 import top.fxmarkbrown.blog.enums.MenuTypeEnum;
 import top.fxmarkbrown.blog.mapper.SysMenuMapper;
 import top.fxmarkbrown.blog.mapper.SysRoleMapper;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
 
 import java.util.List;
 

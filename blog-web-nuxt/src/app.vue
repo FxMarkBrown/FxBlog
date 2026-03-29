@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { getCookie, removeCookie } from '@/utils/cookie'
+import {getCookie, removeCookie} from '@/utils/cookie'
+import {initTheme} from '@/utils/theme'
 
 const WeatherDecor = defineAsyncComponent(() => import('@/components/WeatherDecor/index.vue'))
 const MobileMenu = defineAsyncComponent(() => import('@/layout/MobileMenu/index.vue'))
@@ -7,7 +8,6 @@ const SearchDialog = defineAsyncComponent(() => import('@/components/Search/inde
 const FloatingButtons = defineAsyncComponent(() => import('@/components/Common/FloatingButtons.vue'))
 const Lantern = defineAsyncComponent(() => import('@/components/Lanterns/index.vue'))
 const ContextMenu = defineAsyncComponent(() => import('@/components/ContextMenu/index.vue'))
-import { initTheme } from '@/utils/theme'
 
 const route = useRoute()
 const router = useRouter()

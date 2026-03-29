@@ -1,11 +1,11 @@
 package top.fxmarkbrown.blog.utils;
 
-import top.fxmarkbrown.blog.common.RedisConstants;
-import top.fxmarkbrown.blog.dto.Captcha;
-import top.fxmarkbrown.blog.exception.ServiceException;
 import org.apache.commons.lang3.RandomUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import top.fxmarkbrown.blog.common.RedisConstants;
+import top.fxmarkbrown.blog.dto.Captcha;
+import top.fxmarkbrown.blog.exception.ServiceException;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -15,7 +15,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
-import java.net.URL;
 import java.util.Base64;
 import java.util.Objects;
 import java.util.Random;

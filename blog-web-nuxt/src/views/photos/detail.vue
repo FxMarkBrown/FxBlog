@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
-import { getAlbumDetailApi, getAlbumPhotosApi, verifyAlbumPasswordApi } from '@/api/album'
+import {ElMessage} from 'element-plus'
+import {getAlbumDetailApi, getAlbumPhotosApi, verifyAlbumPasswordApi} from '@/api/album'
 import ImagePreview from '@/components/Common/ImagePreview.vue'
-import { usePageSeo } from '@/composables/useSeo'
-import type { AlbumPhoto, AlbumSummary } from '@/types/article'
-import { IMAGE_ERROR_PLACEHOLDER } from '@/utils/placeholders'
-import { unwrapResponseData } from '@/utils/response'
+import {usePageSeo} from '@/composables/useSeo'
+import type {AlbumPhoto, AlbumSummary} from '@/types/article'
+import {IMAGE_ERROR_PLACEHOLDER} from '@/utils/placeholders'
+import {unwrapResponseData} from '@/utils/response'
 import AlbumPasswordDialog from '@/views/photos/components/password.vue'
 
 type AlbumDetailState = AlbumSummary & {

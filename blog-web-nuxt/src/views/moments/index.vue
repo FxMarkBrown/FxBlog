@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { getMomentsApi } from '@/api/moments'
+import {getMomentsApi} from '@/api/moments'
 import ImagePreview from '@/components/Common/ImagePreview.vue'
-import { usePageSeo } from '@/composables/useSeo'
-import type { MomentSummary } from '@/types/article'
-import type { PageResult } from '@/types/common'
-import { IMAGE_ERROR_PLACEHOLDER } from '@/utils/placeholders'
-import { unwrapResponseData } from '@/utils/response'
-import { formatTime } from '@/utils/time'
+import {usePageSeo} from '@/composables/useSeo'
+import type {MomentSummary} from '@/types/article'
+import type {PageResult} from '@/types/common'
+import {IMAGE_ERROR_PLACEHOLDER} from '@/utils/placeholders'
+import {unwrapResponseData} from '@/utils/response'
+import {formatTime} from '@/utils/time'
 
 type MomentItem = MomentSummary & {
   id: number | string

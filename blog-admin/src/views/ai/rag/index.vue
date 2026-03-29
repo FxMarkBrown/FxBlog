@@ -71,9 +71,9 @@
 </template>
 
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { onBeforeUnmount, onMounted } from 'vue'
-import { getAiRagStatusApi, submitAiRagRebuildApi } from '@/api/ai/rag'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {onBeforeUnmount, onMounted} from 'vue'
+import {getAiRagStatusApi, submitAiRagRebuildApi} from '@/api/ai/rag'
 
 interface AiRagStatusForm {
   enabled: boolean

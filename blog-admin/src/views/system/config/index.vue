@@ -141,12 +141,12 @@
 </template>
 
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from "element-plus";
+import {ElMessage, ElMessageBox} from "element-plus";
 import {
-  listSysConfigApi,
-  detailSysConfigApi,
-  deleteSysConfigApi,
   addSysConfigApi,
+  deleteSysConfigApi,
+  detailSysConfigApi,
+  listSysConfigApi,
   updateSysConfigApi,
 } from "@/api/system/config";
 

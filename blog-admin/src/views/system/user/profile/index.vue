@@ -163,8 +163,8 @@
 </template>
 
 <script lang="ts" setup>
-import { ElMessage } from 'element-plus'
-import { getUserProfileApi, updateUserProfileApi,updateUserPwdApi } from '@/api/system/user'
+import {ElMessage} from 'element-plus'
+import {getUserProfileApi, updateUserProfileApi, updateUserPwdApi} from '@/api/system/user'
 import {Calendar, Check, Iphone, Key, Message, User, UserFilled} from "@element-plus/icons-vue";
 
 const activeTab = ref('basic')

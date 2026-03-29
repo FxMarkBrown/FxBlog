@@ -74,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import { getAiQuotaLogListApi } from '@/api/ai/quota'
+import {getAiQuotaLogListApi} from '@/api/ai/quota'
 
 const queryParams = reactive({
   pageNum: 1,

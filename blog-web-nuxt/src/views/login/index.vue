@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
-import type { FormInstance, FormRules } from 'element-plus'
+import type {FormInstance, FormRules} from 'element-plus'
+import {ElMessage} from 'element-plus'
 import {
   forgotPasswordApi,
   getAuthRenderApi,
@@ -12,14 +12,14 @@ import {
   registerApi,
   sendEmailCodeApi
 } from '@/api/auth'
-import { useNoIndexSeo } from '@/composables/useSeo'
+import {useNoIndexSeo} from '@/composables/useSeo'
 import LoginParticles from '@/views/login/components/LoginParticles.vue'
 import SliderVerify from '@/views/login/components/SliderVerify.vue'
-import { WECHAT_QR_PLACEHOLDER } from '@/utils/placeholders'
-import { setCookieExpires } from '@/utils/cookie'
-import { unwrapResponseData } from '@/utils/response'
-import { getThemeMode, initTheme } from '@/utils/theme'
-import type { LoginUserInfo } from '@/types/auth'
+import {WECHAT_QR_PLACEHOLDER} from '@/utils/placeholders'
+import {setCookieExpires} from '@/utils/cookie'
+import {unwrapResponseData} from '@/utils/response'
+import {getThemeMode, initTheme} from '@/utils/theme'
+import type {LoginUserInfo} from '@/types/auth'
 
 type LoginFormType = 'login' | 'account' | 'register' | 'forgot'
 type LoginType = 'github' | 'qq' | 'wechat' | 'gitee' | 'weibo'

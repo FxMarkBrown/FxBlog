@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { getCaptchaApi } from '@/api/auth'
-import { unwrapResponseData } from '@/utils/response'
-import { getThemeMode } from '@/utils/theme'
+import {getCaptchaApi} from '@/api/auth'
+import {unwrapResponseData} from '@/utils/response'
+import {getThemeMode} from '@/utils/theme'
 
 type CaptchaPayload = {
   nonceStr?: string

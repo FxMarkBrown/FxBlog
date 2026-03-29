@@ -1,14 +1,14 @@
 package top.fxmarkbrown.blog.controller.site;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
-import top.fxmarkbrown.blog.common.Result;
-import top.fxmarkbrown.blog.entity.SysWebConfig;
-import top.fxmarkbrown.blog.service.SysWebConfigService;
-import top.fxmarkbrown.blog.service.WebConfigCacheService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import top.fxmarkbrown.blog.common.Result;
+import top.fxmarkbrown.blog.entity.SysWebConfig;
+import top.fxmarkbrown.blog.service.SysWebConfigService;
+import top.fxmarkbrown.blog.service.WebConfigCacheService;
 
 @RestController
 @Tag(name = "网站配置管理")

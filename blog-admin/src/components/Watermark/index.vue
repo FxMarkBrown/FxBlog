@@ -6,9 +6,9 @@
   </template>
   
   <script setup lang="ts">
-  import { useSettingsStore } from '@/store'
-  import settings from '@/config/settings'  // 导入系统配置
-  
+  import {useSettingsStore} from '@/store'
+  import settings from '@/config/settings' // 导入系统配置
+
   const settingsStore = useSettingsStore()
   const watermarkRef = ref<HTMLCanvasElement | null>(null)
   const wrapperRef = ref<HTMLDivElement | null>(null)

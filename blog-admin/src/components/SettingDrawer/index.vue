@@ -159,11 +159,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
-import { ElMessage } from "element-plus";
-import { useSettingsStore } from "@/store/modules/settings";
-import type { SettingsState } from "@/store/modules/settings";
-import { setThemeMode } from "@/utils/theme";
+import {computed, ref} from "vue";
+import {ElMessage} from "element-plus";
+import type {SettingsState} from "@/store/modules/settings";
+import {useSettingsStore} from "@/store/modules/settings";
+import {setThemeMode} from "@/utils/theme";
 
 const props = defineProps<{
   visible: boolean;

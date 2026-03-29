@@ -65,20 +65,13 @@
 </template>
 
 <script setup lang="ts">
+import type {EChartsOption} from 'echarts'
 import * as echarts from 'echarts'
-import type { EChartsOption } from 'echarts'
-import { 
-  CaretTop, 
-  CaretBottom,
-  Document,
-  Collection,
-  ChatLineRound,
-  View
-} from '@element-plus/icons-vue'
+import {CaretBottom, CaretTop, ChatLineRound, Collection, Document, View} from '@element-plus/icons-vue'
 import CountTo from '@/views/dashboard/components/CountTo.vue'
 import ContributionGraph from './components/ContributionGraph.vue'
-import { getDashboardDataApi, getBottomDataApi } from '@/api/system'
-import { useSettingsStore } from '@/store/modules/settings'
+import {getBottomDataApi, getDashboardDataApi} from '@/api/system'
+import {useSettingsStore} from '@/store/modules/settings'
 
 const icons = {
   Document: markRaw(Document),

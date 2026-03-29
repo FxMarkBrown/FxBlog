@@ -175,7 +175,7 @@
 </template>
 
 <script setup lang="ts">
-import { getServerInfoApi } from '@/api/monitor/server'
+import {getServerInfoApi} from '@/api/monitor/server'
 
 const loading = ref(false)
 const serverInfo = ref<any>({})

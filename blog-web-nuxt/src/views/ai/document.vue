@@ -1,10 +1,15 @@
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { createDocumentTaskApi, deleteDocumentTaskApi, getDocumentTaskListApi, renameDocumentTaskApi } from '@/api/ai-document'
-import { uploadFileApi } from '@/api/file'
-import { useNoIndexSeo } from '@/composables/useSeo'
-import { unwrapResponseData } from '@/utils/response'
-import type { DocumentTaskDetail, DocumentTaskListItem } from '@/types/ai-document'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {
+  createDocumentTaskApi,
+  deleteDocumentTaskApi,
+  getDocumentTaskListApi,
+  renameDocumentTaskApi
+} from '@/api/ai-document'
+import {uploadFileApi} from '@/api/file'
+import {useNoIndexSeo} from '@/composables/useSeo'
+import {unwrapResponseData} from '@/utils/response'
+import type {DocumentTaskDetail, DocumentTaskListItem} from '@/types/ai-document'
 
 const runtimeConfig = useRuntimeConfig()
 const router = useRouter()

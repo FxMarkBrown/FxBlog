@@ -157,13 +157,8 @@
 </template>
 
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from 'element-plus'
-import {
-  getAiQuotaListApi,
-  getAiQuotaRuleApi,
-  updateAiQuotaManualApi,
-  updateAiQuotaRuleApi
-} from '@/api/ai/quota'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {getAiQuotaListApi, getAiQuotaRuleApi, updateAiQuotaManualApi, updateAiQuotaRuleApi} from '@/api/ai/quota'
 
 /**
  * 生成额度规则默认值，便于回填与重置表单。

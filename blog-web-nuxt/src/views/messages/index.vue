@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
+import {ElMessage} from 'element-plus'
 import VueDanmaku from 'vue-danmaku'
 import 'vue-danmaku/style.css'
-import { addMessageApi, getMessagesApi } from '@/api/message'
-import { usePageSeo } from '@/composables/useSeo'
-import type { MessageItem } from '@/types/article'
-import { unwrapResponseData } from '@/utils/response'
+import {addMessageApi, getMessagesApi} from '@/api/message'
+import {usePageSeo} from '@/composables/useSeo'
+import type {MessageItem} from '@/types/article'
+import {unwrapResponseData} from '@/utils/response'
 
 const authStore = useAuthStore()
 const siteStore = useSiteStore()

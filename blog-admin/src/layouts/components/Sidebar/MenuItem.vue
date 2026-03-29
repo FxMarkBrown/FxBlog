@@ -32,9 +32,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import {computed} from 'vue'
 import AppLink from './Link.vue'
-import { isExternal } from '@/utils/validate'
+import {isExternal} from '@/utils/validate'
 
 const props = defineProps<{
   route: any

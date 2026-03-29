@@ -8,11 +8,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -32,29 +32,11 @@ import top.fxmarkbrown.blog.mapper.SysAiDocumentResultMapper;
 import top.fxmarkbrown.blog.mapper.SysAiDocumentTaskMapper;
 import top.fxmarkbrown.blog.model.ai.AiDocumentChunkHit;
 import top.fxmarkbrown.blog.model.ai.AiResolvedChatModel;
-import top.fxmarkbrown.blog.service.AiChatService;
-import top.fxmarkbrown.blog.service.AiChatModelService;
-import top.fxmarkbrown.blog.service.AiDocumentVectorIndexService;
-import top.fxmarkbrown.blog.service.AiDocumentTaskService;
-import top.fxmarkbrown.blog.service.AiModelQuotaBillingService;
-import top.fxmarkbrown.blog.service.AiQuotaCoreService;
+import top.fxmarkbrown.blog.service.*;
 import top.fxmarkbrown.blog.utils.HttpUtil;
 import top.fxmarkbrown.blog.utils.JsonUtil;
 import top.fxmarkbrown.blog.utils.PageUtil;
-import top.fxmarkbrown.blog.vo.ai.AiDocumentNodeAnswerVo;
-import top.fxmarkbrown.blog.vo.ai.AiDocumentNodeMessageVo;
-import top.fxmarkbrown.blog.vo.ai.AiDocumentContextBudgetVo;
-import top.fxmarkbrown.blog.vo.ai.AiDocumentContextNodeVo;
-import top.fxmarkbrown.blog.vo.ai.AiDocumentContextPlanVo;
-import top.fxmarkbrown.blog.vo.ai.AiDocumentKnowledgeFlowEdgeVo;
-import top.fxmarkbrown.blog.vo.ai.AiDocumentNodeCitationVo;
-import top.fxmarkbrown.blog.vo.ai.AiDocumentNodeStreamEventVo;
-import top.fxmarkbrown.blog.vo.ai.AiDocumentNodeThreadVo;
-import top.fxmarkbrown.blog.vo.ai.AiDocumentParseResultVo;
-import top.fxmarkbrown.blog.vo.ai.AiDocumentSourceAnchorVo;
-import top.fxmarkbrown.blog.vo.ai.AiDocumentTaskDetailVo;
-import top.fxmarkbrown.blog.vo.ai.AiDocumentTaskListVo;
-import top.fxmarkbrown.blog.vo.ai.AiDocumentTreeNodeVo;
+import top.fxmarkbrown.blog.vo.ai.*;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -62,15 +44,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Locale;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -280,7 +254,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
 
         emitter.onCompletion(() -> closeNodeAskStream(emitterClosed, disposableRef));
         emitter.onTimeout(() -> closeNodeAskStream(emitterClosed, disposableRef));
-        emitter.onError(error -> closeNodeAskStream(emitterClosed, disposableRef));
+        emitter.onError(_ -> closeNodeAskStream(emitterClosed, disposableRef));
 
         sendNodeAskStreamEvent(
                 emitter,
@@ -362,6 +336,9 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
             requestBody.put("callback", mineru.getCallbackUrl().trim());
             if (!StringUtils.hasText(mineru.getCallbackSeed())) {
                 throw new IllegalStateException("已配置 MinerU callback-url，但缺少 callback-seed");
+            }
+            if (!StringUtils.hasText(mineru.getCallbackUid())) {
+                throw new IllegalStateException("已配置 MinerU callback-url，但缺少 callback-uid");
             }
             requestBody.put("seed", mineru.getCallbackSeed().trim());
         }
@@ -1189,14 +1166,6 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
                               AiDocumentTreeNodeVo node,
                               String relation,
                               double weight,
-                              String reason) {
-        addCandidate(candidateMap, node, relation, weight, reason, null);
-    }
-
-    private void addCandidate(LinkedHashMap<String, ContextCandidate> candidateMap,
-                              AiDocumentTreeNodeVo node,
-                              String relation,
-                              double weight,
                               String reason,
                               String anchorNodeId) {
         if (node == null || !StringUtils.hasText(node.getId())) {
@@ -1341,8 +1310,6 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         int baseBudget = switch (safeText(queryMode, "explain")) {
             case "locate" -> 2;
             case "compare" -> 3;
-            case "summarize" -> 4;
-            case "reason" -> 4;
             default -> 4;
         };
         int normalizedConfiguredBudget = Math.max(0, configuredBudget);
@@ -1359,7 +1326,6 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
     private int resolveCurrentDescendantSupportDepth(String queryMode, int configuredDepth) {
         int cap = switch (safeText(queryMode, "explain")) {
             case "locate" -> 0;
-            case "compare" -> 1;
             case "summarize" -> 2;
             default -> 1;
         };
@@ -1371,8 +1337,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
             return 0;
         }
         int cap = switch (safeText(queryMode, "explain")) {
-            case "compare" -> 1;
-            case "summarize" -> 1;
+            case "compare", "summarize" -> 1;
             default -> 0;
         };
         return Math.min(Math.max(configuredDepth, 0), cap);
@@ -1745,7 +1710,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
             Map<String, String> nodeTitleMap = usedCandidates.stream().collect(Collectors.toMap(
                     ContextCandidate::nodeId,
                     candidate -> safeText(candidate.node() == null ? null : candidate.node().getTitle(), "未命名节点"),
-                    (left, right) -> left,
+                    (left, _) -> left,
                     LinkedHashMap::new
             ));
             builder.append("## 画布箭头标签\n");
@@ -2135,17 +2100,17 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         vo.setQuotePayload(message.getQuotePayload());
         JsonNode quotePayload = parseNodeQuotePayload(message.getQuotePayload());
         vo.setModelId(textAt(quotePayload, "modelId"));
-        vo.setSelectedNodeIds(parseNodeQuoteList(quotePayload, "selectedNodeIds", new TypeReference<List<String>>() {
+        vo.setSelectedNodeIds(parseNodeQuoteList(quotePayload, "selectedNodeIds", new TypeReference<>() {
         }));
-        vo.setCitations(parseNodeQuoteList(quotePayload, "citations", new TypeReference<List<AiDocumentNodeCitationVo>>() {
+        vo.setCitations(parseNodeQuoteList(quotePayload, "citations", new TypeReference<>() {
         }));
         vo.setContextPlan(parseNodeQuoteObject(quotePayload, "contextPlan", AiDocumentContextPlanVo.class));
         vo.setBudgetReport(parseNodeQuoteObject(quotePayload, "budgetReport", AiDocumentContextBudgetVo.class));
-        vo.setUsedNodes(parseNodeQuoteList(quotePayload, "usedNodes", new TypeReference<List<AiDocumentContextNodeVo>>() {
+        vo.setUsedNodes(parseNodeQuoteList(quotePayload, "usedNodes", new TypeReference<>() {
         }));
-        vo.setCandidateNodes(parseNodeQuoteList(quotePayload, "candidateNodes", new TypeReference<List<AiDocumentContextNodeVo>>() {
+        vo.setCandidateNodes(parseNodeQuoteList(quotePayload, "candidateNodes", new TypeReference<>() {
         }));
-        vo.setKnowledgeFlowEdges(parseNodeQuoteList(quotePayload, "knowledgeFlowEdges", new TypeReference<List<AiDocumentKnowledgeFlowEdgeVo>>() {
+        vo.setKnowledgeFlowEdges(parseNodeQuoteList(quotePayload, "knowledgeFlowEdges", new TypeReference<>() {
         }));
         vo.setCreateTime(message.getCreateTime());
         return vo;
@@ -2196,20 +2161,6 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
             chatResponse.getResult();
         }
         return safeText(chatResponse.getResult().getOutput().getText(), null);
-    }
-
-    private long resolveConsumedTokens(String question, String answer, Usage usage) {
-        if (usage != null) {
-            int totalTokens = defaultInt(usage.getTotalTokens());
-            if (totalTokens > 0) {
-                return totalTokens;
-            }
-            int combined = defaultInt(usage.getPromptTokens()) + defaultInt(usage.getCompletionTokens());
-            if (combined > 0) {
-                return combined;
-            }
-        }
-        return resolveConsumedTokens(question, answer, 0, 0, 0);
     }
 
     private long resolveConsumedTokens(String question, String answer, int tokensIn, int tokensOut, int totalTokens) {

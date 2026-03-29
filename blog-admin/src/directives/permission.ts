@@ -1,5 +1,5 @@
-import { DirectiveBinding } from 'vue'
-import { useUserStore } from '@/store/modules/user'
+import {DirectiveBinding} from 'vue'
+import {useUserStore} from '@/store/modules/user'
 
 export default {
   mounted(el: HTMLElement, binding: DirectiveBinding) {

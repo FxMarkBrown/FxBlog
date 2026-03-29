@@ -195,16 +195,11 @@
 </template>
 
 <script setup lang="ts">
-import { ElMessage, ElMessageBox, ElTreeSelect } from 'element-plus'
-import type { FormInstance } from 'element-plus'
+import type {FormInstance} from 'element-plus'
+import {ElMessage, ElMessageBox, ElTreeSelect} from 'element-plus'
 import IconSelect from '@/components/IconSelect/index.vue'
-import {
-  getMenuListApi,
-  createMenuApi,
-  updateMenuApi,
-  deleteMenuApi,
-} from '@/api/system/menu'
-import { MenuTypeEnum } from "@/enum/MenuTypeEnum";
+import {createMenuApi, deleteMenuApi, getMenuListApi, updateMenuApi,} from '@/api/system/menu'
+import {MenuTypeEnum} from "@/enum/MenuTypeEnum";
 import {Delete, Edit, Plus, View} from "@element-plus/icons-vue";
 
 const loading = ref(false)

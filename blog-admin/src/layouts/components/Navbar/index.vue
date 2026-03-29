@@ -28,9 +28,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import {ref} from 'vue'
 import screenfull from 'screenfull'
-import { useSettingsStore } from '@/store/modules/settings'
+import {useSettingsStore} from '@/store/modules/settings'
 import GlobalSearch from '@/components/GlobalSearch/index.vue'
 import Breadcrumb from './Breadcrumb/index.vue'
 import UserTool from './UserTool/index.vue'

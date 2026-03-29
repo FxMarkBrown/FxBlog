@@ -1,9 +1,9 @@
 package top.fxmarkbrown.blog.vo.user;
 
-import top.fxmarkbrown.blog.entity.SysUser;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import top.fxmarkbrown.blog.entity.SysUser;
 
 import java.util.List;
 

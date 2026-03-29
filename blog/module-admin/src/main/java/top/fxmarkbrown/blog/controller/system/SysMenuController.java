@@ -1,15 +1,15 @@
 package top.fxmarkbrown.blog.controller.system;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
 import top.fxmarkbrown.blog.annotation.OperationLogger;
 import top.fxmarkbrown.blog.common.Result;
 import top.fxmarkbrown.blog.entity.SysMenu;
 import top.fxmarkbrown.blog.service.SysMenuService;
 import top.fxmarkbrown.blog.vo.menu.RouterVO;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 

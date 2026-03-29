@@ -120,12 +120,8 @@
 </template>
 
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from 'element-plus'
-import {
-  deleteAiConversationApi,
-  getAiConversationListApi,
-  getAiConversationMessagesApi
-} from '@/api/ai/conversation'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {deleteAiConversationApi, getAiConversationListApi, getAiConversationMessagesApi} from '@/api/ai/conversation'
 
 const queryParams = reactive({
   pageNum: 1,

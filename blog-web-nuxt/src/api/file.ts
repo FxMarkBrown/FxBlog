@@ -1,5 +1,4 @@
-import type { ApiResponse } from '@/types/common'
-import type { AnyRecord } from '@/types/common'
+import type {AnyRecord, ApiResponse} from '@/types/common'
 
 // 上传文件。
 export function uploadFileApi(data: FormData, source: string) {

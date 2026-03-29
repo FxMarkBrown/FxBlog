@@ -49,11 +49,11 @@
 </template>
 
 <script setup lang="ts">
-import { useUserStore } from '@/store/modules/user'
-import { ElMessage } from 'element-plus'
+import {useUserStore} from '@/store/modules/user'
+import {ElMessage} from 'element-plus'
 import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
-import { verifyPassword } from '@/api/system/user'
+import {verifyPassword} from '@/api/system/user'
 import {Unlock} from "@element-plus/icons-vue";
 // 设置 dayjs 语言为中文
 dayjs.locale('zh-cn')

@@ -5,10 +5,10 @@
   </template>
   
   <script setup lang="ts">
-  import { computed } from 'vue'
-  import { isExternal } from '@/utils/validate'
-  import type { RouteLocationRaw } from 'vue-router'
-  
+  import {computed} from 'vue'
+  import {isExternal} from '@/utils/validate'
+  import type {RouteLocationRaw} from 'vue-router'
+
   interface Props {
     to: string | RouteLocationRaw
   }

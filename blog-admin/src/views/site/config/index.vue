@@ -299,15 +299,15 @@
 </template>
 
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
-import type { FormInstance } from 'element-plus'
+import type {FormInstance} from 'element-plus'
+import {ElMessage} from 'element-plus'
 import UploadImage from '@/components/Upload/Image.vue'
-import { getWebConfigApi, updateWebConfigApi } from '@/api/site/config'
-import { getDictDataByDictTypesApi } from '@/api/system/dict'
-import { uploadApi } from '@/api/file'
+import {getWebConfigApi, updateWebConfigApi} from '@/api/site/config'
+import {getDictDataByDictTypesApi} from '@/api/system/dict'
+import {uploadApi} from '@/api/file'
 
-import { Editor, Toolbar } from '@wangeditor-next/editor-for-vue'
-import type { IDomEditor, IEditorConfig, IToolbarConfig } from '@wangeditor-next/editor'
+import {Editor, Toolbar} from '@wangeditor-next/editor-for-vue'
+import type {IDomEditor, IEditorConfig, IToolbarConfig} from '@wangeditor-next/editor'
 import '@wangeditor-next/editor/dist/css/style.css'
 import {
   ChatDotRound,
@@ -315,7 +315,8 @@ import {
   Cloudy,
   ElementPlus,
   Message,
-  Platform, Setting,
+  Platform,
+  Setting,
   Share,
   Tools,
   User

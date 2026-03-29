@@ -1,5 +1,5 @@
-import { config } from 'md-editor-v3'
-import { installMarkdownAlignPlugin } from '@/utils/markdownAlign'
+import {config} from 'md-editor-v3'
+import {installMarkdownAlignPlugin} from '@/utils/markdownAlign'
 
 export default defineNuxtPlugin(() => {
   config({

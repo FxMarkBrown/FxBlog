@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Mesh, Program, Renderer, Triangle } from 'ogl'
+import {Mesh, Program, Renderer, Triangle} from 'ogl'
 
 const hostRef = ref<HTMLElement | null>(null)
 let renderer: Renderer | null = null

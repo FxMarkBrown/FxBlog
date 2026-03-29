@@ -1,7 +1,7 @@
-import type { WebsiteInfo } from '@/types/article'
-import { getSystemNoticeApi } from '@/api/message'
-import { getNoticeApi, getWebConfigApi, reportApi } from '@/api/site'
-import { unwrapResponseData } from '@/utils/response'
+import type {WebsiteInfo} from '@/types/article'
+import {getSystemNoticeApi} from '@/api/message'
+import {getNoticeApi, getWebConfigApi, reportApi} from '@/api/site'
+import {unwrapResponseData} from '@/utils/response'
 
 export const useSiteStore = defineStore('site', () => {
   const runtimeConfig = useRuntimeConfig()

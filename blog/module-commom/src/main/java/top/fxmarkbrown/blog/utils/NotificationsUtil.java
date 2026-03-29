@@ -1,11 +1,11 @@
 package top.fxmarkbrown.blog.utils;
 
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 import top.fxmarkbrown.blog.entity.SysArticle;
 import top.fxmarkbrown.blog.entity.SysNotifications;
 import top.fxmarkbrown.blog.mapper.SysArticleMapper;
 import top.fxmarkbrown.blog.mapper.SysNotificationsMapper;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor

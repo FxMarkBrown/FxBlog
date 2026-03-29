@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { getMomentsApi } from '@/api/moments'
-import type { MomentSummary } from '@/types/article'
-import { unwrapResponseData } from '@/utils/response'
+import {getMomentsApi} from '@/api/moments'
+import type {MomentSummary} from '@/types/article'
+import {unwrapResponseData} from '@/utils/response'
 
 const router = useRouter()
 const moments = ref<MomentSummary[]>([])

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { getCookie, setCookieExpires } from '@/utils/cookie'
+import {getCookie, setCookieExpires} from '@/utils/cookie'
 
 const siteStore = useSiteStore()
 const visible = ref(false)

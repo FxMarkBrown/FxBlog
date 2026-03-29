@@ -1,5 +1,5 @@
-import type { ApiResponse } from '@/types/common'
-import { getToken } from '@/utils/cookie'
+import type {ApiResponse} from '@/types/common'
+import {getToken} from '@/utils/cookie'
 
 // 获取 AI 会话可用模型列表。
 export function getConversationModelOptionsApi() {

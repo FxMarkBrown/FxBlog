@@ -119,12 +119,12 @@
 </template>
 
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Clock } from '@element-plus/icons-vue'
-import type { FormInstance, FormRules } from 'element-plus'
+import type {FormInstance, FormRules} from 'element-plus'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {Clock} from '@element-plus/icons-vue'
 import UploadImage from '@/components/Upload/Image.vue'
-import { listPhotoApi, addPhotoApi, updatePhotoApi, deletePhotoApi, movePhotoApi } from '@/api/site/photo'
-import { listAlbumAllApi } from '@/api/site/album'
+import {addPhotoApi, deletePhotoApi, listPhotoApi, movePhotoApi, updatePhotoApi} from '@/api/site/photo'
+import {listAlbumAllApi} from '@/api/site/album'
 
 // 查询参数
 const queryParams = reactive({

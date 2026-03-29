@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
-import { ElMessage } from 'element-plus'
-import type { Connection, Edge, Node, OnConnectStartParams } from '@vue-flow/core'
-import { ConnectionMode, MarkerType, VueFlow } from '@vue-flow/core'
+import {ElMessage} from 'element-plus'
+import type {Connection, Edge, Node, OnConnectStartParams} from '@vue-flow/core'
+import {ConnectionMode, MarkerType, VueFlow} from '@vue-flow/core'
 import DocumentCanvasNode from '@/components/ai-document/DocumentCanvasNode.vue'
-import { getConversationModelOptionsApi, getConversationQuotaApi } from '@/api/ai'
+import {getConversationModelOptionsApi, getConversationQuotaApi} from '@/api/ai'
 import {
   getDocumentNodeMessagesApi,
   getDocumentNodeThreadApi,
@@ -23,10 +23,10 @@ import type {
   DocumentTaskDetail,
   DocumentTreeNode
 } from '@/types/ai-document'
-import type { PageResult } from '@/types/common'
-import { normalizeMarkdownContent } from '@/utils/ai-markdown'
-import { unwrapResponseData } from '@/utils/response'
-import { getThemeMode, initTheme, setThemeMode } from '@/utils/theme'
+import type {PageResult} from '@/types/common'
+import {normalizeMarkdownContent} from '@/utils/ai-markdown'
+import {unwrapResponseData} from '@/utils/response'
+import {getThemeMode, initTheme, setThemeMode} from '@/utils/theme'
 
 type QueryModePreset = 'strict' | 'balanced' | 'explore'
 type AnyRecord = Record<string, any>

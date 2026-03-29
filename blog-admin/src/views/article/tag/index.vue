@@ -130,15 +130,10 @@
   </template>
   
   <script setup lang="ts">
-  import { ElMessage, ElMessageBox } from 'element-plus'
-  import type { FormInstance, FormRules } from 'element-plus'
-  import {
-    getTagListApi,
-    addTagApi,
-    updateTagApi,
-    deleteTagApi
-  } from '@/api/article/tag'
-  
+  import type {FormInstance, FormRules} from 'element-plus'
+  import {ElMessage, ElMessageBox} from 'element-plus'
+  import {addTagApi, deleteTagApi, getTagListApi, updateTagApi} from '@/api/article/tag'
+
   // 查询参数
   const queryParams = reactive({
     pageNum: 1,

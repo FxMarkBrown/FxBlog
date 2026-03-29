@@ -2,6 +2,11 @@ package top.fxmarkbrown.blog.config.satoken;
 
 import cn.dev33.satoken.listener.SaTokenListener;
 import cn.dev33.satoken.stp.parameter.SaLoginParameter;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 import top.fxmarkbrown.blog.common.RedisConstants;
 import top.fxmarkbrown.blog.entity.SysUser;
 import top.fxmarkbrown.blog.mapper.SysUserMapper;
@@ -10,11 +15,6 @@ import top.fxmarkbrown.blog.utils.JsonUtil;
 import top.fxmarkbrown.blog.utils.RedisUtil;
 import top.fxmarkbrown.blog.utils.UserAgentUtil;
 import top.fxmarkbrown.blog.vo.user.OnlineUserVo;
-import jakarta.servlet.http.HttpServletRequest;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;

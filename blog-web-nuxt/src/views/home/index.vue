@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
-import { getAllCategoriesApi, getArticlesApi, getCarouselArticlesApi } from '@/api/article'
+import {ElMessage} from 'element-plus'
+import {getAllCategoriesApi, getArticlesApi, getCarouselArticlesApi} from '@/api/article'
 import ArticleList from '@/components/ArticleList/index.vue'
 import Sidebar from '@/components/Sidebar/index.vue'
-import { usePageSeo } from '@/composables/useSeo'
-import type { ArticleCategoryGroup, ArticleSummary } from '@/types/article'
-import type { PageResult } from '@/types/common'
-import { unwrapResponseData } from '@/utils/response'
+import {usePageSeo} from '@/composables/useSeo'
+import type {ArticleCategoryGroup, ArticleSummary} from '@/types/article'
+import type {PageResult} from '@/types/common'
+import {unwrapResponseData} from '@/utils/response'
 import Carousel from '@/views/home/components/carousel.vue'
 import MomentsList from '@/views/home/components/moments.vue'
 

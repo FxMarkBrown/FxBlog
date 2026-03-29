@@ -109,8 +109,8 @@
 </template>
 
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { listJobLogApi, delleteJobLogApi, cleanJobLogApi } from '@/api/monitor/jobLog'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {cleanJobLogApi, delleteJobLogApi, listJobLogApi} from '@/api/monitor/jobLog'
 
 // 遍历器
 const queryFormRef = ref()

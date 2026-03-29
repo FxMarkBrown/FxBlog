@@ -1,8 +1,8 @@
 package top.fxmarkbrown.blog.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import top.fxmarkbrown.blog.entity.SysFileOss;
 import org.apache.ibatis.annotations.Mapper;
+import top.fxmarkbrown.blog.entity.SysFileOss;
 
 /**
  * 存储平台 Mapper接口

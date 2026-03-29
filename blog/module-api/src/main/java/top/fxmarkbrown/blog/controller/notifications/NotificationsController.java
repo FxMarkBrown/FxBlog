@@ -1,13 +1,13 @@
 package top.fxmarkbrown.blog.controller.notifications;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import io.swagger.v3.oas.annotations.Operation;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
 import top.fxmarkbrown.blog.common.Result;
 import top.fxmarkbrown.blog.entity.SysNotifications;
 import top.fxmarkbrown.blog.service.NotificationsService;
 import top.fxmarkbrown.blog.vo.notifications.NotificationsListVo;
-import io.swagger.v3.oas.annotations.Operation;
-import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 

@@ -1,9 +1,9 @@
 package top.fxmarkbrown.blog.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import top.fxmarkbrown.blog.entity.SysRole;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import top.fxmarkbrown.blog.entity.SysRole;
 
 import java.util.List;
 

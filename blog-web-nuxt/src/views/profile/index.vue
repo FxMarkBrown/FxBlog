@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from 'element-plus'
-import type { FormInstance, FormRules } from 'element-plus'
-import { marked } from 'marked'
+import type {FormInstance, FormRules} from 'element-plus'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {marked} from 'marked'
 import AvatarCropper from '@/components/Common/AvatarCropper.vue'
-import { getConversationQuotaApi } from '@/api/ai'
-import { delArticleApi, favoriteArticleApi, getMyArticleApi, unlikeArticleApi } from '@/api/article'
-import { getDictDataApi } from '@/api/dict'
+import {getConversationQuotaApi} from '@/api/ai'
+import {delArticleApi, favoriteArticleApi, getMyArticleApi, unlikeArticleApi} from '@/api/article'
+import {getDictDataApi} from '@/api/dict'
 import {
   addFeedbackApi,
   delMyCommentApi,
@@ -22,8 +22,8 @@ import {
   updatePasswordApi,
   updateProfileApi
 } from '@/api/user'
-import { useNoIndexSeo } from '@/composables/useSeo'
-import { unwrapResponseData } from '@/utils/response'
+import {useNoIndexSeo} from '@/composables/useSeo'
+import {unwrapResponseData} from '@/utils/response'
 
 type AnyRecord = Record<string, any>
 

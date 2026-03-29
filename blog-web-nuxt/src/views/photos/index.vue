@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
-import { getAlbumListApi } from '@/api/album'
-import { usePageSeo } from '@/composables/useSeo'
-import type { AlbumSummary } from '@/types/article'
-import { IMAGE_ERROR_PLACEHOLDER } from '@/utils/placeholders'
-import { unwrapResponseData } from '@/utils/response'
+import {ElMessage} from 'element-plus'
+import {getAlbumListApi} from '@/api/album'
+import {usePageSeo} from '@/composables/useSeo'
+import type {AlbumSummary} from '@/types/article'
+import {IMAGE_ERROR_PLACEHOLDER} from '@/utils/placeholders'
+import {unwrapResponseData} from '@/utils/response'
 
 const router = useRouter()
 const runtimeConfig = useRuntimeConfig()

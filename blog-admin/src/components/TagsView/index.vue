@@ -54,17 +54,10 @@
 </template>
 
 <script setup lang="ts">
-import { useRoute, useRouter } from 'vue-router'
-import { 
-  Refresh, 
-  Close, 
-  ArrowLeft,
-  ArrowRight,
-  CircleClose,
-  FolderDelete 
-} from '@element-plus/icons-vue'
-import { useTagsViewStore } from '@/store/modules/tagsView'
-import { useSettingsStore } from '@/store/modules/settings'
+import {useRoute, useRouter} from 'vue-router'
+import {ArrowLeft, ArrowRight, CircleClose, Close, FolderDelete, Refresh} from '@element-plus/icons-vue'
+import {useTagsViewStore} from '@/store/modules/tagsView'
+import {useSettingsStore} from '@/store/modules/settings'
 
 const route = useRoute()
 const router = useRouter()

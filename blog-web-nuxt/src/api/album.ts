@@ -1,5 +1,5 @@
-import type { ApiResponse } from '@/types/common'
-import type { AlbumPhoto, AlbumSummary } from '@/types/article'
+import type {ApiResponse} from '@/types/common'
+import type {AlbumPhoto, AlbumSummary} from '@/types/article'
 
 // 获取相册列表
 export function getAlbumListApi() {

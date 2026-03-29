@@ -1,8 +1,8 @@
 package top.fxmarkbrown.blog.dto.feedback;
 
-import top.fxmarkbrown.blog.entity.SysFeedback;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import top.fxmarkbrown.blog.entity.SysFeedback;
 
 @Data
 @EqualsAndHashCode(callSuper = true)

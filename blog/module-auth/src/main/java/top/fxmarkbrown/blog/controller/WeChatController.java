@@ -1,8 +1,5 @@
 package top.fxmarkbrown.blog.controller;
 
-import top.fxmarkbrown.blog.common.RedisConstants;
-import top.fxmarkbrown.blog.service.AuthService;
-import top.fxmarkbrown.blog.utils.RedisUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,6 +10,9 @@ import me.chanjar.weixin.mp.api.WxMpService;
 import me.chanjar.weixin.mp.bean.message.WxMpXmlMessage;
 import me.chanjar.weixin.mp.bean.message.WxMpXmlOutTextMessage;
 import org.springframework.web.bind.annotation.*;
+import top.fxmarkbrown.blog.common.RedisConstants;
+import top.fxmarkbrown.blog.service.AuthService;
+import top.fxmarkbrown.blog.utils.RedisUtil;
 
 import java.io.IOException;
 import java.text.MessageFormat;

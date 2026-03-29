@@ -65,13 +65,10 @@
   </template>
   
   <script setup lang="ts">
-  import { ElMessage, ElMessageBox } from 'element-plus'
-  import type { FormInstance } from 'element-plus'
-  import {
-    getOnlineUserApi,
-    forceLogoutApi
-  } from '@/api/system/user'
-  
+  import type {FormInstance} from 'element-plus'
+  import {ElMessage, ElMessageBox} from 'element-plus'
+  import {forceLogoutApi, getOnlineUserApi} from '@/api/system/user'
+
   // 查询参数
   const queryParams = reactive({
     pageNum: 1,

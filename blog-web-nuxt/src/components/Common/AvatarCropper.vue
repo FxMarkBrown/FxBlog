@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
+import {ElMessage} from 'element-plus'
 import 'vue-cropper/dist/index.css'
-import { VueCropper } from 'vue-cropper'
-import { uploadFileApi } from '@/api/file'
-import { updateProfileApi } from '@/api/user'
-import { unwrapResponseData } from '@/utils/response'
+import {VueCropper} from 'vue-cropper'
+import {uploadFileApi} from '@/api/file'
+import {updateProfileApi} from '@/api/user'
+import {unwrapResponseData} from '@/utils/response'
 
 interface CropperPreview {
   url?: string

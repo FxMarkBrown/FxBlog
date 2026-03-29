@@ -1,5 +1,5 @@
-import type { ApiResponse } from '@/types/common'
-import type { WebsiteInfo } from '@/types/article'
+import type {ApiResponse} from '@/types/common'
+import type {WebsiteInfo} from '@/types/article'
 
 // 获取网站配置
 export function getWebConfigApi() {

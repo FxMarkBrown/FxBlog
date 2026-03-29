@@ -7,10 +7,10 @@ import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import top.fxmarkbrown.blog.common.Constants;
-import top.fxmarkbrown.blog.model.ai.AiResolvedChatModel;
 import top.fxmarkbrown.blog.entity.SysAiConversation;
 import top.fxmarkbrown.blog.model.ai.AiConversationRoute;
 import top.fxmarkbrown.blog.model.ai.AiConversationRouteDecision;
+import top.fxmarkbrown.blog.model.ai.AiResolvedChatModel;
 import top.fxmarkbrown.blog.service.AiChatModelService;
 import top.fxmarkbrown.blog.service.AiConversationRoutingService;
 

@@ -1,5 +1,5 @@
-import { getUserInfoApi, logoutApi } from '@/api/auth'
-import type { LoginUserInfo } from '@/types/auth'
+import {getUserInfoApi, logoutApi} from '@/api/auth'
+import type {LoginUserInfo} from '@/types/auth'
 
 function shouldClearAuthForError(error: unknown) {
   const statusCode = Number(

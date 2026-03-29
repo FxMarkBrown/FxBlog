@@ -289,17 +289,11 @@
 </template>
 
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from 'element-plus'
-import type { FormInstance, FormRules } from 'element-plus'
-import {
-  getUserListApi,
-  createUserApi,
-  updateUserApi,
-  deleteUserApi,
-  resetPasswordApi
-} from '@/api/system/user'
-import { getAllRoleList } from '@/api/system/role'
-import { getDictDataByDictTypesApi } from '@/api/system/dict'
+import type {FormInstance, FormRules} from 'element-plus'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {createUserApi, deleteUserApi, getUserListApi, resetPasswordApi, updateUserApi} from '@/api/system/user'
+import {getAllRoleList} from '@/api/system/role'
+import {getDictDataByDictTypesApi} from '@/api/system/dict'
 import ButtonGroup from '@/components/ButtonGroup/index.vue'
 
 // 查询参数

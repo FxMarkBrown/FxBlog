@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
-import type { FormInstance, FormRules } from 'element-plus'
-import { applyFriendApi, getFriendsApi } from '@/api/friends'
-import { usePageSeo } from '@/composables/useSeo'
-import type { FriendApplyPayload, FriendItem } from '@/types/article'
-import { IMAGE_ERROR_PLACEHOLDER } from '@/utils/placeholders'
-import { unwrapResponseData } from '@/utils/response'
+import type {FormInstance, FormRules} from 'element-plus'
+import {ElMessage} from 'element-plus'
+import {applyFriendApi, getFriendsApi} from '@/api/friends'
+import {usePageSeo} from '@/composables/useSeo'
+import type {FriendApplyPayload, FriendItem} from '@/types/article'
+import {IMAGE_ERROR_PLACEHOLDER} from '@/utils/placeholders'
+import {unwrapResponseData} from '@/utils/response'
 
 const runtimeConfig = useRuntimeConfig()
 const siteStore = useSiteStore()

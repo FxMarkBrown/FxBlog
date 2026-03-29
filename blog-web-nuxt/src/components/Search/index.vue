@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
-import { getArticlesApi } from '@/api/article'
-import { getTagsApi } from '@/api/tags'
-import type { ArticleSummary, TagSummary } from '@/types/article'
-import type { PageResult } from '@/types/common'
-import { unwrapResponseData } from '@/utils/response'
+import {ElMessage} from 'element-plus'
+import {getArticlesApi} from '@/api/article'
+import {getTagsApi} from '@/api/tags'
+import type {ArticleSummary, TagSummary} from '@/types/article'
+import type {PageResult} from '@/types/common'
+import {unwrapResponseData} from '@/utils/response'
 
 const router = useRouter()
 const uiStore = useUiStore()

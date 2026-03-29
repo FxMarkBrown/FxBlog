@@ -69,19 +69,15 @@
 </template>
 
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from 'element-plus'
-import type { FormInstance, FormRules } from 'element-plus'
-import {
-  getSysMomentListApi,
-  addSysMomentApi,
-  updateSysMomentApi,
-  deleteSysMomentApi
-} from '@/api/article/moment'
+import type {FormInstance, FormRules} from 'element-plus'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {addSysMomentApi, deleteSysMomentApi, getSysMomentListApi, updateSysMomentApi} from '@/api/article/moment'
 import UploadImage from '@/components/Upload/Image.vue'
 
 
-import { Editor, Toolbar } from '@wangeditor-next/editor-for-vue'
+import {Editor, Toolbar} from '@wangeditor-next/editor-for-vue'
 import '@wangeditor-next/editor/dist/css/style.css'
+
 const editorRef = shallowRef()
 const mode = 'default'
 const toolbarConfig = {}

@@ -4,10 +4,10 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.model.ToolContext;
+import org.springframework.ai.support.ToolCallbacks;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
-import org.springframework.ai.support.ToolCallbacks;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import top.fxmarkbrown.blog.common.Constants;
@@ -29,13 +29,7 @@ import top.fxmarkbrown.blog.vo.article.ArticleDetailVo;
 import top.fxmarkbrown.blog.vo.article.ArticleListVo;
 import top.fxmarkbrown.blog.vo.comment.CommentListVo;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
