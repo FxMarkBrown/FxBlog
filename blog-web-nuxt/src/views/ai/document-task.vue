@@ -50,7 +50,20 @@ type OutlineDescriptor = {
   node: DocumentTreeNode
 }
 
-type ViewportAction = 'none' | 'fit' | 'center'
+type CanvasFlowNode = Node<CanvasNodeData> & {
+  selected?: boolean
+}
+
+type OutlinePanelItem = {
+  id: string
+  title: string
+  depth: number
+  expanded: boolean
+  hasChildren: boolean
+  isMatched: boolean
+}
+
+type ViewportAction = 'none' | 'fit' | 'center' | 'focus-node'
 
 const route = useRoute()
 const router = useRouter()
@@ -66,15 +79,20 @@ const previewOpenIds = ref<Set<string>>(new Set())
 const chatOpenIds = ref<Set<string>>(new Set())
 const chatStateMap = ref<Record<string, ChatState>>({})
 const nodePositionOverrides = ref<Record<string, { x: number; y: number }>>({})
+const outlineDrawerOpen = ref(false)
+const outlineSearch = ref('')
 const flowRef = ref<InstanceType<typeof VueFlow> | null>(null)
 const isDarkMode = ref(false)
 const isMobileViewport = ref(false)
 const elkEngine = shallowRef<any | null>(null)
 let layoutRequestId = 0
 let pendingViewportAction: ViewportAction = 'none'
+let pendingViewportNodeId = ''
 
-const visibleNodes = ref<Node<CanvasNodeData>[]>([])
+const visibleNodes = ref<CanvasFlowNode[]>([])
 const visibleEdges = ref<Edge[]>([])
+const outlineSearchKeyword = computed(() => outlineSearch.value.trim().toLowerCase())
+const outlinePanelItems = computed(() => buildOutlinePanelItems(parseResult.value?.root, outlineSearchKeyword.value))
 
 const nodeTypes = markRaw({
   documentNode: markRaw(DocumentCanvasNode)
@@ -89,7 +107,14 @@ watch(
 )
 
 watch(isMobileViewport, () => {
+  if (isMobileViewport.value) {
+    outlineDrawerOpen.value = false
+  }
   requestViewportAction('fit')
+})
+
+watch(selectedOutlineNodeId, () => {
+  syncSelectedOutlineNodes()
 })
 
 async function loadTask(silent = false) {
@@ -149,6 +174,69 @@ function getVisibleTreeChildren(node?: DocumentTreeNode | null) {
   return structuralChildren.length ? structuralChildren : children
 }
 
+function matchesOutlineKeyword(node: DocumentTreeNode, keyword: string) {
+  if (!keyword) {
+    return false
+  }
+
+  return [node.title, node.summary, node.markdown]
+    .filter(Boolean)
+    .some((value) => String(value).toLowerCase().includes(keyword))
+}
+
+function buildOutlinePanelItems(root?: DocumentTreeNode | null, keyword = '') {
+  if (!root) {
+    return [] as OutlinePanelItem[]
+  }
+
+  const items: OutlinePanelItem[] = []
+  const searching = Boolean(keyword)
+
+  function traverse(node: DocumentTreeNode, depth: number): boolean {
+    const children = getVisibleTreeChildren(node)
+    const isMatched = matchesOutlineKeyword(node, keyword)
+    items.push({
+      id: node.id,
+      title: String(node.title || '未命名节点'),
+      depth,
+      expanded: expandedNodeIds.value.has(node.id),
+      hasChildren: Boolean(children.length),
+      isMatched
+    })
+
+    if (!searching) {
+      if (expandedNodeIds.value.has(node.id)) {
+        for (const child of children) {
+          traverse(child, depth + 1)
+        }
+      }
+      return true
+    }
+
+    let hasMatchedDescendant = false
+    const startIndex = items.length
+    for (const child of children) {
+      const childStart = items.length
+      const include = traverse(child, depth + 1)
+      if (!include) {
+        items.splice(childStart)
+      } else {
+        hasMatchedDescendant = true
+      }
+    }
+
+    if (!isMatched && !hasMatchedDescendant) {
+      items.splice(startIndex - 1)
+      return false
+    }
+
+    return true
+  }
+
+  traverse(root, 0)
+  return items
+}
+
 function getLayoutMetrics() {
   if (isMobileViewport.value) {
     return {
@@ -162,7 +250,8 @@ function getLayoutMetrics() {
       previewOffsetY: 228,
       chatOffsetY: 228,
       attachmentStackGap: 28,
-      mobileAttachmentHeight: 392
+      mobileAttachmentHeight: 392,
+      desktopAttachmentHeight: 0
     }
   }
 
@@ -176,8 +265,9 @@ function getLayoutMetrics() {
     attachmentOffsetX: 372,
     previewOffsetY: 92,
     chatOffsetY: -128,
-    attachmentStackGap: 0,
-    mobileAttachmentHeight: 0
+    attachmentStackGap: 28,
+    mobileAttachmentHeight: 0,
+    desktopAttachmentHeight: 456
   }
 }
 
@@ -298,7 +388,7 @@ async function rebuildCanvas() {
   }
 
   const result = {
-    nodes: [] as Node<CanvasNodeData>[],
+    nodes: [] as CanvasFlowNode[],
     edges: [] as Edge[],
     centers: new Map<string, { x: number; y: number }>()
   }
@@ -361,15 +451,17 @@ async function rebuildCanvas() {
 
   if (pendingViewportAction !== 'none') {
     const action = pendingViewportAction
+    const nodeId = pendingViewportNodeId
     pendingViewportAction = 'none'
+    pendingViewportNodeId = ''
     await nextTick()
-    scheduleViewportAction(action)
+    scheduleViewportAction(action, nodeId)
   }
 }
 
 function appendAttachmentNodes(
   root: DocumentTreeNode,
-  result: { nodes: Node<CanvasNodeData>[]; edges: Edge[]; centers: Map<string, { x: number; y: number }> }
+  result: { nodes: CanvasFlowNode[]; edges: Edge[]; centers: Map<string, { x: number; y: number }> }
 ) {
   const metrics = getLayoutMetrics()
   const outlineNodes = flattenTree(root)
@@ -379,6 +471,8 @@ function appendAttachmentNodes(
       continue
     }
 
+    const desktopStacked = !isMobileViewport.value && previewOpenIds.value.has(node.id) && chatOpenIds.value.has(node.id)
+    const desktopStackBaseY = anchor.y - 96
     let attachmentIndex = 0
 
     if (previewOpenIds.value.has(node.id)) {
@@ -391,7 +485,9 @@ function appendAttachmentNodes(
           }
         : {
             x: anchor.x + metrics.attachmentOffsetX,
-            y: anchor.y + metrics.previewOffsetY
+            y: desktopStacked
+              ? desktopStackBaseY + attachmentIndex * (metrics.desktopAttachmentHeight + metrics.attachmentStackGap)
+              : anchor.y + metrics.previewOffsetY
           }
       result.nodes.push({
         id: previewId,
@@ -408,7 +504,8 @@ function appendAttachmentNodes(
           markdown: String(node.markdown || node.summary || '暂无原文预览内容'),
           pageLabel: sourceAnchor?.page ? `第 ${sourceAnchor.page} 页` : '未提供页码',
           anchorBox: normalizeAnchorBox(sourceAnchor?.bbox),
-          sourceUrl: taskDetail.value?.sourceUrl || ''
+          sourceUrl: taskDetail.value?.sourceUrl || '',
+          onTogglePreview: handleTogglePreview
         }
       })
       attachmentIndex += 1
@@ -442,7 +539,9 @@ function appendAttachmentNodes(
           }
         : {
             x: anchor.x + metrics.attachmentOffsetX,
-            y: anchor.y + metrics.chatOffsetY
+            y: desktopStacked
+              ? desktopStackBaseY + attachmentIndex * (metrics.desktopAttachmentHeight + metrics.attachmentStackGap)
+              : anchor.y + metrics.chatOffsetY
           }
       result.nodes.push({
         id: chatId,
@@ -462,6 +561,7 @@ function appendAttachmentNodes(
           citations: chatState.citations,
           sending: chatState.sending,
           error: chatState.error,
+          onToggleChat: handleToggleChat,
           onQuestionChange: handleQuestionChange,
           onSubmitQuestion: handleSubmitQuestion
         }
@@ -492,6 +592,132 @@ function flattenTree(root?: DocumentTreeNode | null): DocumentTreeNode[] {
     items.push(...flattenTree(child))
   }
   return items
+}
+
+function syncSelectedOutlineNodes() {
+  const nextNodes: CanvasFlowNode[] = []
+  for (const node of visibleNodes.value as CanvasFlowNode[]) {
+    if (node.data?.kind !== 'outline') {
+      nextNodes.push(node)
+      continue
+    }
+
+    nextNodes.push({
+      ...node,
+      selected: node.id === selectedOutlineNodeId.value
+    })
+  }
+  visibleNodes.value = nextNodes
+}
+
+function findOutlineTrail(root: DocumentTreeNode | null | undefined, nodeId: string) {
+  if (!root || !nodeId) {
+    return [] as DocumentTreeNode[]
+  }
+
+  const trail: DocumentTreeNode[] = []
+
+  function visit(node: DocumentTreeNode): boolean {
+    trail.push(node)
+    if (node.id === nodeId) {
+      return true
+    }
+
+    for (const child of getVisibleTreeChildren(node)) {
+      if (visit(child)) {
+        return true
+      }
+    }
+
+    trail.pop()
+    return false
+  }
+
+  return visit(root) ? trail : []
+}
+
+function collectOutlineSubtreeIds(node: DocumentTreeNode | null | undefined) {
+  if (!node) {
+    return [] as string[]
+  }
+
+  const ids = [node.id]
+  for (const child of getVisibleTreeChildren(node)) {
+    ids.push(...collectOutlineSubtreeIds(child))
+  }
+  return ids
+}
+
+function findOutlineNode(root: DocumentTreeNode | null | undefined, nodeId: string): DocumentTreeNode | null {
+  if (!root || !nodeId) {
+    return null
+  }
+  if (root.id === nodeId) {
+    return root
+  }
+
+  for (const child of getVisibleTreeChildren(root)) {
+    const matched = findOutlineNode(child, nodeId)
+    if (matched) {
+      return matched
+    }
+  }
+
+  return null
+}
+
+function expandOutlineAncestors(nodeId: string) {
+  const trail = findOutlineTrail(parseResult.value?.root, nodeId)
+  if (!trail.length) {
+    return false
+  }
+
+  const next = new Set(expandedNodeIds.value)
+  let changed = false
+  for (const ancestor of trail.slice(0, -1)) {
+    if (!next.has(ancestor.id)) {
+      next.add(ancestor.id)
+      changed = true
+    }
+  }
+
+  if (changed) {
+    expandedNodeIds.value = next
+  }
+  return changed
+}
+
+async function focusOutlineNode(nodeId: string) {
+  if (!nodeId) {
+    return
+  }
+
+  const expandedChanged = expandOutlineAncestors(nodeId)
+  selectedOutlineNodeId.value = nodeId
+
+  if (expandedChanged) {
+    requestViewportAction('focus-node', nodeId)
+    await rebuildCanvas()
+    return
+  }
+
+  await nextTick()
+  scheduleViewportAction('focus-node', nodeId)
+}
+
+function toggleOutlineDrawer() {
+  if (isMobileViewport.value) {
+    return
+  }
+  outlineDrawerOpen.value = !outlineDrawerOpen.value
+}
+
+function handleOutlineItemToggle(nodeId: string) {
+  handleToggleExpand(nodeId)
+}
+
+function handleOutlineItemSelect(nodeId: string) {
+  void focusOutlineNode(nodeId)
 }
 
 function buildSubtitle(node: DocumentTreeNode) {
@@ -570,11 +796,7 @@ function toggleSetValue(target: { value: Set<string> }, nodeId: string) {
   }
   target.value = next
   selectedOutlineNodeId.value = nodeId
-  if (isMobileViewport.value) {
-    requestViewportAction('fit')
-  } else {
-    requestViewportAction('center')
-  }
+  requestViewportAction('focus-node', nodeId)
 }
 
 function handleTogglePreview(nodeId: string) {
@@ -665,9 +887,39 @@ function handleNodeClick(event: any) {
   }
 
   selectedOutlineNodeId.value = clickedNode.id
-  if (clickedNode.data.expandable && !expandedNodeIds.value.has(clickedNode.id)) {
-    handleToggleExpand(clickedNode.id)
+}
+
+function handleNodeDoubleClick(event: any) {
+  event?.event?.stopPropagation?.()
+  const clickedNode = event?.node
+  if (!clickedNode || clickedNode.data?.kind !== 'outline') {
+    return
   }
+
+  const currentNode = findOutlineNode(parseResult.value?.root, clickedNode.id)
+  if (!currentNode) {
+    return
+  }
+
+  selectedOutlineNodeId.value = clickedNode.id
+
+  if (!clickedNode.data.expandable) {
+    return
+  }
+
+  if (!expandedNodeIds.value.has(clickedNode.id)) {
+    handleToggleExpand(clickedNode.id)
+    return
+  }
+
+  const subtreeIds = new Set(collectOutlineSubtreeIds(currentNode))
+  const nextExpandedIds = new Set([...expandedNodeIds.value].filter((id) => !subtreeIds.has(id)))
+  if (nextExpandedIds.size === expandedNodeIds.value.size) {
+    return
+  }
+
+  expandedNodeIds.value = nextExpandedIds
+  requestViewportAction('focus-node', clickedNode.id)
 }
 
 function handleNodeDragStop(event: any) {
@@ -693,16 +945,112 @@ function fitCanvas() {
   })
 }
 
-function requestViewportAction(action: ViewportAction) {
+function requestViewportAction(action: ViewportAction, nodeId = '') {
   const priorityMap: Record<ViewportAction, number> = {
     none: 0,
     center: 1,
-    fit: 2
+    'focus-node': 2,
+    fit: 3
   }
 
   if (priorityMap[action] >= priorityMap[pendingViewportAction]) {
     pendingViewportAction = action
+    pendingViewportNodeId = action === 'focus-node' ? nodeId : ''
   }
+}
+
+function getViewportDimensions() {
+  if (!import.meta.client) {
+    return { width: 1440, height: 900 }
+  }
+
+  return {
+    width: window.innerWidth,
+    height: window.innerHeight
+  }
+}
+
+function getNodeFrameSize(kind?: CanvasNodeData['kind']) {
+  const metrics = getLayoutMetrics()
+  if (kind === 'outline') {
+    return {
+      width: metrics.outlineWidth,
+      height: metrics.outlineHeight
+    }
+  }
+
+  const viewport = getViewportDimensions()
+  if (isMobileViewport.value) {
+    const width = viewport.width <= 420
+      ? Math.min(Math.max(viewport.width - 24, 252), 332)
+      : Math.min(Math.max(viewport.width - 40, 272), 360)
+    return {
+      width,
+      height: Math.max(360, Math.min(viewport.height * 0.62, 560))
+    }
+  }
+
+  const preferredWidth = Math.min(Math.max(viewport.width * 0.34, 420), 620)
+  const maxWidth = Math.min(viewport.width * 0.78, 760)
+  return {
+    width: Math.min(preferredWidth, maxWidth),
+    height: Math.max(420, Math.min(viewport.height * 0.68, 760))
+  }
+}
+
+function getNodeBoundsByIds(nodeIds: string[]) {
+  if (!nodeIds.length) {
+    return null
+  }
+
+  const lookup = new Set(nodeIds)
+  let minX = Number.POSITIVE_INFINITY
+  let minY = Number.POSITIVE_INFINITY
+  let maxX = Number.NEGATIVE_INFINITY
+  let maxY = Number.NEGATIVE_INFINITY
+  let foundNode = false
+
+  for (const node of visibleNodes.value as Array<{ id: string; position: { x: number; y: number }; data?: CanvasNodeData }>) {
+    if (!lookup.has(node.id)) {
+      continue
+    }
+
+    const frame = getNodeFrameSize(node.data?.kind)
+    const x = Number(node.position.x || 0)
+    const y = Number(node.position.y || 0)
+    minX = Math.min(minX, x)
+    minY = Math.min(minY, y)
+    maxX = Math.max(maxX, x + frame.width)
+    maxY = Math.max(maxY, y + frame.height)
+    foundNode = true
+  }
+
+  if (!foundNode) {
+    return null
+  }
+
+  return {
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY
+  }
+}
+
+function getFocusedNodeBounds(nodeId: string) {
+  if (!nodeId) {
+    return null
+  }
+
+  const nodeIds = [nodeId]
+  if (previewOpenIds.value.has(nodeId)) {
+    nodeIds.push(`${nodeId}__preview`)
+  }
+  if (chatOpenIds.value.has(nodeId)) {
+    nodeIds.push(`${nodeId}__chat`)
+  }
+
+  return getNodeBoundsByIds(nodeIds)
 }
 
 function getOutlineBounds() {
@@ -769,10 +1117,25 @@ function centerOutlineBounds() {
   })
 }
 
-function scheduleViewportAction(action: ViewportAction) {
+function focusNodeBounds(nodeId: string) {
+  const bounds = getFocusedNodeBounds(nodeId)
+  if (!bounds) {
+    centerOutlineBounds()
+    return
+  }
+
+  flowRef.value?.fitBounds?.(bounds, {
+    padding: isMobileViewport.value ? 0.12 : 0.18,
+    duration: 280
+  })
+}
+
+function scheduleViewportAction(action: ViewportAction, nodeId = '') {
   if (!import.meta.client) {
     if (action === 'fit') {
       fitOutlineBounds()
+    } else if (action === 'focus-node') {
+      focusNodeBounds(nodeId)
     } else if (action === 'center') {
       centerOutlineBounds()
     }
@@ -783,6 +1146,8 @@ function scheduleViewportAction(action: ViewportAction) {
     window.requestAnimationFrame(() => {
       if (action === 'fit') {
         fitOutlineBounds()
+      } else if (action === 'focus-node') {
+        focusNodeBounds(nodeId)
       } else if (action === 'center') {
         centerOutlineBounds()
       }
@@ -869,6 +1234,60 @@ onBeforeUnmount(() => {
     </header>
 
     <div v-loading="loading" class="document-canvas-shell">
+      <div
+        v-if="!isMobileViewport"
+        class="outline-drawer"
+        :class="{ 'is-open': outlineDrawerOpen, 'is-dark': isDarkMode }"
+      >
+        <button type="button" class="outline-drawer__toggle" :title="outlineDrawerOpen ? '收起目录' : '展开目录'" @click="toggleOutlineDrawer">
+          <i :class="['fas', outlineDrawerOpen ? 'fa-chevron-left' : 'fa-chevron-right']"></i>
+        </button>
+        <aside v-if="outlineDrawerOpen" class="outline-drawer__panel">
+          <div class="outline-drawer__header">
+            <strong>文档结构</strong>
+            <div class="outline-drawer__header-actions">
+              <span>{{ outlinePanelItems.length }} 项</span>
+              <button type="button" class="outline-drawer__close" title="关闭目录" @click="toggleOutlineDrawer">
+                <i class="fas fa-xmark"></i>
+              </button>
+            </div>
+          </div>
+          <label class="outline-search">
+            <i class="fas fa-magnifying-glass"></i>
+            <input v-model.trim="outlineSearch" type="text" placeholder="搜索节点标题、摘要或内容" />
+          </label>
+          <div class="outline-drawer__list">
+            <div
+              v-for="item in outlinePanelItems"
+              :key="item.id"
+              class="outline-item"
+              :class="{
+                'is-selected': item.id === selectedOutlineNodeId,
+                'is-matched': item.isMatched
+              }"
+              :style="{ '--outline-depth': item.depth }"
+            >
+              <button
+                type="button"
+                class="outline-item__expand"
+                :class="{ 'is-placeholder': !item.hasChildren }"
+                :title="item.expanded ? '收起下一级' : '展开下一级'"
+                :disabled="!item.hasChildren"
+                @click.stop="item.hasChildren && handleOutlineItemToggle(item.id)"
+              >
+                <i v-if="item.hasChildren" :class="['fas', item.expanded ? 'fa-chevron-down' : 'fa-chevron-right']"></i>
+              </button>
+              <button type="button" class="outline-item__button" @click="handleOutlineItemSelect(item.id)">
+                <span class="outline-item__title">{{ item.title }}</span>
+              </button>
+            </div>
+            <div v-if="!outlinePanelItems.length" class="outline-empty">
+              未找到匹配节点
+            </div>
+          </div>
+        </aside>
+      </div>
+
       <ClientOnly>
         <VueFlow
           ref="flowRef"
@@ -882,7 +1301,9 @@ onBeforeUnmount(() => {
           :nodes-connectable="false"
           :elements-selectable="true"
           :fit-view-on-init="true"
+          :zoom-on-double-click="true"
           @node-click="handleNodeClick"
+          @node-double-click="handleNodeDoubleClick"
           @node-drag-stop="handleNodeDragStop"
         >
           <div class="canvas-bg"></div>
@@ -895,6 +1316,13 @@ onBeforeUnmount(() => {
         <i :class="['fas', isDarkMode ? 'fa-sun' : 'fa-moon']"></i>
       </button>
     </ElTooltip>
+
+    <aside v-if="!isMobileViewport" class="document-tip" :class="{ 'is-dark': isDarkMode }">
+      <p>左侧抽屉: 查看结构与搜索节点</p>
+      <p>单击节点: 选中</p>
+      <p>双击节点: 展开 / 收起子树</p>
+      <p>双击空白区域: 缩放</p>
+    </aside>
   </section>
 </template>
 
@@ -1000,6 +1428,197 @@ onBeforeUnmount(() => {
   min-height: 0;
 }
 
+.outline-drawer {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  z-index: 24;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.outline-drawer__toggle,
+.outline-drawer__panel {
+  pointer-events: auto;
+}
+
+.outline-drawer__toggle {
+  width: 42px;
+  height: 72px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-left: none;
+  border-radius: 0 18px 18px 0;
+  background: rgba(255, 255, 255, 0.88);
+  color: #334155;
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(14px);
+  cursor: pointer;
+  transform: translateX(-10px);
+  transition:
+    transform 0.22s ease,
+    box-shadow 0.22s ease,
+    background 0.22s ease;
+}
+
+.outline-drawer:not(.is-open):hover .outline-drawer__toggle {
+  transform: translateX(4px) scale(1.02);
+  box-shadow: 0 18px 34px rgba(15, 23, 42, 0.12);
+}
+
+.outline-drawer.is-open .outline-drawer__toggle {
+  transform: translateX(0);
+}
+
+.outline-drawer__panel {
+  width: min(320px, calc(100vw - 120px));
+  height: min(calc(100dvh - 180px), 760px);
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 22px 48px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(18px);
+}
+
+.outline-drawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+
+  strong {
+    color: #0f172a;
+    font-size: 0.96rem;
+  }
+
+  span {
+    color: #64748b;
+    font-size: 0.8rem;
+  }
+}
+
+.outline-drawer__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.outline-drawer__close {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(148, 163, 184, 0.12);
+  color: #475569;
+  cursor: pointer;
+}
+
+.outline-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 11px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(248, 250, 252, 0.92);
+  color: #64748b;
+
+  input {
+    flex: 1 1 auto;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: #0f172a;
+    font: inherit;
+  }
+}
+
+.outline-drawer__list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.outline-item {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  padding-left: calc(var(--outline-depth, 0) * 14px);
+}
+
+.outline-item__expand {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(99, 102, 241, 0.1);
+  color: #4f46e5;
+  cursor: pointer;
+
+  &.is-placeholder {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+.outline-item__button {
+  min-width: 0;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.64);
+  color: #334155;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+
+  &:hover {
+    background: rgba(99, 102, 241, 0.1);
+    transform: translateX(2px);
+  }
+}
+
+.outline-item__title {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.outline-item.is-selected .outline-item__button {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.18), rgba(14, 165, 233, 0.16));
+  color: #1e1b4b;
+  box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.24);
+}
+
+.outline-item.is-matched:not(.is-selected) .outline-item__button {
+  background: rgba(14, 165, 233, 0.1);
+  color: #0c4a6e;
+}
+
+.outline-empty {
+  padding: 14px 12px;
+  color: #64748b;
+  font-size: 0.84rem;
+}
+
 .document-theme-toggle {
   position: fixed;
   right: 24px;
@@ -1032,6 +1651,26 @@ onBeforeUnmount(() => {
 
   i {
     font-size: 1rem;
+  }
+}
+
+.document-tip {
+  position: fixed;
+  left: 24px;
+  bottom: 24px;
+  z-index: 22;
+  width: min(240px, calc(100vw - 140px));
+  pointer-events: none;
+
+  p {
+    margin: 4px 0 0;
+    color: rgba(100, 116, 139, 0.92);
+    font-size: 0.76rem;
+    line-height: 1.45;
+  }
+
+  p:first-child {
+    margin-top: 0;
   }
 }
 
@@ -1118,8 +1757,67 @@ onBeforeUnmount(() => {
     linear-gradient(180deg, rgba(15, 23, 42, 0.52), rgba(2, 6, 23, 0.3));
 }
 
+.document-task-page.is-dark .outline-drawer__toggle,
+.document-task-page.is-dark .outline-drawer__panel {
+  background: rgba(15, 23, 42, 0.86);
+  border-color: rgba(100, 116, 139, 0.28);
+  box-shadow: 0 20px 44px rgba(2, 6, 23, 0.28);
+}
+
+.document-task-page.is-dark .outline-drawer__toggle {
+  color: #cbd5e1;
+}
+
+.document-task-page.is-dark .outline-drawer__header strong,
+.document-task-page.is-dark .outline-search input {
+  color: #e2e8f0;
+}
+
+.document-task-page.is-dark .outline-drawer__header span,
+.document-task-page.is-dark .outline-search,
+.document-task-page.is-dark .outline-empty {
+  color: #94a3b8;
+}
+
+.document-task-page.is-dark .outline-drawer__close {
+  background: rgba(51, 65, 85, 0.56);
+  color: #cbd5e1;
+}
+
+.document-task-page.is-dark .outline-search {
+  background: rgba(15, 23, 42, 0.8);
+  border-color: rgba(100, 116, 139, 0.24);
+}
+
+.document-task-page.is-dark .outline-item__expand {
+  background: rgba(99, 102, 241, 0.16);
+  color: #a5b4fc;
+}
+
+.document-task-page.is-dark .outline-item__button {
+  background: rgba(30, 41, 59, 0.72);
+  color: #cbd5e1;
+}
+
+.document-task-page.is-dark .outline-item.is-selected .outline-item__button {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.22), rgba(14, 165, 233, 0.18));
+  color: #e0e7ff;
+  box-shadow: inset 0 0 0 1px rgba(129, 140, 248, 0.26);
+}
+
+.document-task-page.is-dark .outline-item.is-matched:not(.is-selected) .outline-item__button {
+  background: rgba(14, 165, 233, 0.14);
+  color: #bae6fd;
+}
+
 .document-task-page.is-dark .document-theme-toggle {
   box-shadow: 0 16px 36px rgba(14, 165, 233, 0.24);
+}
+
+.document-task-page.is-dark .document-tip {
+  p {
+    color: rgba(148, 163, 184, 0.88);
+  }
 }
 
 .document-task-page.is-dark .canvas-bg {
@@ -1185,6 +1883,14 @@ onBeforeUnmount(() => {
   .document-theme-toggle {
     right: 16px;
     bottom: 16px;
+  }
+
+  .outline-drawer {
+    display: none;
+  }
+
+  .document-tip {
+    display: none;
   }
 }
 </style>

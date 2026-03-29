@@ -35,6 +35,7 @@ const props = defineProps<NodeProps<CanvasNodeData>>()
 const isOutline = computed(() => props.data.kind === 'outline')
 const isPreview = computed(() => props.data.kind === 'source-preview')
 const isChat = computed(() => props.data.kind === 'chat-thread')
+const showClose = computed(() => isPreview.value || isChat.value)
 const markdownTheme = computed(() => props.data.themeMode === 'dark' ? 'dark' : 'light')
 
 function handleToggleExpand() {
@@ -59,6 +60,16 @@ function handleToggleChat() {
   }
 
   props.data.onToggleChat(props.data.nodeId)
+}
+
+function handleClosePanel() {
+  if (isPreview.value) {
+    handleTogglePreview()
+    return
+  }
+  if (isChat.value) {
+    handleToggleChat()
+  }
 }
 
 function handleQuestionInput(event: Event) {
@@ -104,6 +115,15 @@ function handleSubmitQuestion() {
           @click.stop="handleToggleExpand"
         >
           <i :class="['fas', data.expanded ? 'fa-minus' : 'fa-plus']"></i>
+        </button>
+        <button
+          v-else-if="showClose"
+          type="button"
+          class="node-close"
+          title="关闭"
+          @click.stop="handleClosePanel"
+        >
+          <i class="fas fa-xmark"></i>
         </button>
       </div>
 
@@ -272,6 +292,16 @@ function handleSubmitQuestion() {
   border-radius: 10px;
   background: rgba(99, 102, 241, 0.1);
   color: #4f46e5;
+  cursor: pointer;
+}
+
+.node-close {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(148, 163, 184, 0.12);
+  color: #475569;
   cursor: pointer;
 }
 
@@ -519,6 +549,11 @@ function handleSubmitQuestion() {
 .document-canvas-node.is-dark .node-toggle {
   background: rgba(99, 102, 241, 0.18);
   color: #a5b4fc;
+}
+
+.document-canvas-node.is-dark .node-close {
+  background: rgba(51, 65, 85, 0.56);
+  color: #cbd5e1;
 }
 
 .document-canvas-node.is-dark .node-card__subtitle,
