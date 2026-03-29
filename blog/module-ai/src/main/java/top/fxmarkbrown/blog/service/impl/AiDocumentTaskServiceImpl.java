@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;
@@ -70,6 +71,9 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
     private final SysAiDocumentNodeMessageMapper documentNodeMessageMapper;
     private final SysAiDocumentTaskMapper documentTaskMapper;
     private final SysAiDocumentResultMapper documentResultMapper;
+
+    @Value("${app.url:}")
+    private String appUrl;
 
     @Override
     public List<AiDocumentTaskListVo> listTasks() {
@@ -319,7 +323,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
 
     private AiDocumentTaskDetailVo createRealMineruTask(AiDocumentTaskCreateDto createDto) {
         AiProperties.Mineru mineru = aiProperties.getDocument().getMineru();
-        String sourceUrl = safeText(createDto == null ? null : createDto.getSourceUrl(), null);
+        String sourceUrl = resolveMineruSourceUrl(safeText(createDto == null ? null : createDto.getSourceUrl(), null));
         if (!StringUtils.hasText(sourceUrl)) {
             throw new IllegalStateException("真实 MinerU 任务要求 sourceUrl 可用");
         }
@@ -2593,6 +2597,32 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
 
     private String safeText(String value, String fallback) {
         return StringUtils.hasText(value) ? value.trim() : fallback;
+    }
+
+    private String resolveMineruSourceUrl(String sourceUrl) {
+        String normalizedSourceUrl = safeText(sourceUrl, null);
+        if (!StringUtils.hasText(normalizedSourceUrl)) {
+            return null;
+        }
+        try {
+            URI uri = URI.create(normalizedSourceUrl);
+            if (StringUtils.hasText(uri.getScheme())) {
+                return normalizedSourceUrl;
+            }
+        } catch (IllegalArgumentException ignored) {
+        }
+
+        String normalizedAppUrl = safeText(appUrl, null);
+        if (!StringUtils.hasText(normalizedAppUrl)) {
+            return normalizedSourceUrl;
+        }
+        if (normalizedAppUrl.endsWith("/") && normalizedSourceUrl.startsWith("/")) {
+            return normalizedAppUrl.substring(0, normalizedAppUrl.length() - 1) + normalizedSourceUrl;
+        }
+        if (!normalizedAppUrl.endsWith("/") && !normalizedSourceUrl.startsWith("/")) {
+            return normalizedAppUrl + "/" + normalizedSourceUrl;
+        }
+        return normalizedAppUrl + normalizedSourceUrl;
     }
 
     private void validateMineruSourceUrl(String sourceUrl) {
