@@ -68,6 +68,16 @@ export const constantRoutes: RouteRecordRaw[] = [
         },
       },
       {
+        path: "document-task",
+        component: () => import("@/views/ai/document-task/index.vue"),
+        name: "AiDocumentTask",
+        meta: {
+          title: "文档任务",
+          icon: "Document",
+          keepAlive: true,
+        },
+      },
+      {
         path: "quota",
         component: () => import("@/views/ai/quota/index.vue"),
         name: "AiQuota",

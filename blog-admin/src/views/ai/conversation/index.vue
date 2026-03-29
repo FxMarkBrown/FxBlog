@@ -1,27 +1,29 @@
 <template>
   <div class="app-container">
+    <div class="search-wrapper">
+      <el-form :inline="true" :model="queryParams" class="filter-form">
+        <el-form-item label="用户">
+          <el-input v-model="queryParams.userKeyword" placeholder="昵称 / 用户名" clearable @keyup.enter="handleQuery" />
+        </el-form-item>
+        <el-form-item label="类型">
+          <el-select v-model="queryParams.type" placeholder="全部" clearable style="width: 140px">
+            <el-option label="全局" value="global" />
+            <el-option label="文章" value="article" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="关键词">
+          <el-input v-model="queryParams.keyword" placeholder="标题 / 摘要" clearable @keyup.enter="handleQuery" />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
+          <el-button icon="Refresh" @click="handleReset">重置</el-button>
+        </el-form-item>
+      </el-form>
+    </div>
+
     <el-card class="box-card">
       <template #header>
-        <div class="toolbar">
-          <el-form :inline="true" :model="queryParams" class="filter-form">
-            <el-form-item label="用户">
-              <el-input v-model="queryParams.userKeyword" placeholder="昵称 / 用户名" clearable @keyup.enter="handleQuery" />
-            </el-form-item>
-            <el-form-item label="类型">
-              <el-select v-model="queryParams.type" placeholder="全部" clearable style="width: 140px">
-                <el-option label="全局" value="global" />
-                <el-option label="文章" value="article" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="关键词">
-              <el-input v-model="queryParams.keyword" placeholder="标题 / 摘要" clearable @keyup.enter="handleQuery" />
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
-              <el-button icon="Refresh" @click="handleReset">重置</el-button>
-            </el-form-item>
-          </el-form>
-
+        <div class="card-header">
           <ButtonGroup>
             <el-button
               type="danger"
@@ -306,19 +308,6 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-.toolbar {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.filter-form {
-  display: flex;
-  flex-wrap: wrap;
-}
-
 .user-cell {
   display: flex;
   align-items: center;
