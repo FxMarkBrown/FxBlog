@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import org.springframework.beans.factory.ObjectProvider;
 import org.dromara.x.file.storage.core.FileInfo;
 import org.dromara.x.file.storage.core.FileStorageService;
 import org.dromara.x.file.storage.core.hash.HashInfo;
@@ -57,7 +58,7 @@ public class FileDetailServiceImpl extends ServiceImpl<FileDetailMapper, FileDet
 
     private final SysFileOssMapper sysFileOssMapper;
 
-    private final FileStorageService fileStorageService;
+    private final ObjectProvider<FileStorageService> fileStorageServiceProvider;
 
     @Override
     public IPage<FileDetail> selectPage(FileDetail fileDetail) {
@@ -159,6 +160,7 @@ public class FileDetailServiceImpl extends ServiceImpl<FileDetailMapper, FileDet
             return deleteManagedFile(detail);
         }
         String storageUrl = resolveStorageUrl(url);
+        FileStorageService fileStorageService = requireFileStorageService();
         boolean deleted = fileStorageService.delete(storageUrl);
         if (!deleted && !Objects.equals(storageUrl, url)) {
             deleted = fileStorageService.delete(url);
@@ -616,6 +618,7 @@ public class FileDetailServiceImpl extends ServiceImpl<FileDetailMapper, FileDet
             }
         }
         String storageUrl = resolveStorageUrl(detail.getUrl());
+        FileStorageService fileStorageService = requireFileStorageService();
         boolean deleted = fileStorageService.delete(storageUrl);
         if (!deleted && !Objects.equals(storageUrl, detail.getUrl())) {
             deleted = fileStorageService.delete(detail.getUrl());
@@ -639,11 +642,20 @@ public class FileDetailServiceImpl extends ServiceImpl<FileDetailMapper, FileDet
             }
         }
         if (StringUtils.hasText(detail.getThUrl())) {
+            FileStorageService fileStorageService = requireFileStorageService();
             String thumbnailStorageUrl = resolveStorageUrl(detail.getThUrl());
             boolean deleted = fileStorageService.delete(thumbnailStorageUrl);
             if (!deleted && !Objects.equals(thumbnailStorageUrl, detail.getThUrl())) {
                 fileStorageService.delete(detail.getThUrl());
             }
         }
+    }
+
+    private FileStorageService requireFileStorageService() {
+        FileStorageService fileStorageService = fileStorageServiceProvider.getIfAvailable();
+        if (fileStorageService == null) {
+            throw new ServiceException("文件存储服务未初始化");
+        }
+        return fileStorageService;
     }
 }
