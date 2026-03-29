@@ -20,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -243,7 +244,7 @@ public class AiMarkdownChunkServiceImpl implements AiMarkdownChunkService {
 
         flushParagraphBlock(article, chunks, paragraphBuffer, headingStack, currentHeadingLevel[0], chunkOrder, articleTitleCache, taxonomyLinks);
         flushSpecialBlock(article, chunks, blockBuffer, headingStack, currentHeadingLevel[0], currentBlockType[0], chunkOrder, articleTitleCache, taxonomyLinks);
-        return chunks;
+        return mergeChunks(article, chunks, articleTitleCache, taxonomyLinks);
     }
 
     private void flushParagraphBlock(SysArticle article,
@@ -310,10 +311,6 @@ public class AiMarkdownChunkServiceImpl implements AiMarkdownChunkService {
         List<AiChunkInternalLink> internalLinks = extractInternalLinks(cleaned, articleTitleCache);
         List<AiChunkMediaRef> mediaRefs = extractMediaRefs(cleaned);
         String retrievalText = buildRetrievalText(article, sectionPath, blockType, cleaned, internalLinks, mediaRefs, taxonomyLinks);
-        String preview = cleaned.replace('\n', ' ');
-        if (preview.length() > 120) {
-            preview = preview.substring(0, 120) + "...";
-        }
         chunks.add(new AiMarkdownChunk(
                 chunkOrder[0]++,
                 sectionPath,
@@ -321,7 +318,7 @@ public class AiMarkdownChunkServiceImpl implements AiMarkdownChunkService {
                 blockType,
                 cleaned,
                 retrievalText,
-                preview,
+                buildPreview(cleaned),
                 internalLinks,
                 mediaRefs,
                 taxonomyLinks,
@@ -329,6 +326,133 @@ public class AiMarkdownChunkServiceImpl implements AiMarkdownChunkService {
                 INLINE_IMAGE_PATTERN.matcher(cleaned).find(),
                 cleaned.contains("<iframe") || cleaned.contains(".mp4")
         ));
+    }
+
+    private List<AiMarkdownChunk> mergeChunks(SysArticle article,
+                                              List<AiMarkdownChunk> chunks,
+                                              Map<Long, String> articleTitleCache,
+                                              List<AiChunkTaxonomyLink> taxonomyLinks) {
+        if (chunks.size() <= 1 || !aiRagProperties.isMergeAdjacentChunks()) {
+            return chunks;
+        }
+        int maxMergedChars = Math.max(aiRagProperties.getMergeMaxChars(), aiRagProperties.getMaxChunkChars());
+        List<AiMarkdownChunk> mergedChunks = new ArrayList<>();
+        for (AiMarkdownChunk chunk : chunks) {
+            if (mergedChunks.isEmpty()) {
+                mergedChunks.add(chunk);
+                continue;
+            }
+            AiMarkdownChunk previous = mergedChunks.getLast();
+            if (!shouldMerge(previous, chunk, maxMergedChars)) {
+                mergedChunks.add(chunk);
+                continue;
+            }
+            mergedChunks.set(mergedChunks.size() - 1, mergeChunkPair(article, previous, chunk, articleTitleCache, taxonomyLinks));
+        }
+        return List.copyOf(mergedChunks);
+    }
+
+    private boolean shouldMerge(AiMarkdownChunk previous, AiMarkdownChunk current, int maxMergedChars) {
+        if (previous == null || current == null) {
+            return false;
+        }
+        if (!StringUtils.hasText(previous.sectionPath()) || !previous.sectionPath().equals(current.sectionPath())) {
+            return false;
+        }
+        if (previous.headingLevel() != current.headingLevel()) {
+            return false;
+        }
+        int mergedLength = previous.rawMarkdownFragment().length() + 2 + current.rawMarkdownFragment().length();
+        return mergedLength <= maxMergedChars;
+    }
+
+    private AiMarkdownChunk mergeChunkPair(SysArticle article,
+                                           AiMarkdownChunk previous,
+                                           AiMarkdownChunk current,
+                                           Map<Long, String> articleTitleCache,
+                                           List<AiChunkTaxonomyLink> taxonomyLinks) {
+        String mergedBlockType = mergeBlockType(previous.blockType(), current.blockType());
+        String mergedMarkdown = previous.rawMarkdownFragment() + "\n\n" + current.rawMarkdownFragment();
+        List<AiChunkInternalLink> internalLinks = mergeInternalLinks(previous.internalLinks(), current.internalLinks());
+        List<AiChunkMediaRef> mediaRefs = mergeMediaRefs(previous.mediaRefs(), current.mediaRefs());
+        List<AiChunkTaxonomyLink> mergedTaxonomyLinks = mergeTaxonomyLinks(previous.taxonomyLinks(), current.taxonomyLinks(), taxonomyLinks);
+        return new AiMarkdownChunk(
+                previous.chunkOrder(),
+                previous.sectionPath(),
+                previous.headingLevel(),
+                mergedBlockType,
+                mergedMarkdown,
+                buildRetrievalText(article, previous.sectionPath(), mergedBlockType, mergedMarkdown, internalLinks, mediaRefs, mergedTaxonomyLinks),
+                buildPreview(mergedMarkdown),
+                internalLinks,
+                mediaRefs,
+                mergedTaxonomyLinks,
+                previous.hasMath() || current.hasMath(),
+                previous.hasImage() || current.hasImage(),
+                previous.hasVideo() || current.hasVideo()
+        );
+    }
+
+    private String mergeBlockType(String previousType, String currentType) {
+        if (!StringUtils.hasText(previousType)) {
+            return currentType;
+        }
+        if (!StringUtils.hasText(currentType) || previousType.equals(currentType)) {
+            return previousType;
+        }
+        LinkedHashSet<String> blockTypes = new LinkedHashSet<>();
+        for (String blockType : (previousType + "+" + currentType).split("\\+")) {
+            if (StringUtils.hasText(blockType)) {
+                blockTypes.add(blockType.trim());
+            }
+        }
+        return String.join("+", blockTypes);
+    }
+
+    private List<AiChunkInternalLink> mergeInternalLinks(List<AiChunkInternalLink> previous, List<AiChunkInternalLink> current) {
+        LinkedHashSet<AiChunkInternalLink> merged = new LinkedHashSet<>();
+        if (previous != null) {
+            merged.addAll(previous);
+        }
+        if (current != null) {
+            merged.addAll(current);
+        }
+        return merged.isEmpty() ? List.of() : List.copyOf(merged);
+    }
+
+    private List<AiChunkMediaRef> mergeMediaRefs(List<AiChunkMediaRef> previous, List<AiChunkMediaRef> current) {
+        LinkedHashSet<AiChunkMediaRef> merged = new LinkedHashSet<>();
+        if (previous != null) {
+            merged.addAll(previous);
+        }
+        if (current != null) {
+            merged.addAll(current);
+        }
+        return merged.isEmpty() ? List.of() : List.copyOf(merged);
+    }
+
+    private List<AiChunkTaxonomyLink> mergeTaxonomyLinks(List<AiChunkTaxonomyLink> previous,
+                                                         List<AiChunkTaxonomyLink> current,
+                                                         List<AiChunkTaxonomyLink> fallback) {
+        LinkedHashSet<AiChunkTaxonomyLink> merged = new LinkedHashSet<>();
+        if (previous != null) {
+            merged.addAll(previous);
+        }
+        if (current != null) {
+            merged.addAll(current);
+        }
+        if (merged.isEmpty() && fallback != null) {
+            merged.addAll(fallback);
+        }
+        return merged.isEmpty() ? List.of() : List.copyOf(merged);
+    }
+
+    private String buildPreview(String text) {
+        String preview = text.replace('\n', ' ').trim();
+        if (preview.length() > 120) {
+            return preview.substring(0, 120) + "...";
+        }
+        return preview;
     }
 
     private List<String> splitLongText(String text, int maxChunkChars) {
