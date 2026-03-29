@@ -2,25 +2,42 @@
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import { ElMessage } from 'element-plus'
-import type { Edge, Node } from '@vue-flow/core'
-import { VueFlow } from '@vue-flow/core'
+import type { Connection, Edge, Node, OnConnectStartParams } from '@vue-flow/core'
+import { ConnectionMode, MarkerType, VueFlow } from '@vue-flow/core'
 import DocumentCanvasNode from '@/components/ai-document/DocumentCanvasNode.vue'
 import { askDocumentNodeApi, getDocumentTaskDetailApi, getDocumentTaskResultApi } from '@/api/ai-document'
-import type { DocumentNodeAnswer, DocumentParseResult, DocumentTaskDetail, DocumentTreeNode } from '@/types/ai-document'
+import type {
+  DocumentContextNode,
+  DocumentKnowledgeFlowEdge,
+  DocumentNodeAnswer,
+  DocumentParseResult,
+  DocumentTaskDetail,
+  DocumentTreeNode
+} from '@/types/ai-document'
 import { unwrapResponseData } from '@/utils/response'
 import { getThemeMode, initTheme, setThemeMode } from '@/utils/theme'
 
+type QueryModePreset = 'strict' | 'balanced' | 'explore'
+
 type ChatState = {
+  mode: QueryModePreset
   question: string
   sending: boolean
+  selectedNodeIds?: string[]
   answer?: string
   error?: string
   citations?: DocumentNodeAnswer['citations']
+  usedNodes?: DocumentNodeAnswer['usedNodes']
+  candidateNodes?: DocumentNodeAnswer['candidateNodes']
+  knowledgeFlowEdges?: DocumentNodeAnswer['knowledgeFlowEdges']
+  contextPlan?: DocumentNodeAnswer['contextPlan']
+  budgetReport?: DocumentNodeAnswer['budgetReport']
 }
 
 type CanvasNodeData = {
   kind: 'outline' | 'source-preview' | 'chat-thread'
   nodeId: string
+  highlightRole?: 'current' | 'used' | 'candidate' | 'citation' | 'selected'
   themeMode?: 'light' | 'dark'
   title: string
   subtitle?: string
@@ -35,6 +52,13 @@ type CanvasNodeData = {
   question?: string
   answer?: string
   citations?: DocumentNodeAnswer['citations']
+  queryMode?: QueryModePreset
+  contextSummary?: string
+  usedNodes?: DocumentContextNode[]
+  candidateNodes?: DocumentContextNode[]
+  selectedContextNodes?: DocumentContextNode[]
+  showContextSocket?: boolean
+  acceptContextDrop?: boolean
   sending?: boolean
   error?: string
   onToggleExpand?: (nodeId: string) => void
@@ -42,6 +66,9 @@ type CanvasNodeData = {
   onToggleChat?: (nodeId: string) => void
   onQuestionChange?: (nodeId: string, value: string) => void
   onSubmitQuestion?: (nodeId: string) => void
+  onSelectCitation?: (nodeId: string) => void
+  onQueryModeChange?: (nodeId: string, mode: QueryModePreset) => void
+  onToggleSelectedContextNode?: (nodeId: string, targetNodeId: string) => void
 }
 
 type OutlineDescriptor = {
@@ -84,6 +111,8 @@ const outlineSearch = ref('')
 const flowRef = ref<InstanceType<typeof VueFlow> | null>(null)
 const isDarkMode = ref(false)
 const isMobileViewport = ref(false)
+const activeAnswerNodeId = ref('')
+const connectingSocketChatNodeId = ref('')
 const elkEngine = shallowRef<any | null>(null)
 let layoutRequestId = 0
 let pendingViewportAction: ViewportAction = 'none'
@@ -93,13 +122,32 @@ const visibleNodes = ref<CanvasFlowNode[]>([])
 const visibleEdges = ref<Edge[]>([])
 const outlineSearchKeyword = computed(() => outlineSearch.value.trim().toLowerCase())
 const outlinePanelItems = computed(() => buildOutlinePanelItems(parseResult.value?.root, outlineSearchKeyword.value))
+const documentNodeLookup = computed<Record<string, DocumentTreeNode>>(() => {
+  const lookup: Record<string, DocumentTreeNode> = {}
+  for (const node of flattenTree(parseResult.value?.root)) {
+    lookup[node.id] = node
+  }
+  return lookup
+})
+const activeAnswerState = computed(() => (activeAnswerNodeId.value ? chatStateMap.value[activeAnswerNodeId.value] : undefined))
+const contextControlState = computed(() => {
+  if (connectingSocketChatNodeId.value) {
+    return chatStateMap.value[connectingSocketChatNodeId.value]
+  }
+  return activeAnswerState.value
+})
+const activeUsedNodeIds = computed(() => new Set((activeAnswerState.value?.usedNodes || []).map((node) => String(node.nodeId || '')).filter(Boolean)))
+const activeCandidateNodeIds = computed(() => new Set((activeAnswerState.value?.candidateNodes || []).map((node) => String(node.nodeId || '')).filter(Boolean)))
+const activeCitationNodeIds = computed(() => new Set((activeAnswerState.value?.citations || []).map((citation) => String(citation.nodeId || '')).filter(Boolean)))
+const activeSelectedContextNodeIds = computed(() => new Set((contextControlState.value?.selectedNodeIds || []).map((nodeId) => String(nodeId || '')).filter(Boolean)))
+const activeKnowledgeFlowEdges = computed(() => activeAnswerState.value?.knowledgeFlowEdges || [])
 
 const nodeTypes = markRaw({
   documentNode: markRaw(DocumentCanvasNode)
 })
 
 watch(
-  [parseResult, expandedNodeIds, previewOpenIds, chatOpenIds, chatStateMap, isDarkMode, isMobileViewport],
+  [parseResult, expandedNodeIds, previewOpenIds, chatOpenIds, chatStateMap, isDarkMode, isMobileViewport, activeAnswerNodeId, connectingSocketChatNodeId],
   () => {
     void rebuildCanvas()
   },
@@ -403,20 +451,22 @@ async function rebuildCanvas() {
       id: descriptor.id,
       type: 'documentNode',
       position,
-      data: {
-        kind: 'outline',
-        nodeId: descriptor.id,
-        themeMode: isDarkMode.value ? 'dark' : 'light',
+        data: {
+          kind: 'outline',
+          nodeId: descriptor.id,
+          highlightRole: resolveNodeHighlightRole(descriptor.id),
+          themeMode: isDarkMode.value ? 'dark' : 'light',
         title: String(node.title || '未命名节点'),
         subtitle: buildSubtitle(node),
         body: String(node.summary || ''),
-        badge: buildBadge(node),
-        expandable: Boolean(getVisibleTreeChildren(node).length),
-        expanded: expandedNodeIds.value.has(descriptor.id),
-        onToggleExpand: handleToggleExpand,
-        onTogglePreview: handleTogglePreview,
-        onToggleChat: handleToggleChat
-      }
+          badge: buildBadge(node),
+          expandable: Boolean(getVisibleTreeChildren(node).length),
+          expanded: expandedNodeIds.value.has(descriptor.id),
+          acceptContextDrop: Boolean(connectingSocketChatNodeId.value),
+          onToggleExpand: handleToggleExpand,
+          onTogglePreview: handleTogglePreview,
+          onToggleChat: handleToggleChat
+        }
     })
 
     if (descriptor.parentId) {
@@ -424,10 +474,16 @@ async function rebuildCanvas() {
         id: `${descriptor.parentId}-->${descriptor.id}`,
         source: descriptor.parentId,
         target: descriptor.id,
-        type: 'smoothstep',
+        type: 'bezier',
         animated: false,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          width: 18,
+          height: 18,
+          color: isDarkMode.value ? '#7c8cff' : '#6366f1'
+        },
         style: {
-          stroke: '#7c83fd',
+          stroke: isDarkMode.value ? '#7c8cff' : '#6366f1',
           strokeWidth: 1.6
         }
       })
@@ -445,6 +501,8 @@ async function rebuildCanvas() {
   })
 
   appendAttachmentNodes(root, result)
+  appendKnowledgeFlowEdges(result)
+  appendUserContextControlEdges(result)
 
   visibleNodes.value = result.nodes
   visibleEdges.value = result.edges
@@ -513,8 +571,14 @@ function appendAttachmentNodes(
         id: `${node.id}-->${previewId}`,
         source: node.id,
         target: previewId,
-        type: 'smoothstep',
+        type: 'bezier',
         animated: true,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          width: 18,
+          height: 18,
+          color: '#10b981'
+        },
         style: {
           stroke: '#10b981',
           strokeWidth: 1.5,
@@ -525,13 +589,7 @@ function appendAttachmentNodes(
 
     if (chatOpenIds.value.has(node.id)) {
       const chatId = `${node.id}__chat`
-      const chatState = chatStateMap.value[node.id] || {
-        question: '',
-        sending: false,
-        answer: '',
-        error: '',
-        citations: []
-      }
+      const chatState = getChatState(node.id)
       const chatPosition = isMobileViewport.value
         ? {
             x: anchor.x,
@@ -554,32 +612,117 @@ function appendAttachmentNodes(
           nodeId: node.id,
           themeMode: isDarkMode.value ? 'dark' : 'light',
           title: `${node.title || '节点'} · 节点对话`,
-          subtitle: '当前为节点上下文对话挂件，后续会接入运行时 RAG 与流式回答。',
-          markdown: buildChatHint(node),
+          subtitle: buildChatSubtitle(chatState),
+          markdown: chatState.answer ? '' : buildChatHint(node),
           question: chatState.question,
           answer: chatState.answer,
           citations: chatState.citations,
+          queryMode: chatState.mode,
+          contextSummary: buildContextSummary(chatState),
+          usedNodes: chatState.usedNodes,
+          candidateNodes: chatState.candidateNodes,
+          selectedContextNodes: resolveSelectedContextNodes(node.id),
+          showContextSocket: true,
           sending: chatState.sending,
           error: chatState.error,
           onToggleChat: handleToggleChat,
           onQuestionChange: handleQuestionChange,
-          onSubmitQuestion: handleSubmitQuestion
+          onSubmitQuestion: handleSubmitQuestion,
+          onSelectCitation: handleSelectCitation,
+          onQueryModeChange: handleQueryModeChange,
+          onToggleSelectedContextNode: handleToggleSelectedContextNode
         }
       })
       result.edges.push({
         id: `${node.id}-->${chatId}`,
         source: node.id,
         target: chatId,
-        type: 'smoothstep',
+        targetHandle: 'context-socket-target',
+        type: 'bezier',
         animated: true,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          width: 18,
+          height: 18,
+          color: '#0ea5e9'
+        },
         style: {
           stroke: '#0ea5e9',
-          strokeWidth: 1.5,
-          strokeDasharray: '6 4'
+          strokeWidth: 1.8
         }
       })
     }
   }
+}
+
+function appendKnowledgeFlowEdges(result: { nodes: CanvasFlowNode[]; edges: Edge[]; centers: Map<string, { x: number; y: number }> }) {
+  const visibleNodeIds = new Set(result.nodes.map((node) => node.id))
+  activeKnowledgeFlowEdges.value.forEach((edge: DocumentKnowledgeFlowEdge, index: number) => {
+    const fromNodeId = String(edge.fromNodeId || '')
+    const toNodeId = String(edge.toNodeId || '')
+    if (!fromNodeId || !toNodeId || !visibleNodeIds.has(fromNodeId) || !visibleNodeIds.has(toNodeId)) {
+      return
+    }
+    result.edges.push({
+      id: `knowledge:${fromNodeId}:${toNodeId}:${index}`,
+      source: fromNodeId,
+      target: toNodeId,
+      type: 'bezier',
+      animated: true,
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        width: 20,
+        height: 20,
+        color: '#38bdf8'
+      },
+      label: buildKnowledgeEdgeLabel(edge),
+      style: {
+        stroke: '#38bdf8',
+        strokeWidth: 2.1,
+        strokeDasharray: '7 5'
+      }
+    })
+  })
+}
+
+function appendUserContextControlEdges(result: { nodes: CanvasFlowNode[]; edges: Edge[]; centers: Map<string, { x: number; y: number }> }) {
+  const visibleNodeIds = new Set(result.nodes.map((node) => node.id))
+  Object.entries(chatStateMap.value).forEach(([chatNodeId, chatState]) => {
+    if (!chatOpenIds.value.has(chatNodeId)) {
+      return
+    }
+
+    const sourceId = `${chatNodeId}__chat`
+    if (!visibleNodeIds.has(sourceId)) {
+      return
+    }
+
+    ;(chatState.selectedNodeIds || []).forEach((targetNodeId, index) => {
+      if (!targetNodeId || !visibleNodeIds.has(targetNodeId)) {
+        return
+      }
+
+      result.edges.push({
+        id: `context-control:${chatNodeId}:${targetNodeId}:${index}`,
+        source: sourceId,
+        target: targetNodeId,
+        type: 'bezier',
+        sourceHandle: 'context-socket-source',
+        targetHandle: 'context-target',
+        animated: connectingSocketChatNodeId.value === chatNodeId,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          width: 18,
+          height: 18,
+          color: '#f59e0b'
+        },
+        style: {
+          stroke: '#f59e0b',
+          strokeWidth: 2.2
+        }
+      })
+    })
+  })
 }
 
 function flattenTree(root?: DocumentTreeNode | null): DocumentTreeNode[] {
@@ -744,11 +887,86 @@ function buildBadge(node: DocumentTreeNode) {
 function buildChatHint(node: DocumentTreeNode) {
   return [
     `当前对话默认绑定节点《${node.title || '未命名节点'}》。`,
-    '后续这里会显示：',
-    '1. 当前节点摘要',
-    '2. 当前节点子树上下文',
-    '3. 引用与回跳结果'
+    '你也可以从顶部插口拖出箭头，把别的节点纳入本轮显式上下文。',
+    '提问后会显示：',
+    '1. 实际使用的上下文节点',
+    '2. 候选但未使用的节点',
+    '3. 可回跳的引用与知识流边'
   ].join('\n')
+}
+
+function buildKnowledgeEdgeLabel(edge?: DocumentKnowledgeFlowEdge) {
+  const edgeType = String(edge?.edgeType || '').toLowerCase()
+  switch (edgeType) {
+    case 'bridges':
+      return '桥接'
+    case 'supports':
+      return '补充'
+    case 'explains':
+      return '上文'
+    case 'extends':
+      return '下文'
+    case 'compares':
+      return '对照'
+    default:
+      return ''
+  }
+}
+
+function buildChatSubtitle(chatState?: ChatState) {
+  if (!chatState?.answer) {
+    return '当前问题将绑定到所选节点，并可叠加显式上下文。'
+  }
+  return `已完成一次节点问答 · ${describeMode(chatState.mode)}模式`
+}
+
+function buildContextSummary(chatState?: ChatState) {
+  const parts: string[] = []
+  const truncatedNodeCount = chatState?.budgetReport?.truncatedNodeCount
+  if (chatState?.selectedNodeIds?.length) {
+    parts.push(`${chatState.selectedNodeIds.length} 个显式节点`)
+  }
+  if (chatState?.answer) {
+    parts.push(`${chatState.usedNodes?.length || 0} 个已使用节点`)
+    parts.push(`${chatState.candidateNodes?.length || 0} 个候选节点`)
+  }
+  if (truncatedNodeCount) {
+    parts.push(`截断 ${truncatedNodeCount} 个`)
+  }
+  return parts.join(' · ')
+}
+
+function describeMode(mode?: QueryModePreset) {
+  switch (mode) {
+    case 'strict':
+      return '严格'
+    case 'explore':
+      return '探索'
+    default:
+      return '平衡'
+  }
+}
+
+function resolveNodeHighlightRole(nodeId: string) {
+  if (!nodeId) {
+    return undefined
+  }
+  if (nodeId === activeAnswerNodeId.value) {
+    return 'current' as const
+  }
+  if (activeSelectedContextNodeIds.value.has(nodeId)) {
+    return 'selected' as const
+  }
+  if (activeCitationNodeIds.value.has(nodeId)) {
+    return 'citation' as const
+  }
+  if (activeUsedNodeIds.value.has(nodeId)) {
+    return 'used' as const
+  }
+  if (activeCandidateNodeIds.value.has(nodeId)) {
+    return 'candidate' as const
+  }
+  return undefined
 }
 
 function normalizeAnchorBox(rawBbox?: number[]) {
@@ -804,33 +1022,41 @@ function handleTogglePreview(nodeId: string) {
 }
 
 function handleToggleChat(nodeId: string) {
-  if (!chatStateMap.value[nodeId]) {
-    chatStateMap.value = {
-      ...chatStateMap.value,
-      [nodeId]: {
-        question: '',
-        sending: false,
-        answer: '',
-        error: '',
-        citations: []
-      }
-    }
-  }
+  ensureChatState(nodeId)
+  activeAnswerNodeId.value = nodeId
   toggleSetValue(chatOpenIds, nodeId)
+  if (!chatOpenIds.value.has(nodeId) && activeAnswerNodeId.value === nodeId) {
+    activeAnswerNodeId.value = ''
+  }
+  if (!chatOpenIds.value.has(nodeId) && connectingSocketChatNodeId.value === nodeId) {
+    connectingSocketChatNodeId.value = ''
+  }
 }
 
 function handleQuestionChange(nodeId: string, value: string) {
+  const currentState = getChatState(nodeId)
   chatStateMap.value = {
     ...chatStateMap.value,
     [nodeId]: {
-      ...(chatStateMap.value[nodeId] || { question: '', sending: false }),
+      ...currentState,
       question: value
     }
   }
 }
 
+function handleQueryModeChange(nodeId: string, mode: QueryModePreset) {
+  const currentState = getChatState(nodeId)
+  chatStateMap.value = {
+    ...chatStateMap.value,
+    [nodeId]: {
+      ...currentState,
+      mode
+    }
+  }
+}
+
 async function handleSubmitQuestion(nodeId: string) {
-  const currentState = chatStateMap.value[nodeId] || { question: '', sending: false }
+  const currentState = getChatState(nodeId)
   const question = String(currentState.question || '').trim()
   if (!question) {
     ElMessage.warning('先输入问题')
@@ -845,15 +1071,24 @@ async function handleSubmitQuestion(nodeId: string) {
     [nodeId]: {
       ...currentState,
       sending: true,
-      error: ''
+      error: '',
+      citations: [],
+      usedNodes: [],
+      candidateNodes: [],
+      knowledgeFlowEdges: []
     }
   }
+  activeAnswerNodeId.value = nodeId
 
   try {
-    const selectedNodeIds = [selectedOutlineNodeId.value].filter((id) => id && id !== nodeId)
+    const selectedNodeIds = Array.from(new Set([
+      ...(currentState.selectedNodeIds || []),
+      selectedOutlineNodeId.value
+    ].filter((id) => id && id !== nodeId)))
     const response = await askDocumentNodeApi(taskId.value, nodeId, {
       question,
-      selectedNodeIds
+      selectedNodeIds,
+      ...buildAskPayloadByMode(currentState.mode)
     })
     const answer = unwrapResponseData<DocumentNodeAnswer | null>(response)
     chatStateMap.value = {
@@ -863,8 +1098,14 @@ async function handleSubmitQuestion(nodeId: string) {
         question,
         sending: false,
         error: '',
+        selectedNodeIds,
         answer: answer?.answer || '',
-        citations: answer?.citations || []
+        citations: answer?.citations || [],
+        usedNodes: answer?.usedNodes || [],
+        candidateNodes: answer?.candidateNodes || [],
+        knowledgeFlowEdges: answer?.knowledgeFlowEdges || [],
+        contextPlan: answer?.contextPlan,
+        budgetReport: answer?.budgetReport
       }
     }
   } catch (error) {
@@ -880,6 +1121,62 @@ async function handleSubmitQuestion(nodeId: string) {
   }
 }
 
+function buildAskPayloadByMode(mode: QueryModePreset = 'balanced') {
+  switch (mode) {
+    case 'strict':
+      return {
+        descendantDepth: 1,
+        includeAncestorSiblings: false,
+        includeSemanticBridges: false,
+        maxBridgeNodes: 0
+      }
+    case 'explore':
+      return {
+        descendantDepth: 3,
+        includeAncestorSiblings: true,
+        includeSemanticBridges: true,
+        maxBridgeNodes: 4
+      }
+    default:
+      return {
+        descendantDepth: 2,
+        includeAncestorSiblings: true,
+        includeSemanticBridges: true,
+        maxBridgeNodes: 2
+      }
+  }
+}
+
+function handleSelectCitation(nodeId: string) {
+  if (!nodeId) {
+    return
+  }
+  void focusOutlineNode(nodeId)
+}
+
+function handleToggleSelectedContextNode(nodeId: string, targetNodeId: string) {
+  if (!nodeId || !targetNodeId || nodeId === targetNodeId) {
+    return
+  }
+
+  const currentState = getChatState(nodeId)
+  const nextSelectedNodeIds = new Set((currentState.selectedNodeIds || []).filter(Boolean))
+  if (nextSelectedNodeIds.has(targetNodeId)) {
+    nextSelectedNodeIds.delete(targetNodeId)
+  } else {
+    nextSelectedNodeIds.add(targetNodeId)
+  }
+
+  chatStateMap.value = {
+    ...chatStateMap.value,
+    [nodeId]: {
+      ...currentState,
+      selectedNodeIds: Array.from(nextSelectedNodeIds)
+    }
+  }
+  activeAnswerNodeId.value = nodeId
+}
+
 function handleNodeClick(event: any) {
   const clickedNode = event.node
   if (!clickedNode || clickedNode.data.kind !== 'outline') {
@@ -887,6 +1184,46 @@ function handleNodeClick(event: any) {
   }
 
   selectedOutlineNodeId.value = clickedNode.id
+  if (chatOpenIds.value.has(clickedNode.id)) {
+    activeAnswerNodeId.value = clickedNode.id
+  }
+}
+
+function extractChatOwnerNodeId(nodeId?: string | null) {
+  if (!nodeId || !nodeId.endsWith('__chat')) {
+    return ''
+  }
+  return nodeId.slice(0, -'__chat'.length)
+}
+
+function handleConnectStart(connectionEvent: { event?: MouseEvent } & OnConnectStartParams) {
+  if (connectionEvent.handleId !== 'context-socket-source') {
+    connectingSocketChatNodeId.value = ''
+    return
+  }
+
+  const ownerNodeId = extractChatOwnerNodeId(connectionEvent.nodeId)
+  if (!ownerNodeId) {
+    connectingSocketChatNodeId.value = ''
+    return
+  }
+
+  connectingSocketChatNodeId.value = ownerNodeId
+  activeAnswerNodeId.value = ownerNodeId
+}
+
+function handleConnect(connection: Connection) {
+  const ownerNodeId = extractChatOwnerNodeId(connection.source)
+  const targetNodeId = String(connection.target || '')
+  if (!ownerNodeId || !targetNodeId || connection.sourceHandle !== 'context-socket-source') {
+    return
+  }
+
+  handleToggleSelectedContextNode(ownerNodeId, targetNodeId)
+}
+
+function handleConnectEnd() {
+  connectingSocketChatNodeId.value = ''
 }
 
 function handleNodeDoubleClick(event: any) {
@@ -1172,6 +1509,57 @@ function toggleTheme() {
   setThemeMode(isDarkMode.value ? 'dark' : 'light')
 }
 
+function createDefaultChatState(): ChatState {
+  return {
+    question: '',
+    mode: 'balanced',
+    sending: false,
+    answer: '',
+    error: '',
+    citations: [],
+    usedNodes: [],
+    candidateNodes: [],
+    knowledgeFlowEdges: [],
+    selectedNodeIds: []
+  }
+}
+
+function getChatState(nodeId: string): ChatState {
+  return chatStateMap.value[nodeId] || createDefaultChatState()
+}
+
+function ensureChatState(nodeId: string) {
+  if (chatStateMap.value[nodeId]) {
+    return
+  }
+
+  chatStateMap.value = {
+    ...chatStateMap.value,
+    [nodeId]: createDefaultChatState()
+  }
+}
+
+function resolveSelectedContextNodes(nodeId: string): DocumentContextNode[] {
+  return (getChatState(nodeId).selectedNodeIds || [])
+    .map((selectedNodeId) => {
+      const treeNode = documentNodeLookup.value[selectedNodeId]
+      if (!treeNode) {
+        return null
+      }
+
+      return {
+        nodeId: selectedNodeId,
+        title: treeNode.title,
+        level: treeNode.level,
+        type: treeNode.type,
+        summary: treeNode.summary,
+        page: treeNode.sourceAnchors?.[0]?.page,
+        relation: 'selected'
+      } as DocumentContextNode
+    })
+    .filter(Boolean) as DocumentContextNode[]
+}
+
 onMounted(() => {
   isDarkMode.value = initTheme()
   syncViewportState()
@@ -1298,10 +1686,17 @@ onBeforeUnmount(() => {
           :default-viewport="{ zoom: 0.92 }"
           :min-zoom="0.3"
           :max-zoom="1.5"
+          :connection-mode="ConnectionMode.Strict"
+          :connection-line-options="{ markerEnd: { type: MarkerType.ArrowClosed, color: '#f59e0b', width: 18, height: 18 } }"
+          :connection-line-style="{ stroke: '#f59e0b', strokeWidth: 2.2 }"
           :nodes-connectable="false"
           :elements-selectable="true"
           :fit-view-on-init="true"
+          :auto-connect="false"
           :zoom-on-double-click="true"
+          @connect="handleConnect"
+          @connect-start="handleConnectStart"
+          @connect-end="handleConnectEnd"
           @node-click="handleNodeClick"
           @node-double-click="handleNodeDoubleClick"
           @node-drag-stop="handleNodeDragStop"
@@ -1321,7 +1716,15 @@ onBeforeUnmount(() => {
       <p>左侧抽屉: 查看结构与搜索节点</p>
       <p>单击节点: 选中</p>
       <p>双击节点: 展开 / 收起子树</p>
+      <p>拖动问答卡片顶部插口: 把节点纳入上下文</p>
       <p>双击空白区域: 缩放</p>
+      <div class="document-tip__legend">
+        <span class="document-tip__legend-item is-current">当前</span>
+        <span class="document-tip__legend-item is-selected">显式</span>
+        <span class="document-tip__legend-item is-used">已用</span>
+        <span class="document-tip__legend-item is-candidate">候选</span>
+        <span class="document-tip__legend-item is-citation">引用</span>
+      </div>
     </aside>
   </section>
 </template>
@@ -1674,6 +2077,50 @@ onBeforeUnmount(() => {
   }
 }
 
+.document-tip__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.document-tip__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(100, 116, 139, 0.94);
+  font-size: 0.72rem;
+  line-height: 1.3;
+
+  &::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.7);
+  }
+
+  &.is-current::before {
+    background: #0ea5e9;
+  }
+
+  &.is-used::before {
+    background: #38bdf8;
+  }
+
+  &.is-selected::before {
+    background: #f59e0b;
+  }
+
+  &.is-candidate::before {
+    background: #94a3b8;
+  }
+
+  &.is-citation::before {
+    background: #a855f7;
+  }
+}
+
 .document-flow {
   width: 100%;
   height: 100%;
@@ -1723,6 +2170,16 @@ onBeforeUnmount(() => {
 
 :deep(.vue-flow__edge-path) {
   stroke-linecap: round;
+}
+
+:deep(.vue-flow__edge-text) {
+  fill: #0f172a;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+:deep(.vue-flow__edge-textbg) {
+  fill: rgba(255, 255, 255, 0.92);
 }
 
 .document-task-page.is-dark {
@@ -1820,6 +2277,10 @@ onBeforeUnmount(() => {
   }
 }
 
+.document-task-page.is-dark .document-tip__legend-item {
+  color: rgba(148, 163, 184, 0.9);
+}
+
 .document-task-page.is-dark .canvas-bg {
   background-image:
     radial-gradient(circle, rgba(148, 163, 184, 0.16) 1px, transparent 1px),
@@ -1836,6 +2297,14 @@ onBeforeUnmount(() => {
 .document-task-page.is-dark :deep(.vue-flow__controls-button) {
   color: #e2e8f0;
   border-bottom-color: rgba(100, 116, 139, 0.2);
+}
+
+.document-task-page.is-dark :deep(.vue-flow__edge-text) {
+  fill: #e2e8f0;
+}
+
+.document-task-page.is-dark :deep(.vue-flow__edge-textbg) {
+  fill: rgba(15, 23, 42, 0.9);
 }
 
 :deep(.document-theme-tooltip.el-popper) {
