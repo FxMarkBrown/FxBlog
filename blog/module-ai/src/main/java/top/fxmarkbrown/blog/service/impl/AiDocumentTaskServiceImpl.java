@@ -23,9 +23,10 @@ import top.fxmarkbrown.blog.mapper.SysAiDocumentResultMapper;
 import top.fxmarkbrown.blog.mapper.SysAiDocumentTaskMapper;
 import top.fxmarkbrown.blog.model.ai.AiResolvedChatModel;
 import top.fxmarkbrown.blog.service.AiChatModelService;
+import top.fxmarkbrown.blog.service.AiDocumentVectorIndexService;
 import top.fxmarkbrown.blog.service.AiQuotaCoreService;
 import top.fxmarkbrown.blog.service.AiDocumentTaskService;
-import top.fxmarkbrown.blog.service.AiVectorStoreCollectionService;
+import top.fxmarkbrown.blog.model.ai.AiDocumentChunkHit;
 import top.fxmarkbrown.blog.utils.HttpUtil;
 import top.fxmarkbrown.blog.utils.JsonUtil;
 import top.fxmarkbrown.blog.vo.ai.AiDocumentNodeAnswerVo;
@@ -73,7 +74,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
     private final AiProperties aiProperties;
     private final AiChatModelService aiChatModelService;
     private final AiQuotaCoreService aiQuotaCoreService;
-    private final ObjectProvider<AiVectorStoreCollectionService> vectorStoreCollectionServiceProvider;
+    private final ObjectProvider<AiDocumentVectorIndexService> documentVectorIndexServiceProvider;
     private final SysAiDocumentTaskMapper documentTaskMapper;
     private final SysAiDocumentResultMapper documentResultMapper;
 
@@ -139,6 +140,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         DocumentTaskAggregate aggregate = buildDynamicAggregate(task.getId(), title, fileName, sourceUrl, now);
         applyMockParseResult(aggregate);
         persistAggregate(aggregate, true);
+        syncTaskVectorIndexIfParsed(aggregate);
         log.info("本地 Mock 文档任务已创建, taskId={}, title={}", task.getId(), title);
         return getTaskDetail(task.getId());
     }
@@ -161,6 +163,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
             aggregate.result().getRoot().setTitle(normalizedTitle);
         }
         persistAggregate(aggregate, false);
+        syncTaskVectorIndexIfParsed(aggregate);
         return copyDetail(aggregate.detail());
     }
 
@@ -226,6 +229,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         DocumentTaskAggregate aggregate = toAggregate(task, result);
         applyMineruPayload(aggregate, dataNode, content, mineru);
         persistAggregate(aggregate, false);
+        syncTaskVectorIndexIfParsed(aggregate);
         log.info("MinerU callback 已处理, taskId={}, remoteTaskId={}, status={}",
                 aggregate.detail().getTaskId(), remoteTaskId, aggregate.detail().getStatus());
     }
@@ -441,9 +445,27 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
     }
 
     private void deleteTaskVectorCollection(Long taskId) {
-        Optional.ofNullable(vectorStoreCollectionServiceProvider.getIfAvailable())
-                .filter(AiVectorStoreCollectionService::isReady)
-                .ifPresent(service -> service.deleteDocumentTaskCollection(taskId));
+        Optional.ofNullable(documentVectorIndexServiceProvider.getIfAvailable())
+                .filter(AiDocumentVectorIndexService::isReady)
+                .ifPresent(service -> service.deleteTaskIndex(taskId));
+    }
+
+    private void syncTaskVectorIndexIfParsed(DocumentTaskAggregate aggregate) {
+        if (aggregate == null || aggregate.detail() == null || aggregate.result() == null) {
+            return;
+        }
+        if (!Objects.equals(aggregate.detail().getStatus(), "PARSED") || aggregate.result().getRoot() == null) {
+            return;
+        }
+        Optional.ofNullable(documentVectorIndexServiceProvider.getIfAvailable())
+                .filter(AiDocumentVectorIndexService::isReady)
+                .ifPresent(service -> {
+                    try {
+                        service.syncTaskIndex(aggregate.detail(), aggregate.result());
+                    } catch (Exception ex) {
+                        log.warn("文档任务向量索引同步失败, taskId={}", aggregate.detail().getTaskId(), ex);
+                    }
+                });
     }
 
     private AiDocumentTaskListVo toListVo(SysAiDocumentTask task) {
@@ -1061,7 +1083,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
 
         if (includeSemanticBridges) {
             Set<String> excludedNodeIds = new LinkedHashSet<>(candidateMap.keySet());
-            for (ContextCandidate bridgeCandidate : collectSemanticBridgeCandidates(root, question, currentNode, excludedNodeIds, maxBridgeNodes)) {
+            for (ContextCandidate bridgeCandidate : collectSemanticBridgeCandidates(detail, root, question, currentNode, excludedNodeIds, maxBridgeNodes)) {
                 addCandidate(candidateMap, bridgeCandidate.node(), bridgeCandidate.relation(), bridgeCandidate.weight(), bridgeCandidate.reason());
             }
         }
@@ -1440,7 +1462,8 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         return "document".equals(type) || "section".equals(type) || "subsection".equals(type);
     }
 
-    private List<ContextCandidate> collectSemanticBridgeCandidates(AiDocumentTreeNodeVo root,
+    private List<ContextCandidate> collectSemanticBridgeCandidates(AiDocumentTaskDetailVo detail,
+                                                                   AiDocumentTreeNodeVo root,
                                                                    String question,
                                                                    AiDocumentTreeNodeVo currentNode,
                                                                    Set<String> excludedNodeIds,
@@ -1448,22 +1471,31 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         if (maxBridgeNodes <= 0) {
             return List.of();
         }
+        List<ContextCandidate> bridgeCandidates = new ArrayList<>();
+        if (detail != null && detail.getTaskId() != null) {
+            bridgeCandidates.addAll(collectVectorBridgeCandidates(detail.getTaskId(), root, excludedNodeIds, question, maxBridgeNodes));
+        }
+        if (bridgeCandidates.size() >= maxBridgeNodes) {
+            return bridgeCandidates.subList(0, maxBridgeNodes);
+        }
         String questionText = safeText(question, "");
         String currentContext = joinNonBlank("\n",
                 currentNode == null ? null : currentNode.getTitle(),
                 currentNode == null ? null : currentNode.getSummary(),
                 currentNode == null ? null : currentNode.getMarkdown());
 
-        List<ContextCandidate> bridgeCandidates = new ArrayList<>();
+        Set<String> excludedIds = new LinkedHashSet<>(excludedNodeIds);
+        bridgeCandidates.forEach(candidate -> excludedIds.add(candidate.nodeId()));
+        List<ContextCandidate> heuristicCandidates = new ArrayList<>();
         for (AiDocumentTreeNodeVo node : flattenTree(root)) {
-            if (node == null || excludedNodeIds.contains(node.getId())) {
+            if (node == null || excludedIds.contains(node.getId())) {
                 continue;
             }
             double score = scoreSemanticBridge(questionText, currentContext, node);
             if (score <= 0.12D) {
                 continue;
             }
-            bridgeCandidates.add(new ContextCandidate(
+            heuristicCandidates.add(new ContextCandidate(
                     node,
                     node.getId(),
                     "semantic_bridge",
@@ -1471,11 +1503,63 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
                     "语义桥接补充节点"
             ));
         }
-        bridgeCandidates.sort((left, right) -> Double.compare(right.weight(), left.weight()));
+        heuristicCandidates.sort((left, right) -> Double.compare(right.weight(), left.weight()));
+        for (ContextCandidate heuristicCandidate : heuristicCandidates) {
+            if (bridgeCandidates.size() >= maxBridgeNodes) {
+                break;
+            }
+            bridgeCandidates.add(heuristicCandidate);
+        }
         if (bridgeCandidates.size() <= maxBridgeNodes) {
             return bridgeCandidates;
         }
         return bridgeCandidates.subList(0, maxBridgeNodes);
+    }
+
+    private List<ContextCandidate> collectVectorBridgeCandidates(Long taskId,
+                                                                 AiDocumentTreeNodeVo root,
+                                                                 Set<String> excludedNodeIds,
+                                                                 String question,
+                                                                 int maxBridgeNodes) {
+        AiDocumentVectorIndexService vectorIndexService = documentVectorIndexServiceProvider.getIfAvailable();
+        if (vectorIndexService == null || !vectorIndexService.isReady()) {
+            return List.of();
+        }
+        List<AiDocumentChunkHit> hits;
+        try {
+            hits = vectorIndexService.searchRelevantChunks(taskId, question, Math.max(maxBridgeNodes * 2, maxBridgeNodes));
+        } catch (Exception ex) {
+            log.warn("文档任务语义桥接向量检索失败, taskId={}", taskId, ex);
+            return List.of();
+        }
+        if (hits.isEmpty()) {
+            return List.of();
+        }
+        List<ContextCandidate> candidates = new ArrayList<>();
+        for (AiDocumentChunkHit hit : hits) {
+            if (hit == null || !StringUtils.hasText(hit.nodeId()) || excludedNodeIds.contains(hit.nodeId())) {
+                continue;
+            }
+            AiDocumentTreeNodeVo node = findNode(root, hit.nodeId());
+            if (node == null) {
+                continue;
+            }
+            double weight = Math.max(0.64D, 0.88D - (hit.rank() - 1) * 0.06D);
+            String reason = StringUtils.hasText(hit.titlePath())
+                    ? "向量召回补充节点：" + hit.titlePath()
+                    : "向量召回补充节点";
+            candidates.add(new ContextCandidate(
+                    node,
+                    node.getId(),
+                    "semantic_bridge",
+                    weight,
+                    reason
+            ));
+            if (candidates.size() >= maxBridgeNodes) {
+                break;
+            }
+        }
+        return candidates;
     }
 
     private double scoreSemanticBridge(String questionText, String currentContext, AiDocumentTreeNodeVo candidateNode) {
@@ -1782,31 +1866,6 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
             }
         }
         return normalized.isEmpty() ? null : String.join(separator, normalized);
-    }
-
-    private String extractContentText(JsonNode item) {
-        String directText = firstText(item,
-                path("text"),
-                path("content"),
-                path("raw_text"),
-                path("caption"));
-        if (StringUtils.hasText(directText)) {
-            return directText;
-        }
-        JsonNode lines = item.get("lines");
-        if (lines != null && lines.isArray()) {
-            List<String> parts = new ArrayList<>();
-            for (JsonNode line : lines) {
-                String content = textAt(line, "text");
-                if (StringUtils.hasText(content)) {
-                    parts.add(content.trim());
-                }
-            }
-            if (!parts.isEmpty()) {
-                return String.join("\n", parts);
-            }
-        }
-        return null;
     }
 
     private List<Double> extractBbox(JsonNode item) {
