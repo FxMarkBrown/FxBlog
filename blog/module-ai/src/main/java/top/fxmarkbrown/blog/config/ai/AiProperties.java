@@ -146,8 +146,6 @@ public class AiProperties {
 
         private boolean enabled = false;
 
-        private boolean mockMode = true;
-
         private String baseUrl;
 
         private String apiKey;

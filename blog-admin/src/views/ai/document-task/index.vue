@@ -16,7 +16,6 @@
         <el-form-item label="供应方">
           <el-select v-model="queryParams.provider" placeholder="全部" clearable style="width: 160px">
             <el-option label="MinerU" value="mineru" />
-            <el-option label="Local Mock" value="local-mock" />
           </el-select>
         </el-form-item>
         <el-form-item label="关键词">

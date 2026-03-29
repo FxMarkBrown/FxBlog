@@ -74,7 +74,7 @@ public class AiConfigurationValidator {
             throw new IllegalStateException("blog.ai.document.retention-days 必须大于 0");
         }
         AiProperties.Mineru mineru = document.getMineru();
-        if (mineru == null || !mineru.isEnabled() || mineru.isMockMode()) {
+        if (mineru == null || !mineru.isEnabled()) {
             return;
         }
         requireText(mineru.getBaseUrl(), "blog.ai.document.mineru.base-url 未配置");

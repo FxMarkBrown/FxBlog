@@ -52,7 +52,6 @@ blog:
       retention-days: ${BLOG_AI_DOCUMENT_RETENTION_DAYS:1}
       mineru:
         enabled: ${BLOG_AI_MINERU_ENABLED:false}
-        mock-mode: ${BLOG_AI_MINERU_MOCK_MODE:true}
         base-url: ${BLOG_AI_MINERU_BASE_URL:}
         api-key: ${BLOG_AI_MINERU_API_KEY:}
         language: ${BLOG_AI_MINERU_LANGUAGE:}

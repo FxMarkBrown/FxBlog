@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { createDocumentTaskApi, createMockDocumentTaskApi, deleteDocumentTaskApi, getDocumentTaskListApi, renameDocumentTaskApi } from '@/api/ai-document'
+import { createDocumentTaskApi, deleteDocumentTaskApi, getDocumentTaskListApi, renameDocumentTaskApi } from '@/api/ai-document'
 import { uploadFileApi } from '@/api/file'
 import { useNoIndexSeo } from '@/composables/useSeo'
 import { unwrapResponseData } from '@/utils/response'
@@ -9,13 +9,11 @@ import type { DocumentTaskDetail, DocumentTaskListItem } from '@/types/ai-docume
 const runtimeConfig = useRuntimeConfig()
 const router = useRouter()
 const authStore = useAuthStore()
-const localMockEnabled = import.meta.dev
 
 const loading = ref(false)
 const creating = ref(false)
 const tasks = ref<DocumentTaskListItem[]>([])
 const uploadInputRef = ref<HTMLInputElement | null>(null)
-const createMode = ref<'real' | 'mock'>('real')
 
 useNoIndexSeo({
   title: () => `文档任务 - ${runtimeConfig.public.siteName}`,
@@ -121,30 +119,8 @@ async function handleDeleteTask(task: DocumentTaskListItem) {
   }
 }
 
-function triggerDocumentUpload(mode: 'real' | 'mock' = 'real') {
-  createMode.value = mode
+function triggerDocumentUpload() {
   uploadInputRef.value?.click()
-}
-
-async function createFixtureMockTask() {
-  try {
-    creating.value = true
-    createMode.value = 'mock'
-    const createResponse = await createMockDocumentTaskApi({
-      title: 'MinerU Fixture Mock'
-    })
-    const created = unwrapResponseData<DocumentTaskDetail | null>(createResponse)
-    ElMessage.success('Fixture Mock 文档任务已创建')
-    await loadPageData()
-    const nextTaskId = created?.taskId || tasks.value[0]?.taskId
-    if (nextTaskId) {
-      await router.push(`/ai/document/${nextTaskId}`)
-    }
-  } catch (error) {
-    ElMessage.error((error as Error)?.message || '创建 Fixture Mock 任务失败')
-  } finally {
-    creating.value = false
-  }
 }
 
 async function handleDocumentUpload(event: Event) {
@@ -218,19 +194,9 @@ onMounted(() => {
             <span class="meta-label">任务数量</span>
             <strong class="meta-value">{{ tasks.length }}</strong>
           </div>
-          <button type="button" class="hero-create-btn" :disabled="creating" @click="triggerDocumentUpload('real')">
+          <button type="button" class="hero-create-btn" :disabled="creating" @click="triggerDocumentUpload">
             <i :class="['fas', creating ? 'fa-spinner fa-spin' : 'fa-cloud-arrow-up']"></i>
-            <span>{{ creating && createMode === 'real' ? '处理中' : '上传并创建真实任务' }}</span>
-          </button>
-          <button
-            v-if="localMockEnabled"
-            type="button"
-            class="hero-create-btn is-secondary"
-            :disabled="creating"
-            @click="createFixtureMockTask"
-          >
-            <i :class="['fas', creating ? 'fa-spinner fa-spin' : 'fa-flask']"></i>
-            <span>{{ creating && createMode === 'mock' ? '处理中' : '创建 Fixture Mock' }}</span>
+            <span>{{ creating ? '处理中' : '上传并创建任务' }}</span>
           </button>
         </div>
       </header>
@@ -246,7 +212,7 @@ onMounted(() => {
         <div class="document-section__header">
           <div>
             <h2>最近文档任务</h2>
-            <p>真实任务通过上传创建；开发环境下的 Mock 任务直接基于现有 MinerU fixture 生成，不再走本地上传。</p>
+            <p>上传 PDF、Office 文档或 Markdown 后即可进入结构画布，继续浏览、追问和整理上下文。</p>
           </div>
           <div class="document-section__actions">
             <button type="button" class="back-link as-button" @click="loadPageData">刷新列表</button>

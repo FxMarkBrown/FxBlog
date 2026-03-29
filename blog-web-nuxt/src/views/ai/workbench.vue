@@ -6,14 +6,14 @@ const authStore = useAuthStore()
 
 useNoIndexSeo({
   title: () => `AI - ${runtimeConfig.public.siteName}`,
-  description: '统一进入一般对话任务与文档任务的 AI 页面'
+  description: 'AI 工作台，统一进入一般对话与文档任务'
 })
 
 const taskCards = computed(() => [
   {
     key: 'chat',
-    title: '一般对话任务',
-    subtitle: '保留当前站内问答、文章上下文问答与流式回复能力',
+    title: '一般对话',
+    subtitle: '面向站内问答、文章上下文问答与流式回复的常规会话入口',
     path: '/ai/chat',
     icon: 'fas fa-comments',
     badge: '已可用',
@@ -22,10 +22,10 @@ const taskCards = computed(() => [
   {
     key: 'document',
     title: '文档任务',
-    subtitle: '上传文档后进入全屏结构画布，围绕节点展开、原文预览和上下文问答',
+    subtitle: '上传文档后进入全屏结构画布，围绕节点展开、引用、预览与追问',
     path: '/ai/document',
     icon: 'fas fa-file-lines',
-    badge: '已接入',
+    badge: '已可用',
     available: true
   }
 ])
@@ -36,10 +36,10 @@ const taskCards = computed(() => [
     <div class="ai-workbench-shell">
       <header class="hero-card">
         <div class="hero-copy">
-          <span class="hero-badge">AI</span>
-          <h1>把对话任务和文档任务拆开管理</h1>
+          <span class="hero-badge">AI 工作台</span>
+          <h1>选择你的 AI 工作入口</h1>
           <p>
-            这里不再直接落到单一对话页，而是先进入 AI 页面。一般对话任务继续承载现有聊天能力，文档任务后续承载解析、对照阅读与问答。
+            一般对话用于常规聊天与站内知识问答，文档任务用于结构化解析、画布浏览和节点级上下文对话。
           </p>
         </div>
         <div class="hero-meta">

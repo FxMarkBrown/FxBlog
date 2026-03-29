@@ -19,13 +19,6 @@ export function createDocumentTaskApi(data: Record<string, unknown> = {}) {
   })
 }
 
-export function createMockDocumentTaskApi(data: Record<string, unknown> = {}) {
-  return useApiClient()<ApiResponse<DocumentTaskDetail>>('/api/ai/document/dev/tasks/mock', {
-    method: 'POST',
-    body: data
-  })
-}
-
 export function renameDocumentTaskApi(taskId: number | string, data: Record<string, unknown>) {
   return useApiClient()<ApiResponse<Record<string, unknown>>>(`/api/ai/document/tasks/${taskId}`, {
     method: 'PATCH',

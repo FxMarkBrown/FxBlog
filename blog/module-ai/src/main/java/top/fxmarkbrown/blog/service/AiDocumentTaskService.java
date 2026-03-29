@@ -36,11 +36,6 @@ public interface AiDocumentTaskService {
     AiDocumentTaskDetailVo createTask(AiDocumentTaskCreateDto createDto);
 
     /**
-     * 创建仅用于开发调试的本地 Mock 文档任务。
-     */
-    AiDocumentTaskDetailVo createLocalMockTask(AiDocumentTaskCreateDto createDto);
-
-    /**
      * 重命名指定文档任务。
      */
     AiDocumentTaskDetailVo renameTask(Long taskId, AiDocumentTaskRenameDto renameDto);

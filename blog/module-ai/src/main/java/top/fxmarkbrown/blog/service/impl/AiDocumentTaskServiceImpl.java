@@ -13,7 +13,6 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.openai.OpenAiChatOptions;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -59,7 +58,6 @@ import top.fxmarkbrown.blog.vo.ai.AiDocumentTreeNodeVo;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -87,9 +85,6 @@ import java.util.zip.ZipInputStream;
 public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
 
     private static final Pattern HEADING_PATTERN = Pattern.compile("^(#{1,6})\\s+(.*)$");
-    private static final String MOCK_FIXTURE_MARKDOWN = "mock/mineru/current/full.md";
-    private static final String MOCK_FIXTURE_CONTENT_LIST = "mock/mineru/current/content_list.json";
-    private static final String MOCK_FIXTURE_PAYLOAD = "mock/mineru/current/task-detail.json";
 
     private final AiProperties aiProperties;
     private final AiChatService aiChatService;
@@ -171,39 +166,10 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
         }
 
         AiProperties.Mineru mineru = document.getMineru();
-        if (mineru == null || !mineru.isEnabled() || mineru.isMockMode()) {
-            throw new IllegalStateException("文档真实解析尚未启用，请先完成 MinerU 配置");
+        if (mineru == null || !mineru.isEnabled()) {
+            throw new IllegalStateException("MinerU 解析未启用，请先完成配置");
         }
         return createRealMineruTask(createDto);
-    }
-
-    @Override
-    public AiDocumentTaskDetailVo createLocalMockTask(AiDocumentTaskCreateDto createDto) {
-        LocalDateTime now = LocalDateTime.now();
-        String title = safeText(createDto == null ? null : createDto.getTitle(), "本地 Mock 文档任务");
-        String fileName = safeText(createDto == null ? null : createDto.getFileName(), "mock-document.pdf");
-        String sourceUrl = safeText(createDto == null ? null : createDto.getSourceUrl(), null);
-
-        SysAiDocumentTask task = SysAiDocumentTask.builder()
-                .userId(StpUtil.getLoginIdAsLong())
-                .sourceFileId(safeText(createDto == null ? null : createDto.getSourceFileId(), null))
-                .title(title)
-                .status("PARSED")
-                .provider("local-mock")
-                .fileName(fileName)
-                .sourceUrl(sourceUrl)
-                .expireAt(resolveExpireAt(now))
-                .createTime(now)
-                .updateTime(now)
-                .build();
-        documentTaskMapper.insert(task);
-
-        DocumentTaskAggregate aggregate = buildDynamicAggregate(task.getId(), title, fileName, sourceUrl, now);
-        applyMockParseResult(aggregate);
-        persistAggregate(aggregate, true);
-        syncTaskVectorIndexIfParsed(aggregate);
-        log.info("本地 Mock 文档任务已创建, taskId={}, title={}", task.getId(), title);
-        return getTaskDetail(task.getId());
     }
 
     @Override
@@ -637,72 +603,6 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
                 SysAiDocumentTask.builder().id(taskId).build(),
                 emptyResultEntity(taskId)
         );
-    }
-
-    private void applyMockParseResult(DocumentTaskAggregate aggregate) {
-        MockFixturePayload fixturePayload = loadMockFixturePayload();
-        String markdown = fixturePayload.markdown();
-        AiDocumentTreeNodeVo root;
-        if (StringUtils.hasText(fixturePayload.contentListJson())) {
-            JsonNode contentListNode = JsonUtil.readTree(fixturePayload.contentListJson());
-            root = contentListNode != null && contentListNode.isArray() && !contentListNode.isEmpty()
-                    ? buildTreeFromContentList(aggregate.detail().getTaskId(), aggregate.detail().getTitle(), contentListNode, markdown)
-                    : buildTreeFromMarkdown(aggregate.detail().getTaskId(), aggregate.detail().getTitle(), markdown);
-        } else {
-            root = buildTreeFromMarkdown(aggregate.detail().getTaskId(), aggregate.detail().getTitle(), markdown);
-        }
-        aggregate.detail().setStatus("PARSED");
-        aggregate.detail().setPageCount(fixturePayload.pageCount());
-        aggregate.detail().setRootNodeId(root.getId());
-        aggregate.detail().setMarkdownUrl(resolveMarkdownResultPath(aggregate.detail().getTaskId()));
-        aggregate.detail().setUpdateTime(LocalDateTime.now());
-        aggregate.result().setTitle(aggregate.detail().getTitle());
-        aggregate.result().setMarkdown(markdown);
-        aggregate.result().setRoot(root);
-        aggregate.resultEntity().setMarkdown(markdown);
-        aggregate.resultEntity().setRootJson(JsonUtil.toJsonString(root));
-        aggregate.resultEntity().setContentListJson(fixturePayload.contentListJson());
-        aggregate.resultEntity().setRawPayloadJson(fixturePayload.rawPayloadJson());
-    }
-
-    private MockFixturePayload loadMockFixturePayload() {
-        String markdown = readClasspathText(MOCK_FIXTURE_MARKDOWN);
-        String contentListJson = readClasspathText(MOCK_FIXTURE_CONTENT_LIST);
-        String rawPayloadJson = readClasspathText(MOCK_FIXTURE_PAYLOAD);
-
-        if (!StringUtils.hasText(markdown) && !StringUtils.hasText(contentListJson)) {
-            throw new IllegalStateException("本地 Mock fixture 不存在，请先执行 tools/fetch_mineru_fixture.py 拉取真实 MinerU 数据");
-        }
-
-        Integer pageCount = firstInt(JsonUtil.readTree(rawPayloadJson),
-                path("data", "extract_progress", "total_pages"),
-                path("extract_progress", "total_pages"),
-                path("data", "result", "page_count"),
-                path("data", "page_count"),
-                path("page_count"));
-
-        return new MockFixturePayload(
-                StringUtils.hasText(markdown) ? markdown.trim() : "",
-                StringUtils.hasText(contentListJson) ? contentListJson : null,
-                StringUtils.hasText(rawPayloadJson)
-                        ? rawPayloadJson
-                        : JsonUtil.toJsonString(Map.of("provider", "local-mock", "fixture", "external-mineru")),
-                pageCount != null && pageCount > 0 ? pageCount : 6
-        );
-    }
-
-    private String readClasspathText(String classpathLocation) {
-        try {
-            ClassPathResource resource = new ClassPathResource(classpathLocation);
-            if (!resource.exists()) {
-                return null;
-            }
-            try (InputStream inputStream = resource.getInputStream()) {
-                return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
-            }
-        } catch (IOException ex) {
-            throw new IllegalStateException("读取 Mock fixture 失败: " + classpathLocation, ex);
-        }
     }
 
     private void applyMineruPayload(DocumentTaskAggregate aggregate, JsonNode payloadRoot, String rawPayload, AiProperties.Mineru mineru) {
@@ -3009,12 +2909,6 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
     }
 
     private record ZipDocumentPayload(String markdown, String contentListJson) {
-    }
-
-    private record MockFixturePayload(String markdown,
-                                      String contentListJson,
-                                      String rawPayloadJson,
-                                      int pageCount) {
     }
 
     private record NodeAskPreparation(DocumentTaskAggregate aggregate,
