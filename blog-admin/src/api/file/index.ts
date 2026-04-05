@@ -1,5 +1,15 @@
 import request from '@/utils/request'
 
+export interface UploadedFileDetail {
+  id?: string
+  url?: string
+  thUrl?: string
+  filename?: string
+  originalFilename?: string
+  source?: string
+  [key: string]: unknown
+}
+
 
 // 获取文件列表
 export function getFileListApi(params: any) {

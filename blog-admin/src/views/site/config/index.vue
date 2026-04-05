@@ -304,6 +304,7 @@ import {ElMessage} from 'element-plus'
 import UploadImage from '@/components/Upload/Image.vue'
 import {getWebConfigApi, updateWebConfigApi} from '@/api/site/config'
 import {getDictDataByDictTypesApi} from '@/api/system/dict'
+import type {UploadedFileDetail} from '@/api/file'
 import {uploadApi} from '@/api/file'
 
 import {Editor, Toolbar} from '@wangeditor-next/editor-for-vue'
@@ -460,8 +461,9 @@ const handleCreated = (editor: IDomEditor) => {
 function contentUpload(file: File, insertFn: WangEditorInsertFn) {
   const formData = new FormData()
   formData.append("file", file)
-  uploadApi(formData).then((res: any) => {
-    insertFn(res.data, "", res.data)
+  uploadApi(formData).then((res: { data?: UploadedFileDetail }) => {
+    const url = String(res?.data?.url || '')
+    insertFn(url, "", url)
   })
 }
 

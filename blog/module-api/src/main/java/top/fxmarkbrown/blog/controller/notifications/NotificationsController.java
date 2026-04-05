@@ -12,7 +12,7 @@ import top.fxmarkbrown.blog.vo.notifications.NotificationsListVo;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/notifications")
+@RequestMapping("/api/notifications")
 @RequiredArgsConstructor
 public class NotificationsController {
 

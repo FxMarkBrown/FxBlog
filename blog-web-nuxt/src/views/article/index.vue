@@ -57,7 +57,7 @@ usePageSeo({
   title: () => article.value?.title ? `${article.value.title} - ${siteName.value}` : '文章详情',
   description: () => articleSummary.value,
   path: () => `/post/${articleId.value}`,
-  image: () => String(article.value?.cover || siteStore.websiteInfo.logo || runtimeConfig.public.seoImage || ''),
+  image: () => article.value?.cover || siteStore.websiteInfo.logo || runtimeConfig.public.seoImage,
   type: 'article'
 })
 

@@ -33,6 +33,7 @@ import type {UploadProps, UploadUserFile} from 'element-plus'
 import {ElMessage} from 'element-plus'
 import {Plus} from '@element-plus/icons-vue'
 import {getToken} from '@/utils/auth'
+import type {UploadedFileDetail} from '@/api/file'
 import {deleteFileApi} from '@/api/file'
 
 const props = defineProps({
@@ -118,7 +119,12 @@ const handleRemove: UploadProps['onRemove'] = async (uploadFile: any) => {
 // 处理上传成功
 const handleSuccess: UploadProps['onSuccess'] = async (response) => {
   if (response.code === 200) {
-    const url = response.data
+    const uploaded = response.data as UploadedFileDetail | undefined
+    const url = String(uploaded?.url || '')
+    if (!url) {
+      ElMessage.error(response?.msg || '上传失败')
+      return
+    }
     if (props.multiple) {
       const urls = props.modelValue ? [...(props.modelValue as string[])] : []
       urls.push(url)

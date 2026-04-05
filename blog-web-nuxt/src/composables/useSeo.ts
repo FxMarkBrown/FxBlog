@@ -5,7 +5,7 @@ interface UsePageSeoOptions {
   title: MaybeRefOrGetter<string>
   description?: MaybeRefOrGetter<string>
   path?: MaybeRefOrGetter<string>
-  image?: MaybeRefOrGetter<string | undefined>
+  image?: MaybeRefOrGetter<unknown>
   type?: MaybeRefOrGetter<'website' | 'article'>
   noindex?: MaybeRefOrGetter<boolean>
 }
@@ -85,8 +85,8 @@ function normalizeSeoPath(path: string) {
 /**
  * 规范化 SEO 图片地址。
  */
-function normalizeSeoImage(image: string | undefined, siteUrl: string, fallbackImage: string) {
-  const candidate = String(image || fallbackImage || '').trim()
+function normalizeSeoImage(image: unknown, siteUrl: string, fallbackImage: string) {
+  const candidate = resolveSeoImageCandidate(image) || resolveSeoImageCandidate(fallbackImage)
   if (!candidate) {
     return undefined
   }
@@ -95,5 +95,31 @@ function normalizeSeoImage(image: string | undefined, siteUrl: string, fallbackI
     return candidate
   }
 
-  return `${siteUrl}${candidate.startsWith('/') ? candidate : `/${candidate}`}`
+  const normalizedPath = candidate.startsWith('/') ? `/${candidate.replace(/^\/+/, '')}` : `/${candidate}`
+  return `${siteUrl}${normalizedPath}`
+}
+
+function resolveSeoImageCandidate(value: unknown) {
+  if (typeof value === 'string') {
+    return sanitizeSeoImageString(value)
+  }
+
+  if (value && typeof value === 'object' && 'url' in value) {
+    return sanitizeSeoImageString(String((value as { url?: string }).url || ''))
+  }
+
+  return ''
+}
+
+function sanitizeSeoImageString(value: string) {
+  const candidate = value.trim()
+  if (!candidate || candidate === '[object Object]' || candidate === 'undefined' || candidate === 'null') {
+    return ''
+  }
+
+  if (/^https?:\/\//i.test(candidate)) {
+    return candidate
+  }
+
+  return candidate.startsWith('//') ? `/${candidate.replace(/^\/+/, '')}` : candidate
 }

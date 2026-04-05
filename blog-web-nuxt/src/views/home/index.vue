@@ -42,7 +42,7 @@ const categories = ref<CategoryTab[]>([{ ...defaultCategory }])
 usePageSeo({
   title: () => `${siteStore.websiteInfo.name || siteStore.websiteInfo.title || runtimeConfig.public.siteName}`,
   description: () => siteStore.websiteInfo.summary || siteStore.websiteInfo.description || '个人知识库',
-  image: () => String(siteStore.websiteInfo.logo || runtimeConfig.public.seoImage || '')
+  image: () => siteStore.websiteInfo.logo || runtimeConfig.public.seoImage
 })
 
 async function bootstrapHome() {

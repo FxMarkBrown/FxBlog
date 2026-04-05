@@ -69,7 +69,7 @@ const siteUrl = readEnvValue('NUXT_PUBLIC_SITE_URL', 'http://localhost:3000')
 const siteName = readEnvValue('NUXT_PUBLIC_SITE_NAME', 'Open Source Blog')
 const siteDescription = readEnvValue('NUXT_PUBLIC_SITE_DESCRIPTION', '个人知识库与生活博客')
 const seoImage = readEnvValue('NUXT_PUBLIC_SEO_IMAGE', '/favicon.ico')
-const proxiedPrefixes = ['/api', '/auth', '/sys', '/portal', '/file', '/static', '/notifications', '/sign']
+const proxiedPrefixes = ['/api', '/auth', '/sys', '/portal', '/file', '/static', '/sign']
 const devProxyEntries = Object.fromEntries(
   proxiedPrefixes.map((prefix) => [
     prefix,

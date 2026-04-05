@@ -4,6 +4,7 @@ import type {FormInstance, FormRules} from 'element-plus'
 import {ElMessage} from 'element-plus'
 import {createArticleApi, getArticleInfoApi, updateArticleApi} from '@/api/article'
 import {getDictDataApi} from '@/api/dict'
+import type {UploadedFileDetail} from '@/api/file'
 import {uploadFileApi} from '@/api/file'
 import {getCategoriesApi, getTagsApi} from '@/api/tags'
 import {useNoIndexSeo} from '@/composables/useSeo'
@@ -410,7 +411,8 @@ async function handleCoverUpload(event: Event) {
 
   try {
     const response = await uploadFileApi(formData, 'articleCover')
-    const coverUrl = unwrapResponseData<string | null>(response)
+    const uploadedFile = unwrapResponseData<UploadedFileDetail | null>(response)
+    const coverUrl = String(uploadedFile?.url || '')
     if (!coverUrl) {
       showError(String(response.message || response.msg || '上传失败'))
       return

@@ -155,6 +155,7 @@ import type {ExposeParam, InsertParam, ToolbarNames} from 'md-editor-v3'
 import {allToolbar, config, DropdownToolbar, MdEditor} from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 
+import type {UploadedFileDetail} from '@/api/file'
 import {uploadApi} from '@/api/file'
 import {installMarkdownAlignPlugin} from '@/utils/markdownAlign'
 
@@ -387,7 +388,7 @@ const handleUploadImg = async (files: File[], callback: (urls: string[]) => void
       const formData = new FormData()
       formData.append('file', file)
       const res = await uploadApi(formData, props.uploadType)
-      return normalizeMarkdownUrl(res.data)
+      return normalizeMarkdownUrl(resolveUploadedFileUrl(res.data))
     })
   )
 
@@ -423,13 +424,20 @@ const normalizeMarkdownUrl = (url: string) => {
 }
 
 /**
+ * 读取上传接口返回的资源地址。
+ */
+const resolveUploadedFileUrl = (payload: unknown) => {
+  return String((payload as UploadedFileDetail | null | undefined)?.url || '')
+}
+
+/**
  * 上传单个资源文件并返回地址。
  */
 const uploadSingleFile = async (file: File) => {
   const formData = new FormData()
   formData.append('file', file)
   const res = await uploadApi(formData, props.uploadType)
-  return normalizeMarkdownUrl(res.data)
+  return normalizeMarkdownUrl(resolveUploadedFileUrl(res.data))
 }
 
 /**

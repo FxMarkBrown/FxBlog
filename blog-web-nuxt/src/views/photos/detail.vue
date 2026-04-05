@@ -49,7 +49,7 @@ usePageSeo({
   title: () => pageTitle.value,
   description: () => pageDescription.value,
   path: () => `/photos/${albumId.value}`,
-  image: () => String(album.cover || '')
+  image: () => album.cover
 })
 
 function normalizeAlbum(record: AlbumSummary | null) {

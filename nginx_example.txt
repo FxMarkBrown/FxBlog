@@ -57,7 +57,7 @@ server
     }
 
     # 后端接口与静态资源 -> Spring Boot
-    location ~ ^/(api|auth|sys|portal|file|static|notifications|sign)(/.*)?$ {
+    location ~ ^/(api|auth|sys|portal|file|static|sign)(/.*)?$ {
         proxy_pass http://127.0.0.1:8800;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
