@@ -44,7 +44,7 @@ blog-admin
 ## 环境要求
 
 - Node.js LTS
-- pnpm
+- bun
 - 已启动的后端服务
 
 ## 快速开始
@@ -52,7 +52,7 @@ blog-admin
 ### 1. 安装依赖
 
 ```bash
-pnpm install
+bun install
 ```
 
 ### 2. 配置环境变量
@@ -80,7 +80,7 @@ VITE_APP_LOGO=/logo.svg
 ### 3. 启动开发环境
 
 ```bash
-pnpm dev
+bun dev
 ```
 
 如未额外配置，Vite 默认端口由 `VITE_APP_PORT` 控制。
@@ -88,6 +88,6 @@ pnpm dev
 ### 4. 构建与预览
 
 ```bash
-pnpm build
-pnpm preview
+bun build
+bun preview
 ```

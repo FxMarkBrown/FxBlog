@@ -75,7 +75,7 @@ FxBlog
 
 - JDK 25
 - Node.js LTS
-- pnpm
+- bun
 - PostgreSQL 16+
 - Redis
 
@@ -106,8 +106,8 @@ bash ./gradlew :module-server:bootRun
 进入 [`blog-admin`](blog-admin)：
 
 ```bash
-pnpm install
-pnpm dev
+bun install
+bun dev
 ```
 
 ### 4. 启动前台门户
@@ -115,8 +115,8 @@ pnpm dev
 进入 [`blog-web-nuxt`](blog-web-nuxt)：
 
 ```bash
-pnpm install
-pnpm dev
+bun install
+bun dev
 ```
 
 ### 5. （生产环境）配置 Nginx

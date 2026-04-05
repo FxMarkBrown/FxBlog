@@ -48,7 +48,7 @@ blog-web-nuxt
 ## 环境要求
 
 - Node.js LTS
-- pnpm
+- bun
 - 已启动的后端服务，默认 `http://127.0.0.1:8800`
 
 ## 快速开始
@@ -56,7 +56,7 @@ blog-web-nuxt
 ### 1. 安装依赖
 
 ```bash
-pnpm install
+bun install
 ```
 
 ### 2. 配置环境变量
@@ -83,7 +83,7 @@ NUXT_PUBLIC_ADMIN_URL=http://localhost:3001
 ### 3. 启动开发环境
 
 ```bash
-pnpm dev
+bun dev
 ```
 
 默认开发地址通常为 `http://localhost:3000`。
@@ -91,12 +91,12 @@ pnpm dev
 ### 4. 构建与预览
 
 ```bash
-pnpm build
-pnpm preview
+bun build
+bun preview
 ```
 
 如果需要纯静态产物，也可以执行：
 
 ```bash
-pnpm generate
+bun generate
 ```
