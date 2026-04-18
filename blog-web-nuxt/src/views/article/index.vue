@@ -1101,6 +1101,26 @@ onBeforeUnmount(() => {
     background: rgba(var(--border-color-rgb), 0.05);
   }
 
+  :deep(.md-editor-preview video),
+  :deep(.md-editor-preview iframe) {
+    display: block;
+    width: min(100%, 960px);
+    max-width: 100%;
+    margin: $spacing-lg auto;
+    border-radius: $border-radius-md;
+    background: #000;
+  }
+
+  :deep(.md-editor-preview video) {
+    height: auto;
+  }
+
+  :deep(.md-editor-preview iframe) {
+    aspect-ratio: 16 / 9;
+    min-height: 240px;
+    border: none;
+  }
+
   :deep(h2) {
     font-size: 1.8em;
     margin: $spacing-xl 0 $spacing-lg;

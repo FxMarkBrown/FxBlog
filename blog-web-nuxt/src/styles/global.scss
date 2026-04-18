@@ -274,11 +274,29 @@ img {
   }
 
   .blog-align-scroll-content {
-    display: inline-block;
-    min-width: 100%;
-    width: max-content;
+    display: block;
+    width: 100%;
     box-sizing: border-box;
     text-align: inherit;
+  }
+
+  .blog-align-scroll-content video,
+  .blog-align-scroll-content iframe {
+    display: block;
+    max-width: 100%;
+    margin-top: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .blog-align-scroll-content video {
+    width: min(100%, 960px);
+    height: auto;
+    background: #000;
+  }
+
+  .blog-align-scroll-content iframe {
+    width: min(100%, 960px);
+    aspect-ratio: 16 / 9;
   }
 
   .blog-align-scroll-content > :first-child {

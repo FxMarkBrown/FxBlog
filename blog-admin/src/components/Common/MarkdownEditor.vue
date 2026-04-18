@@ -411,7 +411,7 @@ const getHtml = () => htmlValue.value || marked.parse(innerValue.value || '')
  * 生成视频标签模板。
  */
 const buildVideoTag = (src: string) =>
-  `\n<video height="100%" width="100%" controls src="${src}"></video>\n`
+  `\n<video controls playsinline preload="metadata" src="${src}"></video>\n`
 
 /**
  * 规范化 Markdown 资源地址。

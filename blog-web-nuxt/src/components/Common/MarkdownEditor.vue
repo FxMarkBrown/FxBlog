@@ -303,7 +303,7 @@ function handleInsertInternalLink() {
  * 生成视频标签模板。
  */
 function buildVideoTag(src: string) {
-  return `\n<video height="100%" width="100%" controls src="${src}"></video>\n`
+  return `\n<video controls playsinline preload="metadata" src="${src}"></video>\n`
 }
 
 /**
