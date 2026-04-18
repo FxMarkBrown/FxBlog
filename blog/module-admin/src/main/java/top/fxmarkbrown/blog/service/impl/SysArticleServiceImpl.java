@@ -173,8 +173,6 @@ public class SysArticleServiceImpl extends ServiceImpl<SysArticleMapper, SysArti
         }
 
         List<SysArticle> removedArticles = baseMapper.selectByIds(ids);
-        baseMapper.deleteByIds(ids);
-        sysTagMapper.deleteArticleTagsByArticleIds(ids);
         List<Long> removedArticleIds = new ArrayList<>();
         for (SysArticle removedArticle : removedArticles) {
             if (removedArticle != null && Integer.valueOf(Constants.YES).equals(removedArticle.getStatus())) {
@@ -184,6 +182,8 @@ public class SysArticleServiceImpl extends ServiceImpl<SysArticleMapper, SysArti
                 removedArticleIds.add(removedArticle.getId());
             }
         }
+        baseMapper.deleteByIds(ids);
+        sysTagMapper.deleteArticleTagsByArticleIds(ids);
         if (!removedArticleIds.isEmpty()) {
             eventPublisher.publishEvent(new AiArticleIndexRemoveEvent(removedArticleIds));
         }
