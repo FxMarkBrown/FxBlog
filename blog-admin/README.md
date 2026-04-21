@@ -80,7 +80,7 @@ VITE_APP_LOGO=/logo.svg
 ### 3. 启动开发环境
 
 ```bash
-bun dev
+bun run dev
 ```
 
 如未额外配置，Vite 默认端口由 `VITE_APP_PORT` 控制。
@@ -88,6 +88,6 @@ bun dev
 ### 4. 构建与预览
 
 ```bash
-bun build
-bun preview
+bun run build
+bun run preview
 ```

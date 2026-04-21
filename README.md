@@ -107,7 +107,7 @@ bash ./gradlew :module-server:bootRun
 
 ```bash
 bun install
-bun dev
+bun run dev
 ```
 
 ### 4. 启动前台门户
@@ -116,7 +116,7 @@ bun dev
 
 ```bash
 bun install
-bun dev
+bun run dev
 ```
 
 ### 5. （生产环境）配置 Nginx
