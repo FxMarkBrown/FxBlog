@@ -228,10 +228,8 @@ function validateKeywords(_rule: unknown, value: string, callback: (error?: Erro
  */
 function getRouteArticleId() {
   const rawId = route.query.id
-  if (Array.isArray(rawId)) {
-    return rawId[0] || ''
-  }
-  return rawId || ''
+  const normalizedId = Array.isArray(rawId) ? rawId[0] || '' : rawId || ''
+  return /^\d+$/.test(String(normalizedId).trim()) ? String(normalizedId).trim() : ''
 }
 
 /**
