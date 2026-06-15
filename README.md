@@ -31,7 +31,8 @@
 
 博客的新对话功能 / 画布式文档解析功能：
 ![对话](Screenshot1.png)
-![画布解析](Screenshot2.png)
+![画布问答1](Screenshot2.png)
+![画布问答2](Screenshot3.png)
 
 ## 技术栈
 
