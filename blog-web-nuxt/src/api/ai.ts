@@ -1,5 +1,5 @@
-import type {ApiResponse} from '@/types/common'
-import {getToken} from '@/utils/cookie'
+import type { ApiResponse } from '@/types/common'
+import { getToken } from '@/utils/cookie'
 
 // 获取 AI 会话可用模型列表。
 export function getConversationModelOptionsApi() {
@@ -15,16 +15,24 @@ export function createGlobalConversationApi(data: Record<string, unknown> = {}) 
 }
 
 // 创建绑定文章上下文的 AI 会话。
-export function createArticleConversationApi(articleId: number | string, data: Record<string, unknown> = {}) {
-  return useApiClient()<ApiResponse<Record<string, unknown>>>(`/api/ai/chat/conversations/article/${articleId}`, {
-    method: 'POST',
-    body: data
-  })
+export function createArticleConversationApi(
+  articleId: number | string,
+  data: Record<string, unknown> = {}
+) {
+  return useApiClient()<ApiResponse<Record<string, unknown>>>(
+    `/api/ai/chat/conversations/article/${articleId}`,
+    {
+      method: 'POST',
+      body: data
+    }
+  )
 }
 
 // 获取单个会话的详情信息。
 export function getConversationDetailApi(conversationId: number | string) {
-  return useApiClient()<ApiResponse<Record<string, unknown>>>(`/api/ai/chat/conversations/${conversationId}`)
+  return useApiClient()<ApiResponse<Record<string, unknown>>>(
+    `/api/ai/chat/conversations/${conversationId}`
+  )
 }
 
 // 分页获取会话列表。
@@ -35,10 +43,16 @@ export function getConversationPageApi(query: Record<string, unknown>) {
 }
 
 // 获取指定会话的消息列表。
-export function getConversationMessagesApi(conversationId: number | string, query: Record<string, unknown>) {
-  return useApiClient()<ApiResponse<Record<string, unknown>>>(`/api/ai/chat/conversations/${conversationId}/messages`, {
-    query
-  })
+export function getConversationMessagesApi(
+  conversationId: number | string,
+  query: Record<string, unknown>
+) {
+  return useApiClient()<ApiResponse<Record<string, unknown>>>(
+    `/api/ai/chat/conversations/${conversationId}/messages`,
+    {
+      query
+    }
+  )
 }
 
 // 获取当前用户的 AI 额度概览。
@@ -73,7 +87,7 @@ export async function streamConversationMessageApi(
 
   const contentType = response.headers.get('content-type') || ''
   if (!response.ok || !contentType.includes('text/event-stream')) {
-    const payload = await response.json().catch(() => null) as { message?: string } | null
+    const payload = (await response.json().catch(() => null)) as { message?: string } | null
     const error = new Error(payload?.message || '流式请求失败') as Error & { status?: number }
     error.status = response.status
     throw error
@@ -172,10 +186,13 @@ function parseSseChunk(chunk: string) {
 
 // 重命名指定会话。
 export function renameConversationApi(conversationId: number | string, title: string) {
-  return useApiClient()<ApiResponse<unknown>>(`/api/ai/chat/conversations/${conversationId}/title`, {
-    method: 'PUT',
-    query: { title }
-  })
+  return useApiClient()<ApiResponse<unknown>>(
+    `/api/ai/chat/conversations/${conversationId}/title`,
+    {
+      method: 'PUT',
+      query: { title }
+    }
+  )
 }
 
 // 删除指定会话。

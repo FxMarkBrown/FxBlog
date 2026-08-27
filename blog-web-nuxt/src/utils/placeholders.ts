@@ -4,9 +4,9 @@ export const IMAGE_LOADING_PLACEHOLDER = svgToDataUri(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 90">' +
     '<rect width="160" height="90" fill="#f3f4f6"/>' +
     '<circle cx="80" cy="45" r="14" fill="none" stroke="#94a3b8" stroke-width="6" stroke-dasharray="60 28">' +
-      '<animateTransform attributeName="transform" type="rotate" from="0 80 45" to="360 80 45" dur="1s" repeatCount="indefinite"/>' +
+    '<animateTransform attributeName="transform" type="rotate" from="0 80 45" to="360 80 45" dur="1s" repeatCount="indefinite"/>' +
     '</circle>' +
-  '</svg>'
+    '</svg>'
 )
 
 export const IMAGE_ERROR_PLACEHOLDER = svgToDataUri(
@@ -14,7 +14,7 @@ export const IMAGE_ERROR_PLACEHOLDER = svgToDataUri(
     '<rect width="160" height="90" fill="#e5e7eb"/>' +
     '<path d="M30 62l22-22 16 16 18-24 24 30H30z" fill="#94a3b8"/>' +
     '<circle cx="58" cy="34" r="7" fill="#cbd5e1"/>' +
-  '</svg>'
+    '</svg>'
 )
 
 export const WECHAT_QR_PLACEHOLDER = svgToDataUri(
@@ -60,5 +60,5 @@ export const WECHAT_QR_PLACEHOLDER = svgToDataUri(
     '<rect x="104" y="184" width="10" height="10" fill="#111827"/>' +
     '<rect x="136" y="184" width="10" height="10" fill="#111827"/>' +
     '<rect x="152" y="184" width="10" height="10" fill="#111827"/>' +
-  '</svg>'
+    '</svg>'
 )

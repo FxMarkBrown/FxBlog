@@ -25,10 +25,10 @@ export const WEATHER_PARTICLE_PRESETS = [
   'aurora'
 ] as const
 
-export type WeatherType = typeof WEATHER_TYPES[number]
-export type WeatherSeason = typeof WEATHER_SEASONS[number]
-export type WeatherIntensity = typeof WEATHER_INTENSITIES[number]
-export type WeatherParticlePreset = typeof WEATHER_PARTICLE_PRESETS[number]
+export type WeatherType = (typeof WEATHER_TYPES)[number]
+export type WeatherSeason = (typeof WEATHER_SEASONS)[number]
+export type WeatherIntensity = (typeof WEATHER_INTENSITIES)[number]
+export type WeatherParticlePreset = (typeof WEATHER_PARTICLE_PRESETS)[number]
 export type WeatherAccentEffect = 'none' | 'aurora'
 type WeatherParticleWeather = Extract<WeatherType, WeatherParticlePreset>
 
@@ -121,7 +121,9 @@ function isParticleWeatherType(value: WeatherType): value is WeatherParticleWeat
 export function normalizeWeatherEffect(payload: WeatherEffectPayload = {}): WeatherEffect {
   const weather = isWeatherType(payload.weather) ? payload.weather : DEFAULT_WEATHER_EFFECT.weather
   const season = isWeatherSeason(payload.season) ? payload.season : DEFAULT_WEATHER_EFFECT.season
-  const intensity = isWeatherIntensity(payload.intensity) ? payload.intensity : DEFAULT_WEATHER_EFFECT.intensity
+  const intensity = isWeatherIntensity(payload.intensity)
+    ? payload.intensity
+    : DEFAULT_WEATHER_EFFECT.intensity
 
   return {
     ...DEFAULT_WEATHER_EFFECT,
@@ -215,7 +217,10 @@ function resolveAccentEffect(effect: WeatherEffect): WeatherAccentEffect {
   return 'none'
 }
 
-function resolveParticlePreset(weather: WeatherType, accentEffect: WeatherAccentEffect): WeatherParticlePreset | null {
+function resolveParticlePreset(
+  weather: WeatherType,
+  accentEffect: WeatherAccentEffect
+): WeatherParticlePreset | null {
   if (accentEffect && accentEffect !== 'none') {
     return accentEffect
   }

@@ -1,8 +1,8 @@
-import {existsSync, readFileSync} from 'node:fs'
-import {fileURLToPath} from 'node:url'
+import { existsSync, readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
-import {ElementPlusResolver} from 'unplugin-vue-components/resolvers'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 
 type LocalEnvMap = Record<string, string>
 
@@ -31,7 +31,10 @@ function parseEnvFile(filePath: string) {
     const key = line.slice(0, separatorIndex).trim()
     let value = line.slice(separatorIndex + 1).trim()
 
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith('\'') && value.endsWith('\''))) {
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
       value = value.slice(1, -1)
     }
 
@@ -85,7 +88,7 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: false },
   srcDir: 'src/',
-  modules: ['@pinia/nuxt'],
+  modules: ['@pinia/nuxt', '@nuxt/eslint'],
   css: ['@/styles/global.scss'],
   vite: {
     server: {
@@ -118,7 +121,8 @@ export default defineNuxtConfig({
     css: {
       preprocessorOptions: {
         scss: {
-          additionalData: '@use "sass:color" as color;@use "@/styles/variables.scss" as *;@use "@/styles/mixins.scss" as *;'
+          additionalData:
+            '@use "sass:color" as color;@use "@/styles/variables.scss" as *;@use "@/styles/mixins.scss" as *;'
         }
       }
     }
@@ -134,7 +138,8 @@ export default defineNuxtConfig({
       siteName,
       siteDescription,
       seoImage,
-      recordNum: readEnvValue('NUXT_PUBLIC_RECORD_NUM', ''), adminUrl: readEnvValue('NUXT_PUBLIC_ADMIN_URL', 'http://localhost:3001')
+      recordNum: readEnvValue('NUXT_PUBLIC_RECORD_NUM', ''),
+      adminUrl: readEnvValue('NUXT_PUBLIC_ADMIN_URL', 'http://localhost:3001')
     }
   },
   routeRules: {},

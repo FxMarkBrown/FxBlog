@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import {defineAsyncComponent} from 'vue'
-import type {FormInstance, FormRules} from 'element-plus'
-import {ElMessage} from 'element-plus'
-import {createArticleApi, getArticleInfoApi, updateArticleApi} from '@/api/article'
-import {getDictDataApi} from '@/api/dict'
-import type {UploadedFileDetail} from '@/api/file'
-import {uploadFileApi} from '@/api/file'
-import {getCategoriesApi, getTagsApi} from '@/api/tags'
-import {useNoIndexSeo} from '@/composables/useSeo'
-import type {ArticleDetail, TagSummary} from '@/types/article'
-import {unwrapResponseData} from '@/utils/response'
+import { defineAsyncComponent } from 'vue'
+import type { FormInstance, FormRules } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import { createArticleApi, getArticleInfoApi, updateArticleApi } from '@/api/article'
+import { getDictDataApi } from '@/api/dict'
+import type { UploadedFileDetail } from '@/api/file'
+import { uploadFileApi } from '@/api/file'
+import { getCategoriesApi, getTagsApi } from '@/api/tags'
+import { useNoIndexSeo } from '@/composables/useSeo'
+import type { ArticleDetail, TagSummary } from '@/types/article'
+import { unwrapResponseData } from '@/utils/response'
 
 interface ArticleFormState {
   id: number | string | ''
@@ -44,12 +44,14 @@ interface MarkdownEditorExpose {
   focus: () => void
   getHtml: () => string
   getSelectedText: () => string | undefined
-  insert: (generator: (selectedText: string) => {
-    targetValue: string
-    select?: boolean
-    deviationStart?: number
-    deviationEnd?: number
-  }) => void
+  insert: (
+    generator: (selectedText: string) => {
+      targetValue: string
+      select?: boolean
+      deviationStart?: number
+      deviationEnd?: number
+    }
+  ) => void
 }
 
 const MarkdownEditor = defineAsyncComponent(() => import('@/components/Common/MarkdownEditor.vue'))
@@ -83,22 +85,14 @@ const rules = reactive<FormRules>({
     { required: true, message: '请输入文章内容', trigger: 'blur' },
     { validator: validateContentMarkdown, trigger: ['blur', 'change'] }
   ],
-  cover: [
-    { required: true, message: '请上传封面图片', trigger: 'change' }
-  ],
-  categoryId: [
-    { required: true, message: '请选择文章分类', trigger: 'change' }
-  ],
+  cover: [{ required: true, message: '请上传封面图片', trigger: 'change' }],
+  categoryId: [{ required: true, message: '请选择文章分类', trigger: 'change' }],
   tagIds: [
     { required: true, message: '请选择文章标签', trigger: 'change' },
     { validator: validateTagIds, trigger: 'change' }
   ],
-  originalUrl: [
-    { validator: validateOriginalUrl, trigger: 'blur' }
-  ],
-  keywords: [
-    { validator: validateKeywords, trigger: 'blur' }
-  ]
+  originalUrl: [{ validator: validateOriginalUrl, trigger: 'blur' }],
+  keywords: [{ validator: validateKeywords, trigger: 'blur' }]
 })
 
 useNoIndexSeo({
@@ -182,7 +176,11 @@ function validateContentMarkdown(_rule: unknown, value: string, callback: (error
 /**
  * 校验标签数量限制。
  */
-function validateTagIds(_rule: unknown, value: Array<number | string>, callback: (error?: Error) => void) {
+function validateTagIds(
+  _rule: unknown,
+  value: Array<number | string>,
+  callback: (error?: Error) => void
+) {
   if (Array.isArray(value) && value.length > 3) {
     callback(new Error('最多只能选择3个标签'))
     return
@@ -216,7 +214,13 @@ function validateOriginalUrl(_rule: unknown, value: string, callback: (error?: E
  * 校验关键词数量限制。
  */
 function validateKeywords(_rule: unknown, value: string, callback: (error?: Error) => void) {
-  if (value && value.split(',').map((item) => item.trim()).filter(Boolean).length > 5) {
+  if (
+    value &&
+    value
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean).length > 5
+  ) {
     callback(new Error('关键词最多不超过5个'))
     return
   }
@@ -245,10 +249,7 @@ async function initializePage() {
   articleForm.id = getRouteArticleId()
 
   try {
-    await Promise.all([
-      loadEditorOptions(),
-      loadArticleDetail()
-    ])
+    await Promise.all([loadEditorOptions(), loadArticleDetail()])
   } finally {
     bootstrapping.value = false
   }
@@ -309,7 +310,9 @@ function normalizeArticleForm(data: ArticleFormInput) {
 
   const normalizedTagIds = Array.isArray(source.tagIds)
     ? source.tagIds
-    : articleTags.map((item) => item.id).filter((item): item is number | string => item !== undefined && item !== null)
+    : articleTags
+        .map((item) => item.id)
+        .filter((item): item is number | string => item !== undefined && item !== null)
 
   return {
     ...createDefaultArticleForm(),
@@ -432,13 +435,18 @@ async function handleCoverUpload(event: Event) {
 function removeCover() {
   articleForm.cover = ''
 }
-
 </script>
 
 <template>
   <div v-loading="bootstrapping" class="editor-container">
     <div class="editor-main">
-      <ElForm ref="articleFormRef" :model="articleForm" :rules="rules" label-position="top" size="small">
+      <ElForm
+        ref="articleFormRef"
+        :model="articleForm"
+        :rules="rules"
+        label-position="top"
+        size="small"
+      >
         <div class="editor-content">
           <div class="content-card">
             <div class="title-cover-layout">
@@ -447,7 +455,12 @@ function removeCover() {
                   <ElInput v-model="articleForm.title" placeholder="请输入文章标题..." />
                 </ElFormItem>
                 <ElFormItem label="文章描述" prop="summary">
-                  <ElInput v-model="articleForm.summary" type="textarea" :rows="4" placeholder="请输入文章描述..." />
+                  <ElInput
+                    v-model="articleForm.summary"
+                    type="textarea"
+                    :rows="4"
+                    placeholder="请输入文章描述..."
+                  />
                 </ElFormItem>
               </div>
 
@@ -459,7 +472,7 @@ function removeCover() {
                       <span>点击上传封面图</span>
                     </div>
                     <div v-else class="cover-preview">
-                      <img :src="articleForm.cover" alt="文章封面">
+                      <img :src="articleForm.cover" alt="文章封面" />
                       <div class="cover-actions">
                         <ElButton circle size="small" type="danger" @click.stop="removeCover">
                           <i class="fas fa-trash"></i>
@@ -473,7 +486,7 @@ function removeCover() {
                     accept="image/*"
                     style="display: none"
                     @change="handleCoverUpload"
-                  >
+                  />
                 </ElFormItem>
               </div>
             </div>
@@ -500,7 +513,12 @@ function removeCover() {
             </h3>
             <ElFormItem prop="categoryId">
               <ElSelect v-model="articleForm.categoryId" placeholder="请选择分类">
-                <ElOption v-for="item in categories" :key="item.id" :label="item.name" :value="item.id" />
+                <ElOption
+                  v-for="item in categories"
+                  :key="item.id"
+                  :label="item.name"
+                  :value="item.id"
+                />
               </ElSelect>
             </ElFormItem>
           </div>
@@ -530,18 +548,31 @@ function removeCover() {
               文章设置
             </h3>
             <div class="setting-item">
-              <ElSwitch v-model="articleForm.isOriginal" :active-value="1" :inactive-value="0" active-text="原创文章" />
+              <ElSwitch
+                v-model="articleForm.isOriginal"
+                :active-value="1"
+                :inactive-value="0"
+                active-text="原创文章"
+              />
             </div>
             <div v-if="!articleForm.isOriginal" class="setting-item">
               <div class="setting-label">转载地址：</div>
               <ElFormItem prop="originalUrl">
-                <ElInput v-model="articleForm.originalUrl" placeholder="请输入原文地址" size="small" />
+                <ElInput
+                  v-model="articleForm.originalUrl"
+                  placeholder="请输入原文地址"
+                  size="small"
+                />
               </ElFormItem>
             </div>
             <div class="setting-item">
               <div class="setting-label">关键词：</div>
               <ElFormItem prop="keywords">
-                <ElInput v-model="articleForm.keywords" placeholder="请输入关键词（多个用逗号隔开）" size="small" />
+                <ElInput
+                  v-model="articleForm.keywords"
+                  placeholder="请输入关键词（多个用逗号隔开）"
+                  size="small"
+                />
               </ElFormItem>
             </div>
           </div>
@@ -700,7 +731,6 @@ function removeCover() {
   .cover-preview:hover .cover-actions {
     opacity: 1;
   }
-
 }
 
 .editor-sidebar {

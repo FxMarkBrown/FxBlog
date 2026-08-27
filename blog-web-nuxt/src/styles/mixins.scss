@@ -33,14 +33,14 @@
   }
 }
 
+// Poetize 卡片浮起：常态浅阴影，hover 阴影加深（不做位移）
 @mixin card {
-  background: white;
+  background: var(--card-bg);
   border-radius: $border-radius-lg;
   box-shadow: $shadow-md;
-  transition: transform 0.3s ease;
+  transition: all 0.3s ease;
 
   &:hover {
-    transform: translateY(-5px);
     box-shadow: $shadow-lg;
   }
 }

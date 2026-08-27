@@ -46,7 +46,13 @@ onBeforeUnmount(() => {
         <div class="copyright">
           Copyright©{{ startYear }}-{{ currentYear }} {{ siteStore.websiteInfo.name }}
           <span v-if="recordNumber" class="divider">·</span>
-          <a v-if="recordNumber" href="https://beian.miit.gov.cn/" target="_blank" rel="noopener" class="record">
+          <a
+            v-if="recordNumber"
+            href="https://beian.miit.gov.cn/"
+            target="_blank"
+            rel="noopener"
+            class="record"
+          >
             {{ recordNumber }}
           </a>
         </div>
@@ -84,7 +90,7 @@ onBeforeUnmount(() => {
   color: var(--text-secondary);
 
   .icon {
-    color: #4CAF50;
+    color: #4caf50;
     margin-right: 4px;
   }
 }

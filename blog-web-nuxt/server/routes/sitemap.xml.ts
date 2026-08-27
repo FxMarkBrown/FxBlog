@@ -1,5 +1,5 @@
-import type {AlbumSummary, ArticleSummary} from '@/types/article'
-import type {ApiResponse, PageResult} from '@/types/common'
+import type { AlbumSummary, ArticleSummary } from '@/types/article'
+import type { ApiResponse, PageResult } from '@/types/common'
 
 type SitemapEntry = {
   loc: string
@@ -10,8 +10,14 @@ type SitemapEntry = {
 
 export default defineEventHandler(async (event) => {
   const runtimeConfig = useRuntimeConfig(event)
-  const siteUrl = String(runtimeConfig.public.siteUrl || 'http://localhost:3000').replace(/\/+$/, '')
-  const apiServer = String(runtimeConfig.apiBaseServer || 'http://127.0.0.1:8800').replace(/\/+$/, '')
+  const siteUrl = String(runtimeConfig.public.siteUrl || 'http://localhost:3000').replace(
+    /\/+$/,
+    ''
+  )
+  const apiServer = String(runtimeConfig.apiBaseServer || 'http://127.0.0.1:8800').replace(
+    /\/+$/,
+    ''
+  )
 
   const staticEntries: SitemapEntry[] = [
     { loc: `${siteUrl}/`, changefreq: 'daily', priority: '1.0' },

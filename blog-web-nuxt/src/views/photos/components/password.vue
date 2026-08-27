@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type {FormInstance, FormRules} from 'element-plus'
+import type { FormInstance, FormRules } from 'element-plus'
 
 const emit = defineEmits<{
   submit: [password: string, done: () => void]
@@ -14,9 +14,7 @@ const form = reactive({
 })
 
 const rules: FormRules<typeof form> = {
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' }
-  ]
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }
 
 function show() {
@@ -78,11 +76,7 @@ defineExpose({
       <p class="dialog-tip">这是一个加密相册，请输入密码访问</p>
       <ElForm ref="formRef" :model="form" :rules="rules" @submit.prevent="handleSubmit">
         <ElFormItem prop="password">
-          <ElInput
-            v-model="form.password"
-            type="password"
-            placeholder="请输入相册密码"
-          >
+          <ElInput v-model="form.password" type="password" placeholder="请输入相册密码">
             <template #prefix>
               <i class="fas fa-key"></i>
             </template>
@@ -91,9 +85,7 @@ defineExpose({
       </ElForm>
       <div class="dialog-footer">
         <ElButton @click="handleCancel">返回</ElButton>
-        <ElButton type="primary" :loading="loading" @click="handleSubmit">
-          确认
-        </ElButton>
+        <ElButton type="primary" :loading="loading" @click="handleSubmit"> 确认 </ElButton>
       </div>
     </div>
   </ElDialog>

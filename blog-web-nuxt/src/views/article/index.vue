@@ -1,16 +1,21 @@
 <script setup lang="ts">
-import {defineAsyncComponent} from 'vue'
-import {ElMessage} from 'element-plus'
+import { defineAsyncComponent } from 'vue'
+import { ElMessage } from 'element-plus'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/atom-one-dark.css'
 import 'md-editor-v3/lib/style.css'
-import {favoriteArticleApi, getArticleDetailApi, likeArticleApi, unlikeArticleApi} from '@/api/article'
+import {
+  favoriteArticleApi,
+  getArticleDetailApi,
+  likeArticleApi,
+  unlikeArticleApi
+} from '@/api/article'
 import ArticleShareCard from '@/components/ArticleShareCard/index.vue'
 import Comment from '@/components/Comment/index.vue'
 import ImagePreview from '@/components/Common/ImagePreview.vue'
-import {usePageSeo} from '@/composables/useSeo'
-import type {ArticleDetail} from '@/types/article'
-import {unwrapResponseData} from '@/utils/response'
+import { usePageSeo } from '@/composables/useSeo'
+import type { ArticleDetail } from '@/types/article'
+import { unwrapResponseData } from '@/utils/response'
 
 interface TocItem {
   id: string
@@ -19,7 +24,9 @@ interface TocItem {
   path: string
 }
 
-const MdPreview = defineAsyncComponent(() => import('md-editor-v3').then((module) => module.MdPreview))
+const MdPreview = defineAsyncComponent(() =>
+  import('md-editor-v3').then((module) => module.MdPreview)
+)
 
 const route = useRoute()
 const runtimeConfig = useRuntimeConfig()
@@ -45,16 +52,36 @@ const collapsedCodeBlocks = reactive(new Set<number>())
 let headingFrame = 0
 
 const articleId = computed(() => String(route.params.id || ''))
-const articleContent = computed(() => String(article.value?.contentMd || article.value?.content || ''))
-const articleSummary = computed(() => String(article.value?.summary || article.value?.introduction || siteStore.websiteInfo.summary || '暂无摘要'))
-const siteName = computed(() => String(siteStore.websiteInfo.name || siteStore.websiteInfo.title || runtimeConfig.public.siteName || 'Open Source Blog'))
-const normalizedSiteUrl = computed(() => String(runtimeConfig.public.siteUrl || '').replace(/\/+$/, ''))
+const articleContent = computed(() =>
+  String(article.value?.contentMd || article.value?.content || '')
+)
+const articleSummary = computed(() =>
+  String(
+    article.value?.summary ||
+      article.value?.introduction ||
+      siteStore.websiteInfo.summary ||
+      '暂无摘要'
+  )
+)
+const siteName = computed(() =>
+  String(
+    siteStore.websiteInfo.name ||
+      siteStore.websiteInfo.title ||
+      runtimeConfig.public.siteName ||
+      'Open Source Blog'
+  )
+)
+const normalizedSiteUrl = computed(() =>
+  String(runtimeConfig.public.siteUrl || '').replace(/\/+$/, '')
+)
 const canonicalUrl = computed(() => `${normalizedSiteUrl.value}/post/${articleId.value}`)
 const currentUrl = computed(() => (import.meta.client ? window.location.href : canonicalUrl.value))
-const categoryName = computed(() => String(article.value?.category?.name || article.value?.categoryName || '未分类'))
+const categoryName = computed(() =>
+  String(article.value?.category?.name || article.value?.categoryName || '未分类')
+)
 
 usePageSeo({
-  title: () => article.value?.title ? `${article.value.title} - ${siteName.value}` : '文章详情',
+  title: () => (article.value?.title ? `${article.value.title} - ${siteName.value}` : '文章详情'),
   description: () => articleSummary.value,
   path: () => `/post/${articleId.value}`,
   image: () => article.value?.cover || siteStore.websiteInfo.logo || runtimeConfig.public.seoImage,
@@ -169,11 +196,12 @@ function generateToc() {
     }
 
     headingStack.push(heading.textContent?.trim() || '')
-    const baseId = (heading.textContent || '')
-      .trim()
-      .toLowerCase()
-      .replace(/[^\w\u4e00-\u9fa5-]/g, '')
-      .replace(/\s+/g, '-') || 'heading'
+    const baseId =
+      (heading.textContent || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^\w\u4e00-\u9fa5-]/g, '')
+        .replace(/\s+/g, '-') || 'heading'
     const currentCount = slugCounter.get(baseId) || 0
     slugCounter.set(baseId, currentCount + 1)
     const id = currentCount ? `${baseId}-${currentCount}` : baseId
@@ -201,7 +229,9 @@ function getRequestedHeadingId() {
     }
   }
 
-  return String(route.hash || '').replace(/^#/, '').trim()
+  return String(route.hash || '')
+    .replace(/^#/, '')
+    .trim()
 }
 
 /**
@@ -746,7 +776,7 @@ onBeforeUnmount(() => {
 
             <div class="article-info">
               <div class="author-info">
-                <img :src="article.avatar" alt="作者头像" class="author-avatar">
+                <img :src="article.avatar" alt="作者头像" class="author-avatar" />
                 <div class="author-meta">
                   <span class="author-name">{{ article.nickname }}</span>
                   <div class="post-meta">
@@ -802,7 +832,14 @@ onBeforeUnmount(() => {
                 </div>
                 <div v-else class="notice-item">
                   <i class="fas fa-share-alt"></i>
-                  <span>本文转载自：<a :href="article.originalUrl" target="_blank" rel="noopener noreferrer">{{ article.originalUrl || '未知来源' }}</a></span>
+                  <span
+                    >本文转载自：<a
+                      :href="article.originalUrl"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      >{{ article.originalUrl || '未知来源' }}</a
+                    ></span
+                  >
                 </div>
                 <div class="notice-item">
                   <i class="fas fa-calendar-alt"></i>
@@ -812,7 +849,11 @@ onBeforeUnmount(() => {
                   <i class="fab fa-creative-commons-sa"></i>
                   <span>
                     版权协议：
-                    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer">
+                    <a
+                      href="https://creativecommons.org/licenses/by-nc-sa/4.0/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       CC BY-NC-SA 4.0
                     </a>
                   </span>
@@ -839,11 +880,19 @@ onBeforeUnmount(() => {
             </div>
 
             <div class="article-actions">
-              <button class="action-btn like" :class="{ active: article.isLike }" @click="toggleLike">
+              <button
+                class="action-btn like"
+                :class="{ active: article.isLike }"
+                @click="toggleLike"
+              >
                 <i class="fas fa-heart"></i>
                 <span>{{ article.likeNum || 0 }}</span>
               </button>
-              <button class="action-btn favorite" :class="{ active: article.isFavorite }" @click="toggleFavorite">
+              <button
+                class="action-btn favorite"
+                :class="{ active: article.isFavorite }"
+                @click="toggleFavorite"
+              >
                 <i class="fas fa-bookmark"></i>
                 <span>{{ article.favoriteNum || 0 }}</span>
               </button>
@@ -1256,7 +1305,9 @@ onBeforeUnmount(() => {
       height: 12px;
       border-radius: 50%;
       background: #ff5f56;
-      box-shadow: 20px 0 0 #ffbd2e, 40px 0 0 #27c93f;
+      box-shadow:
+        20px 0 0 #ffbd2e,
+        40px 0 0 #27c93f;
     }
 
     .expand-button {

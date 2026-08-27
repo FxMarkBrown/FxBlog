@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import {ElMessage} from 'element-plus'
-import {getThemeMode, setThemeMode} from '@/utils/theme'
+import { ElMessage } from 'element-plus'
+import { getThemeMode, setThemeMode } from '@/utils/theme'
 
 const router = useRouter()
 const visible = ref(false)
@@ -155,7 +155,10 @@ function toggleTheme() {
     </div>
     <div class="divider"></div>
     <div class="menu-item" @click="toggleTheme">
-      <i :class="['fas', isDark ? 'fa-sun' : 'fa-moon']" :style="{ color: isDark ? '#E6A23C' : '#409EFF' }"></i>
+      <i
+        :class="['fas', isDark ? 'fa-sun' : 'fa-moon']"
+        :style="{ color: isDark ? '#E6A23C' : '#409EFF' }"
+      ></i>
       {{ isDark ? '浅色模式' : '深色模式' }}
     </div>
   </div>

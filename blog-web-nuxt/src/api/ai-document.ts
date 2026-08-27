@@ -1,4 +1,4 @@
-import type {ApiResponse, PageResult} from '@/types/common'
+import type { ApiResponse, PageResult } from '@/types/common'
 import type {
   DocumentNodeMessage,
   DocumentNodeThread,
@@ -6,7 +6,7 @@ import type {
   DocumentTaskDetail,
   DocumentTaskListItem
 } from '@/types/ai-document'
-import {getToken} from '@/utils/cookie'
+import { getToken } from '@/utils/cookie'
 
 export function getDocumentTaskListApi() {
   return useApiClient()<ApiResponse<DocumentTaskListItem[]>>('/api/ai/document/tasks')
@@ -41,13 +41,22 @@ export function getDocumentTaskResultApi(taskId: number | string) {
 }
 
 export function getDocumentNodeThreadApi(taskId: number | string, nodeId: string) {
-  return useApiClient()<ApiResponse<DocumentNodeThread | null>>(`/api/ai/document/tasks/${taskId}/nodes/${nodeId}/thread`)
+  return useApiClient()<ApiResponse<DocumentNodeThread | null>>(
+    `/api/ai/document/tasks/${taskId}/nodes/${nodeId}/thread`
+  )
 }
 
-export function getDocumentNodeMessagesApi(taskId: number | string, nodeId: string, query: Record<string, unknown>) {
-  return useApiClient()<ApiResponse<PageResult<DocumentNodeMessage>>>(`/api/ai/document/tasks/${taskId}/nodes/${nodeId}/messages`, {
-    query
-  })
+export function getDocumentNodeMessagesApi(
+  taskId: number | string,
+  nodeId: string,
+  query: Record<string, unknown>
+) {
+  return useApiClient()<ApiResponse<PageResult<DocumentNodeMessage>>>(
+    `/api/ai/document/tasks/${taskId}/nodes/${nodeId}/messages`,
+    {
+      query
+    }
+  )
 }
 
 export async function streamDocumentNodeApi(
@@ -77,7 +86,7 @@ export async function streamDocumentNodeApi(
 
   const contentType = response.headers.get('content-type') || ''
   if (!response.ok || !contentType.includes('text/event-stream')) {
-    const payload = await response.json().catch(() => null) as { message?: string } | null
+    const payload = (await response.json().catch(() => null)) as { message?: string } | null
     const error = new Error(payload?.message || '流式请求失败') as Error & { status?: number }
     error.status = response.status
     throw error

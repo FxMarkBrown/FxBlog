@@ -80,7 +80,9 @@
   background: var(--input-bg) !important;
   box-shadow: 0 0 0 1px var(--border-color) inset !important;
   border: none !important;
-  transition: box-shadow 0.2s ease, background 0.2s ease !important;
+  transition:
+    box-shadow 0.2s ease,
+    background 0.2s ease !important;
 }
 
 .el-input__wrapper.is-focus,

@@ -1,21 +1,24 @@
 <script setup lang="ts">
-import {ElMessage} from 'element-plus'
-import {addCommentApi, getCommentsApi} from '@/api/article'
+import { ElMessage } from 'element-plus'
+import { addCommentApi, getCommentsApi } from '@/api/article'
 import EmojiPicker from '@/components/Common/EmojiPicker.vue'
-import {getBrowserInfo} from '@/utils/browser'
-import {formatTime} from '@/utils/time'
-import type {ArticleComment, ArticleCommentPayload} from '@/types/article'
-import type {PageResult} from '@/types/common'
-import {unwrapResponseData} from '@/utils/response'
+import { getBrowserInfo } from '@/utils/browser'
+import { formatTime } from '@/utils/time'
+import type { ArticleComment, ArticleCommentPayload } from '@/types/article'
+import type { PageResult } from '@/types/common'
+import { unwrapResponseData } from '@/utils/response'
 
-const props = withDefaults(defineProps<{
-  articleId: string | number
-  commentCount?: string | number
-  articleAuthorId?: string | number
-}>(), {
-  commentCount: 0,
-  articleAuthorId: ''
-})
+const props = withDefaults(
+  defineProps<{
+    articleId: string | number
+    commentCount?: string | number
+    articleAuthorId?: string | number
+  }>(),
+  {
+    commentCount: 0,
+    articleAuthorId: ''
+  }
+)
 
 const emit = defineEmits<{
   commentAdded: []
@@ -48,7 +51,14 @@ const params = reactive({
   sortType: 'newest'
 })
 
-const userAvatar = computed(() => String(authStore.userInfo?.avatar || siteStore.websiteInfo.touristAvatar || siteStore.websiteInfo.authorAvatar || ''))
+const userAvatar = computed(() =>
+  String(
+    authStore.userInfo?.avatar ||
+      siteStore.websiteInfo.touristAvatar ||
+      siteStore.websiteInfo.authorAvatar ||
+      ''
+  )
+)
 const userName = computed(() => String(authStore.userInfo?.nickname || '游客'))
 const sortedComments = computed(() => comments.value)
 
@@ -165,7 +175,10 @@ function isContentEmpty(content: string) {
   const container = document.createElement('div')
   container.innerHTML = content
   const hasMedia = !!container.querySelector('img, video, audio, iframe, embed')
-  const text = (container.textContent || '').replace(/\u200B/g, '').replace(/\u00A0/g, ' ').trim()
+  const text = (container.textContent || '')
+    .replace(/\u200B/g, '')
+    .replace(/\u00A0/g, ' ')
+    .trim()
 
   return !hasMedia && text === ''
 }
@@ -269,11 +282,13 @@ async function submitReply(comment: ArticleComment) {
   }
 
   try {
-    await addCommentApi(buildCommentPayload({
-      content: replyContent.value,
-      parentId: comment.id,
-      replyUserId: comment.userId
-    }))
+    await addCommentApi(
+      buildCommentPayload({
+        content: replyContent.value,
+        parentId: comment.id,
+        replyUserId: comment.userId
+      })
+    )
     await fetchComments()
     ElMessage.success('回复成功')
     emit('commentAdded')
@@ -300,11 +315,13 @@ async function submitChildReply(reply: ArticleComment) {
   }
 
   try {
-    await addCommentApi(buildCommentPayload({
-      content: replyContent.value,
-      parentId: reply.parentId || reply.id,
-      replyUserId: reply.userId
-    }))
+    await addCommentApi(
+      buildCommentPayload({
+        content: replyContent.value,
+        parentId: reply.parentId || reply.id,
+        replyUserId: reply.userId
+      })
+    )
     await fetchComments()
     ElMessage.success('回复成功')
     emit('commentAdded')
@@ -430,7 +447,7 @@ onBeforeUnmount(() => {
     <div class="comment-editor">
       <div class="editor-content">
         <div class="avatar-container">
-          <img :src="userAvatar" :alt="userName">
+          <img :src="userAvatar" :alt="userName" />
         </div>
         <div class="input-container">
           <div
@@ -458,12 +475,22 @@ onBeforeUnmount(() => {
 
     <div class="comments-list">
       <div class="list-header">
-        <h3>全部评论 <span>({{ commentCount }})</span></h3>
+        <h3>
+          全部评论 <span>({{ commentCount }})</span>
+        </h3>
         <div class="sort-options">
-          <button class="sort-btn" :class="{ active: sortBy === 'newest' }" @click="sortBy = 'newest'">
+          <button
+            class="sort-btn"
+            :class="{ active: sortBy === 'newest' }"
+            @click="sortBy = 'newest'"
+          >
             最新
           </button>
-          <button class="sort-btn" :class="{ active: sortBy === 'hottest' }" @click="sortBy = 'hottest'">
+          <button
+            class="sort-btn"
+            :class="{ active: sortBy === 'hottest' }"
+            @click="sortBy = 'hottest'"
+          >
             最热
           </button>
         </div>
@@ -477,14 +504,20 @@ onBeforeUnmount(() => {
           class="comment-item"
         >
           <div class="comment-avatar">
-            <img :src="comment.avatar" :alt="comment.nickname">
+            <img :src="comment.avatar" :alt="comment.nickname" />
           </div>
           <div class="comment-content">
             <div class="comment-header">
               <div class="comment-info">
                 <span class="nickname">{{ comment.nickname }}</span>
-                <span v-if="String(comment.userId || '') === String(articleAuthorId || '')" class="author-tag">作者</span>
-                <span v-if="formatIpSource(comment.ipSource)" class="ipSource">IP属地:{{ formatIpSource(comment.ipSource) }}</span>
+                <span
+                  v-if="String(comment.userId || '') === String(articleAuthorId || '')"
+                  class="author-tag"
+                  >作者</span
+                >
+                <span v-if="formatIpSource(comment.ipSource)" class="ipSource"
+                  >IP属地:{{ formatIpSource(comment.ipSource) }}</span
+                >
                 <span class="time">{{ formatTime(comment.createTime) }}</span>
               </div>
               <div class="comment-actions">
@@ -499,15 +532,23 @@ onBeforeUnmount(() => {
             <div v-if="comment.children?.length" class="replies-list">
               <div v-for="reply in comment.children" :key="reply.id" class="reply-item">
                 <div class="reply-avatar">
-                  <img :src="reply.avatar" :alt="reply.nickname">
+                  <img :src="reply.avatar" :alt="reply.nickname" />
                 </div>
                 <div class="reply-content">
                   <div class="reply-header">
                     <div class="reply-info">
                       <span class="nickname">{{ reply.nickname }}</span>
-                      <span v-if="String(reply.userId || '') === String(articleAuthorId || '')" class="author-tag">作者</span>
-                      <span class="reply-to">回复 <span class="target">@{{ reply.replyNickname }}</span></span>
-                      <span v-if="formatIpSource(reply.ipSource)" class="ipSource">IP属地:{{ formatIpSource(reply.ipSource) }}</span>
+                      <span
+                        v-if="String(reply.userId || '') === String(articleAuthorId || '')"
+                        class="author-tag"
+                        >作者</span
+                      >
+                      <span class="reply-to"
+                        >回复 <span class="target">@{{ reply.replyNickname }}</span></span
+                      >
+                      <span v-if="formatIpSource(reply.ipSource)" class="ipSource"
+                        >IP属地:{{ formatIpSource(reply.ipSource) }}</span
+                      >
                       <span class="time">{{ formatTime(reply.createTime) }}</span>
                     </div>
                     <div class="comment-actions">
@@ -533,7 +574,11 @@ onBeforeUnmount(() => {
                       </div>
                       <div class="reply-actions">
                         <button class="cancel-btn" @click="cancelReply">取消</button>
-                        <button class="submit-btn" :disabled="isContentEmpty(replyContent) || !canComment" @click="submitChildReply(reply)">
+                        <button
+                          class="submit-btn"
+                          :disabled="isContentEmpty(replyContent) || !canComment"
+                          @click="submitChildReply(reply)"
+                        >
                           回复
                         </button>
                       </div>
@@ -557,7 +602,11 @@ onBeforeUnmount(() => {
                 </div>
                 <div class="reply-actions">
                   <button class="cancel-btn" @click="cancelReply">取消</button>
-                  <button class="submit-btn" :disabled="isContentEmpty(replyContent) || !canComment" @click="submitReply(comment)">
+                  <button
+                    class="submit-btn"
+                    :disabled="isContentEmpty(replyContent) || !canComment"
+                    @click="submitReply(comment)"
+                  >
                     {{ canComment ? '回复' : `${countdown}秒后可评论` }}
                   </button>
                 </div>

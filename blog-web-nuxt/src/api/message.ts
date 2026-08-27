@@ -1,5 +1,5 @@
-import type {ApiResponse, PageResult} from '@/types/common'
-import type {MessageItem, NotificationItem} from '@/types/article'
+import type { ApiResponse, PageResult } from '@/types/common'
+import type { MessageItem, NotificationItem } from '@/types/article'
 
 // 获取留言列表
 export function getMessagesApi() {
@@ -45,5 +45,7 @@ export function deleteNotificationApi(id: number | string) {
 
 // 获取各分类未读消息数量。
 export function getUnreadNotificationsCountApi() {
-  return useApiClient()<ApiResponse<Record<string, { num?: number }>>>('/api/notifications/unReadNum')
+  return useApiClient()<ApiResponse<Record<string, { num?: number }>>>(
+    '/api/notifications/unReadNum'
+  )
 }

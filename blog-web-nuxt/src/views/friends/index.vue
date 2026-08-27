@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import type {FormInstance, FormRules} from 'element-plus'
-import {ElMessage} from 'element-plus'
-import {applyFriendApi, getFriendsApi} from '@/api/friends'
-import {usePageSeo} from '@/composables/useSeo'
-import type {FriendApplyPayload, FriendItem} from '@/types/article'
-import {IMAGE_ERROR_PLACEHOLDER} from '@/utils/placeholders'
-import {unwrapResponseData} from '@/utils/response'
+import type { FormInstance, FormRules } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import { applyFriendApi, getFriendsApi } from '@/api/friends'
+import { usePageSeo } from '@/composables/useSeo'
+import type { FriendApplyPayload, FriendItem } from '@/types/article'
+import { IMAGE_ERROR_PLACEHOLDER } from '@/utils/placeholders'
+import { unwrapResponseData } from '@/utils/response'
 
 const runtimeConfig = useRuntimeConfig()
 const siteStore = useSiteStore()
@@ -37,9 +37,26 @@ const rules: FormRules<typeof form> = {
   ]
 }
 
-const siteLogo = computed(() => String(siteStore.websiteInfo.logo || siteStore.websiteInfo.authorAvatar || IMAGE_ERROR_PLACEHOLDER))
-const siteName = computed(() => String(siteStore.websiteInfo.name || siteStore.websiteInfo.title || runtimeConfig.public.siteName || 'Open Source Blog'))
-const siteSummary = computed(() => String(siteStore.websiteInfo.summary || siteStore.websiteInfo.description || '与优秀的人同行，分享技术与生活'))
+const siteLogo = computed(() =>
+  String(
+    siteStore.websiteInfo.logo || siteStore.websiteInfo.authorAvatar || IMAGE_ERROR_PLACEHOLDER
+  )
+)
+const siteName = computed(() =>
+  String(
+    siteStore.websiteInfo.name ||
+      siteStore.websiteInfo.title ||
+      runtimeConfig.public.siteName ||
+      'Open Source Blog'
+  )
+)
+const siteSummary = computed(() =>
+  String(
+    siteStore.websiteInfo.summary ||
+      siteStore.websiteInfo.description ||
+      '与优秀的人同行，分享技术与生活'
+  )
+)
 const siteUrl = computed(() => String(siteStore.websiteInfo.webUrl || ''))
 
 usePageSeo({
@@ -222,7 +239,7 @@ onMounted(() => {
             <p>{{ siteSummary }}</p>
             <div class="site-url">
               <i class="fas fa-link"></i>
-              <input :value="siteUrl" readonly @click="copyUrl">
+              <input :value="siteUrl" readonly @click="copyUrl" />
               <button class="copy-btn" type="button" @click="copyUrl">
                 <i class="fas fa-copy"></i>
               </button>
@@ -249,9 +266,14 @@ onMounted(() => {
         </div>
 
         <div class="friends-grid">
-          <div v-for="friend in friends" :key="friend.id" class="friend-card" @click="visitFriend(friend.url)">
+          <div
+            v-for="friend in friends"
+            :key="friend.id"
+            class="friend-card"
+            @click="visitFriend(friend.url)"
+          >
             <div class="friend-avatar">
-              <img :src="friend.avatar" :alt="friend.name" @error="handleImageError">
+              <img :src="friend.avatar" :alt="friend.name" @error="handleImageError" />
               <div class="status" :class="{ online: friend.online }"></div>
             </div>
             <div class="friend-info">

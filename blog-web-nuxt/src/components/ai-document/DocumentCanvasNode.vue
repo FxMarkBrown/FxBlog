@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import 'md-editor-v3/lib/style.css'
-import {Handle, type NodeProps, Position} from '@vue-flow/core'
+import { Handle, type NodeProps, Position } from '@vue-flow/core'
 
-const MdPreview = defineAsyncComponent(() => import('md-editor-v3').then((module) => module.MdPreview))
+const MdPreview = defineAsyncComponent(() =>
+  import('md-editor-v3').then((module) => module.MdPreview)
+)
 
 type CanvasNodeData = {
   kind?: 'outline' | 'source-preview' | 'chat-thread'
@@ -53,10 +55,19 @@ const isOutline = computed(() => props.data.kind === 'outline')
 const isPreview = computed(() => props.data.kind === 'source-preview')
 const isChat = computed(() => props.data.kind === 'chat-thread')
 const showClose = computed(() => isPreview.value || isChat.value)
-const markdownTheme = computed(() => props.data.themeMode === 'dark' ? 'dark' : 'light')
-const selectedContextSet = computed(() => new Set((props.data.selectedContextNodes || []).map((node) => String(node.nodeId || '')).filter(Boolean)))
+const markdownTheme = computed(() => (props.data.themeMode === 'dark' ? 'dark' : 'light'))
+const selectedContextSet = computed(
+  () =>
+    new Set(
+      (props.data.selectedContextNodes || [])
+        .map((node) => String(node.nodeId || ''))
+        .filter(Boolean)
+    )
+)
 const showContextSocket = computed(() => isChat.value && Boolean(props.data.showContextSocket))
-const selectedModelOption = computed(() => (props.data.modelOptions || []).find((item) => item.id === props.data.modelId) || null)
+const selectedModelOption = computed(
+  () => (props.data.modelOptions || []).find((item) => item.id === props.data.modelId) || null
+)
 const messageListRef = ref<HTMLElement | null>(null)
 
 function handleToggleExpand() {
@@ -157,10 +168,14 @@ function formatQuotaMultiplier(value?: number) {
   if (Number.isNaN(normalized) || normalized <= 0) {
     return '1'
   }
-  return Number.isInteger(normalized) ? String(normalized) : normalized.toFixed(1).replace(/\.0$/, '')
+  return Number.isInteger(normalized)
+    ? String(normalized)
+    : normalized.toFixed(1).replace(/\.0$/, '')
 }
 
-function buildModelOptionLabel(model?: { id: string; displayName?: string; quotaMultiplier?: number } | null) {
+function buildModelOptionLabel(
+  model?: { id: string; displayName?: string; quotaMultiplier?: number } | null
+) {
   if (!model) {
     return '请选择模型'
   }
@@ -176,13 +191,14 @@ function scrollMessagesToBottom() {
 }
 
 watch(
-  () => [
-    props.data.question || '',
-    props.data.answer || '',
-    props.data.reasoningContent || '',
-    props.data.sending ? '1' : '0',
-    String(props.data.citations?.length || 0)
-  ].join('|'),
+  () =>
+    [
+      props.data.question || '',
+      props.data.answer || '',
+      props.data.reasoningContent || '',
+      props.data.sending ? '1' : '0',
+      String(props.data.citations?.length || 0)
+    ].join('|'),
   async () => {
     if (!isChat.value) {
       return
@@ -247,254 +263,284 @@ watch(
       </div>
 
       <div class="node-card">
-      <div class="node-card__header">
-        <div class="node-card__heading">
-          <span v-if="data.badge" class="node-badge">{{ data.badge }}</span>
-          <strong>{{ data.title || '未命名节点' }}</strong>
+        <div class="node-card__header">
+          <div class="node-card__heading">
+            <span v-if="data.badge" class="node-badge">{{ data.badge }}</span>
+            <strong>{{ data.title || '未命名节点' }}</strong>
+          </div>
+          <button
+            v-if="isOutline && data.expandable"
+            type="button"
+            class="node-toggle"
+            :title="data.expanded ? '收起下一级' : '展开下一级'"
+            @click.stop="handleToggleExpand"
+          >
+            <i :class="['fas', data.expanded ? 'fa-minus' : 'fa-plus']"></i>
+          </button>
+          <button
+            v-else-if="showClose"
+            type="button"
+            class="node-close"
+            title="关闭"
+            @click.stop="handleClosePanel"
+          >
+            <i class="fas fa-xmark"></i>
+          </button>
         </div>
-        <button
-          v-if="isOutline && data.expandable"
-          type="button"
-          class="node-toggle"
-          :title="data.expanded ? '收起下一级' : '展开下一级'"
-          @click.stop="handleToggleExpand"
+
+        <div v-if="data.subtitle" class="node-card__subtitle">{{ data.subtitle }}</div>
+        <div v-if="data.body" class="node-card__body">{{ data.body }}</div>
+
+        <div v-if="isPreview && data.pageLabel" class="node-card__meta">{{ data.pageLabel }}</div>
+        <div v-if="isPreview && data.markdown" class="node-preview markdown-preview">
+          <MdPreview
+            :model-value="data.markdown"
+            :theme="markdownTheme"
+            preview-theme="github"
+            code-theme="github"
+          />
+        </div>
+        <a
+          v-if="isPreview && data.sourceUrl"
+          :href="data.sourceUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="source-link"
         >
-          <i :class="['fas', data.expanded ? 'fa-minus' : 'fa-plus']"></i>
-        </button>
-        <button
-          v-else-if="showClose"
-          type="button"
-          class="node-close"
-          title="关闭"
-          @click.stop="handleClosePanel"
-        >
-          <i class="fas fa-xmark"></i>
-        </button>
-      </div>
+          <i class="fas fa-up-right-from-square"></i>
+          <span>打开原文</span>
+        </a>
 
-      <div v-if="data.subtitle" class="node-card__subtitle">{{ data.subtitle }}</div>
-      <div v-if="data.body" class="node-card__body">{{ data.body }}</div>
-
-      <div v-if="isPreview && data.pageLabel" class="node-card__meta">{{ data.pageLabel }}</div>
-      <div v-if="isPreview && data.markdown" class="node-preview markdown-preview">
-        <MdPreview
-          :model-value="data.markdown"
-          :theme="markdownTheme"
-          preview-theme="github"
-          code-theme="github"
-        />
-      </div>
-      <a v-if="isPreview && data.sourceUrl" :href="data.sourceUrl" target="_blank" rel="noopener noreferrer" class="source-link">
-        <i class="fas fa-up-right-from-square"></i>
-        <span>打开原文</span>
-      </a>
-
-      <div v-if="isChat" class="node-ask">
-        <div ref="messageListRef" class="node-message-list">
-          <div v-if="!data.answer && data.helperLines?.length" class="node-message-item system">
-            <div class="node-message-role">使用说明</div>
-            <div class="node-chat-helper">
-              <div
-                v-for="(line, index) in data.helperLines"
-                :key="`helper-${index}`"
-                class="node-chat-helper__line"
-              >
-                {{ line }}
+        <div v-if="isChat" class="node-ask">
+          <div ref="messageListRef" class="node-message-list">
+            <div v-if="!data.answer && data.helperLines?.length" class="node-message-item system">
+              <div class="node-message-role">使用说明</div>
+              <div class="node-chat-helper">
+                <div
+                  v-for="(line, index) in data.helperLines"
+                  :key="`helper-${index}`"
+                  class="node-chat-helper__line"
+                >
+                  {{ line }}
+                </div>
               </div>
             </div>
-          </div>
 
-          <div v-if="data.question" class="node-message-item user">
-            <div class="node-message-role">本轮问题</div>
-            <div class="node-message-plain">{{ data.question }}</div>
-          </div>
-
-          <div v-if="data.answer" class="node-message-item assistant">
-            <div class="node-message-role">节点回答</div>
-            <div class="node-message-content markdown-preview">
-              <MdPreview
-                :model-value="data.answer"
-                :theme="markdownTheme"
-                preview-theme="github"
-                code-theme="github"
-              />
+            <div v-if="data.question" class="node-message-item user">
+              <div class="node-message-role">本轮问题</div>
+              <div class="node-message-plain">{{ data.question }}</div>
             </div>
 
-            <details v-if="data.reasoningContent" class="node-message-reasoning">
-              <summary>思考过程</summary>
-              <div class="reasoning-content markdown-preview reasoning-preview">
+            <div v-if="data.answer" class="node-message-item assistant">
+              <div class="node-message-role">节点回答</div>
+              <div class="node-message-content markdown-preview">
                 <MdPreview
-                  :model-value="data.reasoningContent"
+                  :model-value="data.answer"
                   :theme="markdownTheme"
                   preview-theme="github"
                   code-theme="github"
                 />
               </div>
-            </details>
 
-            <div v-if="data.contextSummary" class="node-message-activities">
-              <div class="node-message-activity completed">
-                <i class="fas fa-diagram-project"></i>
-                <span class="node-message-activity-label">{{ data.contextSummary }}</span>
+              <details v-if="data.reasoningContent" class="node-message-reasoning">
+                <summary>思考过程</summary>
+                <div class="reasoning-content markdown-preview reasoning-preview">
+                  <MdPreview
+                    :model-value="data.reasoningContent"
+                    :theme="markdownTheme"
+                    preview-theme="github"
+                    code-theme="github"
+                  />
+                </div>
+              </details>
+
+              <div v-if="data.contextSummary" class="node-message-activities">
+                <div class="node-message-activity completed">
+                  <i class="fas fa-diagram-project"></i>
+                  <span class="node-message-activity-label">{{ data.contextSummary }}</span>
+                </div>
+              </div>
+
+              <div v-if="data.citations?.length" class="node-message-citations">
+                <div class="node-citation-title">引用节点</div>
+                <div
+                  v-for="citation in data.citations"
+                  :key="`${citation.nodeId}-${citation.relation || 'citation'}`"
+                  class="node-citation-card"
+                >
+                  <div class="node-citation-meta">
+                    <button
+                      type="button"
+                      class="node-citation-card__main"
+                      @click.stop="handleCitationSelect(citation.nodeId)"
+                    >
+                      <span class="node-citation-article"
+                        >{{ citation.displayLabel ? `${citation.displayLabel} · ` : ''
+                        }}{{ citation.title || citation.nodeId }}</span
+                      >
+                    </button>
+                    <button
+                      type="button"
+                      class="node-context-chip__toggle"
+                      :class="{ 'is-active': isSelectedContextNode(citation.nodeId) }"
+                      :title="
+                        isSelectedContextNode(citation.nodeId) ? '移出显式上下文' : '纳入显式上下文'
+                      "
+                      @click.stop="handleToggleSelectedContextNode(citation.nodeId)"
+                    >
+                      <i
+                        :class="[
+                          'fas',
+                          isSelectedContextNode(citation.nodeId) ? 'fa-check' : 'fa-plus'
+                        ]"
+                      ></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                v-if="data.usedNodes?.length || data.candidateNodes?.length"
+                class="node-message-activities"
+              >
+                <div v-if="data.usedNodes?.length" class="node-message-activity completed">
+                  <i class="fas fa-circle-check"></i>
+                  <span class="node-message-activity-label"
+                    >已使用 {{ data.usedNodes.length }} 个节点</span
+                  >
+                </div>
+                <div v-if="data.candidateNodes?.length" class="node-message-activity requested">
+                  <i class="fas fa-wave-square"></i>
+                  <span class="node-message-activity-label"
+                    >候选 {{ data.candidateNodes.length }} 个节点</span
+                  >
+                </div>
               </div>
             </div>
 
-            <div v-if="data.citations?.length" class="node-message-citations">
-              <div class="node-citation-title">引用节点</div>
-              <div
-                v-for="citation in data.citations"
-                :key="`${citation.nodeId}-${citation.relation || 'citation'}`"
-                class="node-citation-card"
-              >
-                <div class="node-citation-meta">
+            <div v-else-if="data.sending" class="node-message-item assistant pending">
+              <div class="node-message-role">节点回答</div>
+              <div class="node-message-pending">生成中...</div>
+            </div>
+          </div>
+
+          <div class="node-composer-shell">
+            <div class="node-query-toolbar">
+              <div v-if="data.modelOptions?.length" class="node-model-picker">
+                <ClientOnly>
+                  <ElSelect
+                    :model-value="data.modelId || ''"
+                    class="node-model-select"
+                    popper-class="ai-model-select-dropdown"
+                    placeholder="请选择模型"
+                    @change="handleModelSelectChange"
+                  >
+                    <ElOption
+                      v-for="model in data.modelOptions"
+                      :key="model.id"
+                      :label="buildModelOptionLabel(model)"
+                      :value="model.id"
+                    />
+                  </ElSelect>
+                  <template #fallback>
+                    <div class="node-model-select-fallback">
+                      {{ buildModelOptionLabel(selectedModelOption) }}
+                    </div>
+                  </template>
+                </ClientOnly>
+              </div>
+
+              <div class="node-query-modes">
+                <button
+                  type="button"
+                  class="node-query-mode"
+                  :class="{ 'is-active': data.queryMode === 'strict' }"
+                  @click.stop="handleQueryModeChange('strict')"
+                >
+                  严格
+                </button>
+                <button
+                  type="button"
+                  class="node-query-mode"
+                  :class="{ 'is-active': data.queryMode === 'balanced' || !data.queryMode }"
+                  @click.stop="handleQueryModeChange('balanced')"
+                >
+                  平衡
+                </button>
+                <button
+                  type="button"
+                  class="node-query-mode"
+                  :class="{ 'is-active': data.queryMode === 'explore' }"
+                  @click.stop="handleQueryModeChange('explore')"
+                >
+                  探索
+                </button>
+              </div>
+            </div>
+
+            <div v-if="data.selectedContextNodes?.length" class="node-context-group">
+              <div class="node-context-group__label">显式上下文</div>
+              <div class="node-context-chips">
+                <div
+                  v-for="node in data.selectedContextNodes"
+                  :key="`${node.nodeId}-selected`"
+                  class="node-context-chip"
+                >
                   <button
                     type="button"
-                    class="node-citation-card__main"
-                    @click.stop="handleCitationSelect(citation.nodeId)"
+                    class="node-citation is-selected"
+                    @click.stop="handleCitationSelect(node.nodeId)"
                   >
-                    <span class="node-citation-article">{{ citation.displayLabel ? `${citation.displayLabel} · ` : '' }}{{ citation.title || citation.nodeId }}</span>
+                    {{ node.title || node.nodeId }}
                   </button>
                   <button
                     type="button"
-                    class="node-context-chip__toggle"
-                    :class="{ 'is-active': isSelectedContextNode(citation.nodeId) }"
-                    :title="isSelectedContextNode(citation.nodeId) ? '移出显式上下文' : '纳入显式上下文'"
-                    @click.stop="handleToggleSelectedContextNode(citation.nodeId)"
+                    class="node-context-chip__toggle is-active"
+                    title="移出显式上下文"
+                    @click.stop="handleToggleSelectedContextNode(node.nodeId)"
                   >
-                    <i :class="['fas', isSelectedContextNode(citation.nodeId) ? 'fa-check' : 'fa-plus']"></i>
+                    <i class="fas fa-xmark"></i>
                   </button>
                 </div>
               </div>
             </div>
 
-            <div v-if="data.usedNodes?.length || data.candidateNodes?.length" class="node-message-activities">
-              <div v-if="data.usedNodes?.length" class="node-message-activity completed">
-                <i class="fas fa-circle-check"></i>
-                <span class="node-message-activity-label">已使用 {{ data.usedNodes.length }} 个节点</span>
-              </div>
-              <div v-if="data.candidateNodes?.length" class="node-message-activity requested">
-                <i class="fas fa-wave-square"></i>
-                <span class="node-message-activity-label">候选 {{ data.candidateNodes.length }} 个节点</span>
-              </div>
+            <textarea
+              class="node-ask__input"
+              rows="4"
+              :value="data.question || ''"
+              placeholder="输入你想围绕当前节点追问的问题"
+              @input="handleQuestionInput"
+              @keydown="handleQuestionKeydown"
+            ></textarea>
+            <div class="node-composer-footer">
+              <span class="node-composer-hint">{{
+                data.contextSummary || 'Ctrl+Enter 发送，支持显式上下文与知识流回跳'
+              }}</span>
+              <button
+                type="button"
+                class="node-composer-btn"
+                :disabled="data.sending"
+                @click.stop="handleSubmitQuestion"
+              >
+                <i :class="['fas', data.sending ? 'fa-spinner fa-spin' : 'fa-paper-plane']"></i>
+                <span>{{ data.sending ? '发送中...' : '发送' }}</span>
+              </button>
             </div>
-          </div>
-
-          <div v-else-if="data.sending" class="node-message-item assistant pending">
-            <div class="node-message-role">节点回答</div>
-            <div class="node-message-pending">生成中...</div>
+            <div v-if="data.error" class="node-ask__error">{{ data.error }}</div>
           </div>
         </div>
 
-        <div class="node-composer-shell">
-          <div class="node-query-toolbar">
-            <div v-if="data.modelOptions?.length" class="node-model-picker">
-              <ClientOnly>
-                <ElSelect
-                  :model-value="data.modelId || ''"
-                  class="node-model-select"
-                  popper-class="ai-model-select-dropdown"
-                  placeholder="请选择模型"
-                  @change="handleModelSelectChange"
-                >
-                  <ElOption
-                    v-for="model in data.modelOptions"
-                    :key="model.id"
-                    :label="buildModelOptionLabel(model)"
-                    :value="model.id"
-                  />
-                </ElSelect>
-                <template #fallback>
-                  <div class="node-model-select-fallback">
-                    {{ buildModelOptionLabel(selectedModelOption) }}
-                  </div>
-                </template>
-              </ClientOnly>
-            </div>
-
-            <div class="node-query-modes">
-              <button
-                type="button"
-                class="node-query-mode"
-                :class="{ 'is-active': data.queryMode === 'strict' }"
-                @click.stop="handleQueryModeChange('strict')"
-              >
-                严格
-              </button>
-              <button
-                type="button"
-                class="node-query-mode"
-                :class="{ 'is-active': data.queryMode === 'balanced' || !data.queryMode }"
-                @click.stop="handleQueryModeChange('balanced')"
-              >
-                平衡
-              </button>
-              <button
-                type="button"
-                class="node-query-mode"
-                :class="{ 'is-active': data.queryMode === 'explore' }"
-                @click.stop="handleQueryModeChange('explore')"
-              >
-                探索
-              </button>
-            </div>
-          </div>
-
-          <div v-if="data.selectedContextNodes?.length" class="node-context-group">
-            <div class="node-context-group__label">显式上下文</div>
-            <div class="node-context-chips">
-              <div
-                v-for="node in data.selectedContextNodes"
-                :key="`${node.nodeId}-selected`"
-                class="node-context-chip"
-              >
-                <button
-                  type="button"
-                  class="node-citation is-selected"
-                  @click.stop="handleCitationSelect(node.nodeId)"
-                >
-                  {{ node.title || node.nodeId }}
-                </button>
-                <button
-                  type="button"
-                  class="node-context-chip__toggle is-active"
-                  title="移出显式上下文"
-                  @click.stop="handleToggleSelectedContextNode(node.nodeId)"
-                >
-                  <i class="fas fa-xmark"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <textarea
-            class="node-ask__input"
-            rows="4"
-            :value="data.question || ''"
-            placeholder="输入你想围绕当前节点追问的问题"
-            @input="handleQuestionInput"
-            @keydown="handleQuestionKeydown"
-          ></textarea>
-          <div class="node-composer-footer">
-            <span class="node-composer-hint">{{ data.contextSummary || 'Ctrl+Enter 发送，支持显式上下文与知识流回跳' }}</span>
-            <button type="button" class="node-composer-btn" :disabled="data.sending" @click.stop="handleSubmitQuestion">
-              <i :class="['fas', data.sending ? 'fa-spinner fa-spin' : 'fa-paper-plane']"></i>
-              <span>{{ data.sending ? '发送中...' : '发送' }}</span>
-            </button>
-          </div>
-          <div v-if="data.error" class="node-ask__error">{{ data.error }}</div>
+        <div v-if="isOutline && data.isActive" class="node-actions">
+          <button type="button" class="node-action ghost" @click.stop="handleTogglePreview">
+            <i class="far fa-file-lines"></i>
+            <span>查看原文</span>
+          </button>
+          <button type="button" class="node-action primary" @click.stop="handleToggleChat">
+            <i class="fas fa-comment-dots"></i>
+            <span>对话</span>
+          </button>
         </div>
-      </div>
-
-      <div v-if="isOutline && data.isActive" class="node-actions">
-        <button type="button" class="node-action ghost" @click.stop="handleTogglePreview">
-          <i class="far fa-file-lines"></i>
-          <span>查看原文</span>
-        </button>
-        <button type="button" class="node-action primary" @click.stop="handleToggleChat">
-          <i class="fas fa-comment-dots"></i>
-          <span>对话</span>
-        </button>
-      </div>
       </div>
     </div>
   </div>
@@ -619,7 +665,9 @@ watch(
   background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
   backdrop-filter: blur(12px);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .document-canvas-node.is-preview .node-card,

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {useNoIndexSeo} from '@/composables/useSeo'
+import { useNoIndexSeo } from '@/composables/useSeo'
 
 const runtimeConfig = useRuntimeConfig()
 const authStore = useAuthStore()
@@ -99,8 +99,7 @@ const taskCards = computed(() => [
   border-radius: 28px;
   border: 1px solid var(--border-color);
   background:
-    linear-gradient(135deg, rgba(15, 118, 110, 0.12), rgba(14, 165, 233, 0.08)),
-    var(--card-bg);
+    linear-gradient(135deg, rgba(15, 118, 110, 0.12), rgba(14, 165, 233, 0.08)), var(--card-bg);
   box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
 }
 
@@ -173,7 +172,10 @@ const taskCards = computed(() => [
   color: inherit;
   text-decoration: none;
   box-shadow: 0 16px 36px rgba(15, 23, 42, 0.06);
-  transition: transform 0.24s ease, box-shadow 0.24s ease, border-color 0.24s ease;
+  transition:
+    transform 0.24s ease,
+    box-shadow 0.24s ease,
+    border-color 0.24s ease;
 
   &:hover {
     transform: translateY(-4px);
@@ -242,7 +244,10 @@ const taskCards = computed(() => [
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
   color: #0891b2;
   font-weight: 600;
-  transition: transform 0.24s ease, border-color 0.24s ease, background 0.24s ease;
+  transition:
+    transform 0.24s ease,
+    border-color 0.24s ease,
+    background 0.24s ease;
 }
 
 .task-card:hover .task-card__action {

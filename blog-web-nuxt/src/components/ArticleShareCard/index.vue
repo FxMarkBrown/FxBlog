@@ -1,24 +1,27 @@
 <script setup lang="ts">
-import {ElMessage} from 'element-plus'
+import { ElMessage } from 'element-plus'
 import QRCode from 'qrcode'
-import type {ArticleDetail} from '@/types/article'
+import type { ArticleDetail } from '@/types/article'
 
 const CARD_WIDTH = 900
 const CARD_HEIGHT = 1320
 const CARD_RADIUS = 36
 const COVER_HEIGHT = 500
 
-const props = withDefaults(defineProps<{
-  modelValue: boolean
-  article?: ArticleDetail | null
-  url?: string
-  siteName?: string
-}>(), {
-  modelValue: false,
-  article: null,
-  url: '',
-  siteName: ''
-})
+const props = withDefaults(
+  defineProps<{
+    modelValue?: boolean
+    article?: ArticleDetail | null
+    url?: string
+    siteName?: string
+  }>(),
+  {
+    modelValue: false,
+    article: null,
+    url: '',
+    siteName: ''
+  }
+)
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
@@ -103,7 +106,15 @@ async function renderCardToDataUrl() {
 
   ctx.fillStyle = '#111827'
   ctx.font = '700 52px sans-serif'
-  drawMultilineText(ctx, props.article?.title || props.siteName || '文章分享', contentX, 346, contentWidth, 72, 2)
+  drawMultilineText(
+    ctx,
+    props.article?.title || props.siteName || '文章分享',
+    contentX,
+    346,
+    contentWidth,
+    72,
+    2
+  )
 
   const coverTop = 468
   if (cover) {
@@ -125,7 +136,15 @@ async function renderCardToDataUrl() {
 
   ctx.fillStyle = '#6b7280'
   ctx.font = '500 24px sans-serif'
-  drawMultilineText(ctx, props.url || window.location.href, contentX, 1162, contentWidth - 148, 34, 2)
+  drawMultilineText(
+    ctx,
+    props.url || window.location.href,
+    contentX,
+    1162,
+    contentWidth - 148,
+    34,
+    2
+  )
 
   if (qrImage) {
     const qrBoxX = contentX + contentWidth - 132
@@ -244,7 +263,13 @@ function drawRoundedImage(
 /**
  * 绘制圆形头像。
  */
-function drawCircularImage(ctx: CanvasRenderingContext2D, image: HTMLImageElement, x: number, y: number, size: number) {
+function drawCircularImage(
+  ctx: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  x: number,
+  y: number,
+  size: number
+) {
   ctx.save()
   ctx.beginPath()
   ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2)
@@ -270,7 +295,13 @@ function drawAvatarFallback(ctx: CanvasRenderingContext2D, x: number, y: number,
 /**
  * 绘制封面缺失时的兜底背景。
  */
-function drawCoverFallback(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number) {
+function drawCoverFallback(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number
+) {
   const gradient = ctx.createLinearGradient(x, y, x + width, y + height)
   gradient.addColorStop(0, '#1f2937')
   gradient.addColorStop(1, '#334155')
@@ -289,7 +320,14 @@ function drawCoverFallback(ctx: CanvasRenderingContext2D, x: number, y: number, 
 /**
  * 绘制封面图片。
  */
-function drawCoverImage(ctx: CanvasRenderingContext2D, image: HTMLImageElement, x: number, y: number, width: number, height: number) {
+function drawCoverImage(
+  ctx: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  x: number,
+  y: number,
+  width: number,
+  height: number
+) {
   const imgRatio = image.width / image.height
   const boxRatio = width / height
   let drawWidth = width
@@ -430,7 +468,9 @@ async function downloadCard() {
   try {
     const link = document.createElement('a')
     link.href = cardImage.value
-    link.download = `${String(props.article?.title || 'article-share-card').replace(/[\\/:*?"<>|]/g, '-').slice(0, 40)}.png`
+    link.download = `${String(props.article?.title || 'article-share-card')
+      .replace(/[\\/:*?"<>|]/g, '-')
+      .slice(0, 40)}.png`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -501,12 +541,7 @@ watch(
           <span class="shell-glow shell-glow-top"></span>
           <span class="shell-glow shell-glow-bottom"></span>
           <div class="share-card-preview">
-            <img
-              v-if="cardImage"
-              :src="cardImage"
-              class="share-card-image"
-              alt="文章分享卡片"
-            >
+            <img v-if="cardImage" :src="cardImage" class="share-card-image" alt="文章分享卡片" />
             <div v-else class="share-card-placeholder">
               <i class="fas fa-image"></i>
               <span>正在生成卡片...</span>
@@ -519,9 +554,7 @@ watch(
     <template #footer>
       <div class="dialog-footer">
         <ElButton @click="copyLink">复制链接</ElButton>
-        <ElButton type="primary" :loading="downloading" @click="downloadCard">
-          下载卡片
-        </ElButton>
+        <ElButton type="primary" :loading="downloading" @click="downloadCard"> 下载卡片 </ElButton>
       </div>
     </template>
   </ElDialog>
@@ -638,14 +671,18 @@ watch(
   left: 8%;
   bottom: 18%;
   background: #fde68a;
-  box-shadow: 18px -16px 0 0 rgba(191, 219, 254, 0.82), 30px 10px 0 0 rgba(252, 211, 77, 0.58);
+  box-shadow:
+    18px -16px 0 0 rgba(191, 219, 254, 0.82),
+    30px 10px 0 0 rgba(252, 211, 77, 0.58);
 }
 
 .stage-spark-right {
   right: 10%;
   top: 20%;
   background: rgba(255, 255, 255, 0.9);
-  box-shadow: -18px 14px 0 0 rgba(253, 224, 71, 0.52), -34px -8px 0 0 rgba(191, 219, 254, 0.72);
+  box-shadow:
+    -18px 14px 0 0 rgba(253, 224, 71, 0.52),
+    -34px -8px 0 0 rgba(191, 219, 254, 0.72);
 }
 
 .stage-cross {

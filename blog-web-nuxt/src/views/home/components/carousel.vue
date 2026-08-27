@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type {ArticleSummary} from '@/types/article'
-import {IMAGE_ERROR_PLACEHOLDER} from '@/utils/placeholders'
+import type { ArticleSummary } from '@/types/article'
+import { IMAGE_ERROR_PLACEHOLDER } from '@/utils/placeholders'
 
 const props = defineProps<{
   slides: ArticleSummary[]
@@ -14,7 +14,7 @@ const emit = defineEmits<{
 <template>
   <ElCarousel v-if="props.slides?.length" :interval="5000" class="custom-carousel">
     <ElCarouselItem v-for="slide in props.slides" :key="slide.id">
-      <img :src="slide.cover || IMAGE_ERROR_PLACEHOLDER" :alt="slide.title">
+      <img :src="slide.cover || IMAGE_ERROR_PLACEHOLDER" :alt="slide.title" />
       <div class="slide-content">
         <h3>{{ slide.title }}</h3>
         <p>{{ slide.summary || slide.introduction }}</p>

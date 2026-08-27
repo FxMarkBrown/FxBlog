@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import {ElLoading, ElMessage} from 'element-plus'
-import {defineAsyncComponent} from 'vue'
-import {marked} from 'marked'
-import type {ToolbarNames} from 'md-editor-v3'
-import {allToolbar, DropdownToolbar} from 'md-editor-v3'
+import { ElLoading, ElMessage } from 'element-plus'
+import { defineAsyncComponent } from 'vue'
+import { marked } from 'marked'
+import type { ToolbarNames } from 'md-editor-v3'
+import { allToolbar, DropdownToolbar } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
-import {uploadFileApi} from '@/api/file'
-import {unwrapResponseData} from '@/utils/response'
+import { uploadFileApi } from '@/api/file'
+import { unwrapResponseData } from '@/utils/response'
 
 interface MarkdownEditorProps {
   modelValue?: string
@@ -41,7 +41,9 @@ const emit = defineEmits<{
   (event: 'update:modelValue', value: string): void
 }>()
 
-const MdEditorComponent = defineAsyncComponent(() => import('md-editor-v3').then((module) => module.MdEditor))
+const MdEditorComponent = defineAsyncComponent(() =>
+  import('md-editor-v3').then((module) => module.MdEditor)
+)
 
 const editorRef = ref<MarkdownEditorInstance | null>(null)
 const innerValue = ref(props.modelValue)
@@ -417,7 +419,7 @@ defineExpose({
       multiple
       class="video-file-input"
       @change="handleVideoFileChange"
-    >
+    />
 
     <ClientOnly>
       <MdEditorComponent
@@ -434,7 +436,11 @@ defineExpose({
         @on-html-changed="handleHtmlChanged"
       >
         <template #defToolbars>
-          <DropdownToolbar title="插入对齐块" :visible="alignDropdownVisible" @on-change="handleAlignDropdownChange">
+          <DropdownToolbar
+            title="插入对齐块"
+            :visible="alignDropdownVisible"
+            @on-change="handleAlignDropdownChange"
+          >
             <template #default>
               <i class="fas fa-align-center custom-toolbar-icon"></i>
             </template>
@@ -457,7 +463,11 @@ defineExpose({
             </template>
           </DropdownToolbar>
 
-          <DropdownToolbar title="插入链接" :visible="linkDropdownVisible" @on-change="handleLinkDropdownChange">
+          <DropdownToolbar
+            title="插入链接"
+            :visible="linkDropdownVisible"
+            @on-change="handleLinkDropdownChange"
+          >
             <template #default>
               <i class="fas fa-link custom-toolbar-icon"></i>
             </template>
@@ -529,7 +539,10 @@ defineExpose({
       append-to-body
     >
       <div class="dialog-form-stack">
-        <ElInput v-model="internalLinkTargetInput" placeholder="请输入文章 ID、/post/123 或其他站内路径" />
+        <ElInput
+          v-model="internalLinkTargetInput"
+          placeholder="请输入文章 ID、/post/123 或其他站内路径"
+        />
         <ElInput v-model="internalLinkTextInput" placeholder="请输入显示文字，可留空使用选中文本" />
       </div>
 

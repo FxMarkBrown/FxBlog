@@ -1,21 +1,12 @@
 <script setup lang="ts">
-import {getMomentsApi} from '@/api/moments'
+import { getMomentsApi } from '@/api/moments'
 import ImagePreview from '@/components/Common/ImagePreview.vue'
-import {usePageSeo} from '@/composables/useSeo'
-import type {MomentSummary} from '@/types/article'
-import type {PageResult} from '@/types/common'
-import {IMAGE_ERROR_PLACEHOLDER} from '@/utils/placeholders'
-import {unwrapResponseData} from '@/utils/response'
-import {formatTime} from '@/utils/time'
-
-type MomentItem = MomentSummary & {
-  id: number | string
-  content: string
-  createTime: string
-  avatar: string
-  nickname: string
-  images: string[]
-}
+import { usePageSeo } from '@/composables/useSeo'
+import type { MomentSummary } from '@/types/article'
+import type { PageResult } from '@/types/common'
+import { IMAGE_ERROR_PLACEHOLDER } from '@/utils/placeholders'
+import { unwrapResponseData } from '@/utils/response'
+import { formatTime } from '@/utils/time'
 
 const runtimeConfig = useRuntimeConfig()
 const loading = ref(false)
@@ -89,9 +80,13 @@ const { data: momentsPageData, pending: momentsPending } = await useAsyncData(
 const moments = computed(() => momentsPageData.value?.records || [])
 const total = computed(() => momentsPageData.value?.total || 0)
 
-watch(momentsPending, (value) => {
-  loading.value = value
-}, { immediate: true })
+watch(
+  momentsPending,
+  (value) => {
+    loading.value = value
+  },
+  { immediate: true }
+)
 
 /**
  * 切换说说分页并回到顶部。
@@ -122,7 +117,12 @@ function previewImage(images: string[], index: number) {
     <div v-loading="loading" class="moments-list">
       <div v-for="moment in moments" :key="moment.id" class="moment-item">
         <div class="user-avatar">
-          <img :src="moment.avatar" :alt="moment.nickname" class="avatar" @error="handleAvatarError">
+          <img
+            :src="moment.avatar"
+            :alt="moment.nickname"
+            class="avatar"
+            @error="handleAvatarError"
+          />
           <div class="mobile-user-info">
             <span class="name">{{ moment.nickname }}</span>
             <span class="time">
@@ -148,7 +148,7 @@ function previewImage(images: string[], index: number) {
                 :src="img"
                 :alt="`${moment.nickname}-${index + 1}`"
                 @click="previewImage(moment.images, index)"
-              >
+              />
             </div>
           </div>
         </div>

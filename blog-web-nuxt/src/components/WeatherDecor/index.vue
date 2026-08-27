@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import {getWeatherEffectApi} from '@/api/site'
-import {createWeatherEngine} from '@/components/WeatherDecor/engine'
-import {unwrapResponseData} from '@/utils/response'
+import { getWeatherEffectApi } from '@/api/site'
+import { createWeatherEngine } from '@/components/WeatherDecor/engine'
+import { unwrapResponseData } from '@/utils/response'
 import {
   DEFAULT_WEATHER_EFFECT,
   normalizeWeatherEffect,
@@ -60,7 +60,9 @@ const particleClasses = computed(() => [
   `weather-decor--${effect.value.weather}`,
   `weather-preset--${renderProfile.value.particlePreset || 'none'}`
 ])
-const refreshMinutes = computed(() => resolveRefreshMinutes(siteStore.websiteInfo as Record<string, unknown>))
+const refreshMinutes = computed(() =>
+  resolveRefreshMinutes(siteStore.websiteInfo as Record<string, unknown>)
+)
 const sceneSignature = computed(() => {
   const profile = renderProfile.value
   return [
@@ -121,14 +123,17 @@ function scheduleRefresh() {
     return
   }
 
-  refreshTimer = window.setTimeout(() => {
-    if (document.hidden) {
-      scheduleRefresh()
-      return
-    }
+  refreshTimer = window.setTimeout(
+    () => {
+      if (document.hidden) {
+        scheduleRefresh()
+        return
+      }
 
-    void fetchWeatherEffect()
-  }, refreshMinutes.value * 60 * 1000)
+      void fetchWeatherEffect()
+    },
+    refreshMinutes.value * 60 * 1000
+  )
 }
 
 /**
@@ -242,7 +247,9 @@ function removeReducedMotionListener() {
 
 onMounted(() => {
   isMobile.value = window.innerWidth < 768
-  deviceMemory.value = Number((navigator as Navigator & { deviceMemory?: number }).deviceMemory || 8)
+  deviceMemory.value = Number(
+    (navigator as Navigator & { deviceMemory?: number }).deviceMemory || 8
+  )
   initReducedMotion()
   document.addEventListener('visibilitychange', handleVisibilityChange)
   window.addEventListener('resize', handleResize, { passive: true })
@@ -267,11 +274,17 @@ onBeforeUnmount(() => {
       <div class="weather-atmosphere"></div>
       <div class="weather-season-tint"></div>
       <div class="weather-glow"></div>
-      <div v-if="effect.enabled && effect.weather === 'sunny' && !effect.isNight" class="weather-sun">
+      <div
+        v-if="effect.enabled && effect.weather === 'sunny' && !effect.isNight"
+        class="weather-sun"
+      >
         <span class="weather-sun-core"></span>
         <span class="weather-sun-ring"></span>
       </div>
-      <div v-if="effect.enabled && ['cloudy', 'overcast'].includes(effect.weather) && effect.isNight" class="weather-moon">
+      <div
+        v-if="effect.enabled && ['cloudy', 'overcast'].includes(effect.weather) && effect.isNight"
+        class="weather-moon"
+      >
         <span class="weather-moon-core"></span>
         <span class="weather-moon-halo"></span>
       </div>
@@ -284,7 +297,12 @@ onBeforeUnmount(() => {
         <span class="weather-lightning-flash weather-lightning-flash--a"></span>
         <span class="weather-lightning-flash weather-lightning-flash--b"></span>
       </div>
-      <div v-if="effect.enabled && ['light_rain', 'heavy_rain', 'thunderstorm'].includes(effect.weather)" class="weather-rain-veil">
+      <div
+        v-if="
+          effect.enabled && ['light_rain', 'heavy_rain', 'thunderstorm'].includes(effect.weather)
+        "
+        class="weather-rain-veil"
+      >
         <span class="weather-rain-veil__layer weather-rain-veil__layer--a"></span>
         <span class="weather-rain-veil__layer weather-rain-veil__layer--b"></span>
       </div>
@@ -319,7 +337,9 @@ onBeforeUnmount(() => {
   overflow: hidden;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.6s ease, filter 0.6s ease;
+  transition:
+    opacity 0.6s ease,
+    filter 0.6s ease;
   contain: layout paint style;
 }
 
@@ -396,7 +416,10 @@ onBeforeUnmount(() => {
 .weather-season-tint,
 .weather-glow,
 .weather-vignette {
-  transition: background 0.6s ease, opacity 0.6s ease, filter 0.6s ease;
+  transition:
+    background 0.6s ease,
+    opacity 0.6s ease,
+    filter 0.6s ease;
 }
 
 .weather-atmosphere {
@@ -443,8 +466,12 @@ onBeforeUnmount(() => {
   left: 14%;
   width: 86px;
   height: 86px;
-  background:
-    radial-gradient(circle at 34% 34%, rgba(255, 255, 255, 0.98) 0%, rgba(223, 235, 255, 0.94) 58%, rgba(193, 213, 247, 0.78) 100%);
+  background: radial-gradient(
+    circle at 34% 34%,
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(223, 235, 255, 0.94) 58%,
+    rgba(193, 213, 247, 0.78) 100%
+  );
   filter: blur(3px);
   box-shadow:
     inset -12px -8px 0 rgba(183, 202, 235, 0.18),
@@ -470,7 +497,12 @@ onBeforeUnmount(() => {
   left: calc(14% - 24px);
   width: 134px;
   height: 134px;
-  background: radial-gradient(circle, rgba(193, 214, 255, 0.24), rgba(162, 189, 242, 0.08) 48%, transparent 74%);
+  background: radial-gradient(
+    circle,
+    rgba(193, 214, 255, 0.24),
+    rgba(162, 189, 242, 0.08) 48%,
+    transparent 74%
+  );
   filter: blur(16px);
   animation: moonPulse 8s ease-in-out infinite;
 }
@@ -480,7 +512,13 @@ onBeforeUnmount(() => {
   left: 12%;
   width: 120px;
   height: 120px;
-  background: radial-gradient(circle, rgba(255, 248, 212, 0.96) 0%, rgba(255, 223, 149, 0.88) 42%, rgba(255, 207, 102, 0.12) 78%, transparent 100%);
+  background: radial-gradient(
+    circle,
+    rgba(255, 248, 212, 0.96) 0%,
+    rgba(255, 223, 149, 0.88) 42%,
+    rgba(255, 207, 102, 0.12) 78%,
+    transparent 100%
+  );
   filter: blur(6px);
   box-shadow:
     0 0 34px rgba(255, 214, 120, 0.18),
@@ -493,7 +531,12 @@ onBeforeUnmount(() => {
   left: calc(12% - 26px);
   width: 172px;
   height: 172px;
-  background: radial-gradient(circle, rgba(255, 228, 162, 0.18), rgba(255, 208, 120, 0.06) 54%, transparent 74%);
+  background: radial-gradient(
+    circle,
+    rgba(255, 228, 162, 0.18),
+    rgba(255, 208, 120, 0.06) 54%,
+    transparent 74%
+  );
   filter: blur(12px);
   animation: sunPulse 7s ease-in-out infinite;
 }
@@ -569,12 +612,20 @@ onBeforeUnmount(() => {
 }
 
 .weather-rain-veil__layer--a {
-  background-image: repeating-linear-gradient(-4deg, rgba(196, 220, 248, 0.12) 0 1px, transparent 1px 18px);
+  background-image: repeating-linear-gradient(
+    -4deg,
+    rgba(196, 220, 248, 0.12) 0 1px,
+    transparent 1px 18px
+  );
   animation: rainVeilMove 8s linear infinite;
 }
 
 .weather-rain-veil__layer--b {
-  background-image: repeating-linear-gradient(-6deg, rgba(140, 185, 232, 0.1) 0 1px, transparent 1px 20px);
+  background-image: repeating-linear-gradient(
+    -6deg,
+    rgba(140, 185, 232, 0.1) 0 1px,
+    transparent 1px 20px
+  );
   opacity: 0.58;
   animation: rainVeilMove 12s linear infinite reverse;
 }
@@ -641,7 +692,12 @@ onBeforeUnmount(() => {
 .weather-decor--sunny .weather-atmosphere {
   background:
     radial-gradient(circle at 14% 18%, rgba(255, 232, 166, 0.48), transparent 25%),
-    linear-gradient(180deg, rgba(146, 198, 255, 0.26), rgba(255, 232, 206, 0.14) 74%, transparent 100%);
+    linear-gradient(
+      180deg,
+      rgba(146, 198, 255, 0.26),
+      rgba(255, 232, 206, 0.14) 74%,
+      transparent 100%
+    );
 }
 
 .weather-decor--sunny .weather-glow {
@@ -652,7 +708,12 @@ onBeforeUnmount(() => {
 
 .weather-decor--cloudy .weather-atmosphere,
 .weather-decor--overcast .weather-atmosphere {
-  background: linear-gradient(180deg, rgba(188, 206, 226, 0.18), rgba(154, 170, 192, 0.12) 55%, transparent 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(188, 206, 226, 0.18),
+    rgba(154, 170, 192, 0.12) 55%,
+    transparent 100%
+  );
 }
 
 .weather-decor--cloudy .weather-glow {
@@ -666,11 +727,21 @@ onBeforeUnmount(() => {
 
 .weather-decor--light_rain .weather-atmosphere,
 .weather-decor--heavy_rain .weather-atmosphere {
-  background: linear-gradient(180deg, rgba(92, 118, 156, 0.22), rgba(58, 77, 110, 0.26) 65%, rgba(25, 31, 48, 0.1) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(92, 118, 156, 0.22),
+    rgba(58, 77, 110, 0.26) 65%,
+    rgba(25, 31, 48, 0.1) 100%
+  );
 }
 
 .weather-decor--thunderstorm .weather-atmosphere {
-  background: linear-gradient(180deg, rgba(61, 72, 99, 0.3), rgba(26, 31, 46, 0.32) 62%, rgba(8, 11, 19, 0.18) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(61, 72, 99, 0.3),
+    rgba(26, 31, 46, 0.32) 62%,
+    rgba(8, 11, 19, 0.18) 100%
+  );
 }
 
 .weather-decor--light_rain .weather-glow,
@@ -721,8 +792,7 @@ onBeforeUnmount(() => {
 :root:not([data-theme='dark']) .weather-particle-layer.weather-decor--snow .weather-canvas,
 :root:not([data-theme='dark']) .weather-particle-layer.weather-decor--windy .weather-canvas {
   opacity: 1;
-  filter:
-    drop-shadow(0 0 0.42rem rgba(70, 117, 172, 0.26))
+  filter: drop-shadow(0 0 0.42rem rgba(70, 117, 172, 0.26))
     drop-shadow(0 0 0.08rem rgba(116, 156, 204, 0.24));
 }
 
@@ -734,8 +804,7 @@ onBeforeUnmount(() => {
 :root:not([data-theme='dark']) .weather-particle-layer.weather-decor--thunderstorm .weather-canvas,
 :root:not([data-theme='dark']) .weather-particle-layer.weather-decor--dust .weather-canvas {
   opacity: 1;
-  filter:
-    drop-shadow(0 0 0.52rem rgba(66, 111, 165, 0.28))
+  filter: drop-shadow(0 0 0.52rem rgba(66, 111, 165, 0.28))
     drop-shadow(0 0 0.12rem rgba(114, 154, 200, 0.26));
 }
 
@@ -748,18 +817,31 @@ onBeforeUnmount(() => {
 :root:not([data-theme='dark']) .weather-decor--light_rain .weather-rain-veil__layer--a,
 :root:not([data-theme='dark']) .weather-decor--heavy_rain .weather-rain-veil__layer--a,
 :root:not([data-theme='dark']) .weather-decor--thunderstorm .weather-rain-veil__layer--a {
-  background-image: repeating-linear-gradient(-4deg, rgba(108, 149, 197, 0.2) 0 1px, transparent 1px 18px);
+  background-image: repeating-linear-gradient(
+    -4deg,
+    rgba(108, 149, 197, 0.2) 0 1px,
+    transparent 1px 18px
+  );
 }
 
 :root:not([data-theme='dark']) .weather-decor--light_rain .weather-rain-veil__layer--b,
 :root:not([data-theme='dark']) .weather-decor--heavy_rain .weather-rain-veil__layer--b,
 :root:not([data-theme='dark']) .weather-decor--thunderstorm .weather-rain-veil__layer--b {
-  background-image: repeating-linear-gradient(-6deg, rgba(78, 121, 172, 0.18) 0 1px, transparent 1px 20px);
+  background-image: repeating-linear-gradient(
+    -6deg,
+    rgba(78, 121, 172, 0.18) 0 1px,
+    transparent 1px 20px
+  );
   opacity: 0.68;
 }
 
 .weather-decor--snow .weather-atmosphere {
-  background: linear-gradient(180deg, rgba(198, 221, 255, 0.28), rgba(214, 228, 247, 0.16) 58%, transparent 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(198, 221, 255, 0.28),
+    rgba(214, 228, 247, 0.16) 58%,
+    transparent 100%
+  );
 }
 
 .weather-decor--snow .weather-glow {
@@ -778,7 +860,12 @@ onBeforeUnmount(() => {
 }
 
 .weather-decor--fog .weather-atmosphere {
-  background: linear-gradient(180deg, rgba(205, 214, 224, 0.16), rgba(184, 193, 205, 0.12) 64%, rgba(242, 246, 250, 0.05) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(205, 214, 224, 0.16),
+    rgba(184, 193, 205, 0.12) 64%,
+    rgba(242, 246, 250, 0.05) 100%
+  );
 }
 
 .weather-decor--fog .weather-glow {
@@ -787,7 +874,12 @@ onBeforeUnmount(() => {
 }
 
 .weather-decor--windy .weather-atmosphere {
-  background: linear-gradient(180deg, rgba(169, 196, 231, 0.22), rgba(158, 181, 207, 0.18) 58%, transparent 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(169, 196, 231, 0.22),
+    rgba(158, 181, 207, 0.18) 58%,
+    transparent 100%
+  );
 }
 
 .weather-decor--windy .weather-glow {
@@ -797,7 +889,12 @@ onBeforeUnmount(() => {
 }
 
 .weather-decor--dust .weather-atmosphere {
-  background: linear-gradient(180deg, rgba(218, 184, 128, 0.24), rgba(190, 144, 94, 0.22) 62%, rgba(163, 118, 69, 0.1) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(218, 184, 128, 0.24),
+    rgba(190, 144, 94, 0.22) 62%,
+    rgba(163, 118, 69, 0.1) 100%
+  );
 }
 
 .weather-decor--dust .weather-glow {
@@ -851,19 +948,34 @@ onBeforeUnmount(() => {
 }
 
 :root[data-theme='dark'] .weather-sun-core {
-  background: radial-gradient(circle, rgba(255, 235, 179, 0.5) 0%, rgba(255, 193, 102, 0.32) 46%, rgba(255, 176, 64, 0.08) 76%, transparent 100%);
+  background: radial-gradient(
+    circle,
+    rgba(255, 235, 179, 0.5) 0%,
+    rgba(255, 193, 102, 0.32) 46%,
+    rgba(255, 176, 64, 0.08) 76%,
+    transparent 100%
+  );
   box-shadow:
     0 0 28px rgba(255, 186, 84, 0.12),
     0 0 64px rgba(255, 176, 64, 0.08);
 }
 
 :root[data-theme='dark'] .weather-sun-ring {
-  background: radial-gradient(circle, rgba(255, 205, 126, 0.12), rgba(255, 176, 64, 0.04) 54%, transparent 74%);
+  background: radial-gradient(
+    circle,
+    rgba(255, 205, 126, 0.12),
+    rgba(255, 176, 64, 0.04) 54%,
+    transparent 74%
+  );
 }
 
 :root[data-theme='dark'] .weather-moon-core {
-  background:
-    radial-gradient(circle at 34% 34%, rgba(244, 248, 255, 0.94) 0%, rgba(206, 220, 247, 0.88) 58%, rgba(157, 178, 220, 0.72) 100%);
+  background: radial-gradient(
+    circle at 34% 34%,
+    rgba(244, 248, 255, 0.94) 0%,
+    rgba(206, 220, 247, 0.88) 58%,
+    rgba(157, 178, 220, 0.72) 100%
+  );
   box-shadow:
     inset -12px -8px 0 rgba(110, 130, 171, 0.18),
     0 0 24px rgba(180, 204, 255, 0.12),
@@ -876,34 +988,67 @@ onBeforeUnmount(() => {
 
 :root[data-theme='dark'] .weather-decor--cloudy .weather-atmosphere,
 :root[data-theme='dark'] .weather-decor--overcast .weather-atmosphere {
-  background: linear-gradient(180deg, rgba(58, 73, 102, 0.16), rgba(31, 41, 55, 0.1) 68%, transparent 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(58, 73, 102, 0.16),
+    rgba(31, 41, 55, 0.1) 68%,
+    transparent 100%
+  );
 }
 
 :root[data-theme='dark'] .weather-decor--light_rain .weather-atmosphere,
 :root[data-theme='dark'] .weather-decor--heavy_rain .weather-atmosphere,
 :root[data-theme='dark'] .weather-decor--thunderstorm .weather-atmosphere {
-  background: linear-gradient(180deg, rgba(30, 41, 59, 0.24), rgba(15, 23, 42, 0.26) 72%, transparent 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(30, 41, 59, 0.24),
+    rgba(15, 23, 42, 0.26) 72%,
+    transparent 100%
+  );
 }
 
 :root[data-theme='dark'] .weather-decor--snow .weather-atmosphere {
-  background: linear-gradient(180deg, rgba(52, 70, 102, 0.24), rgba(23, 37, 61, 0.16) 68%, transparent 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(52, 70, 102, 0.24),
+    rgba(23, 37, 61, 0.16) 68%,
+    transparent 100%
+  );
 }
 
 :root[data-theme='dark'] .weather-decor--fog .weather-atmosphere,
 :root[data-theme='dark'] .weather-decor--windy .weather-atmosphere {
-  background: linear-gradient(180deg, rgba(55, 68, 92, 0.14), rgba(20, 30, 48, 0.1) 70%, transparent 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(55, 68, 92, 0.14),
+    rgba(20, 30, 48, 0.1) 70%,
+    transparent 100%
+  );
 }
 
 :root[data-theme='dark'] .weather-decor--dust .weather-atmosphere {
-  background: linear-gradient(180deg, rgba(111, 79, 49, 0.24), rgba(77, 55, 35, 0.18) 70%, transparent 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(111, 79, 49, 0.24),
+    rgba(77, 55, 35, 0.18) 70%,
+    transparent 100%
+  );
 }
 
 :root[data-theme='dark'] .weather-rain-veil__layer--a {
-  background-image: repeating-linear-gradient(-18deg, rgba(196, 216, 255, 0.1) 0 2px, transparent 2px 16px);
+  background-image: repeating-linear-gradient(
+    -18deg,
+    rgba(196, 216, 255, 0.1) 0 2px,
+    transparent 2px 16px
+  );
 }
 
 :root[data-theme='dark'] .weather-rain-veil__layer--b {
-  background-image: repeating-linear-gradient(-18deg, rgba(164, 193, 255, 0.06) 0 1px, transparent 1px 18px);
+  background-image: repeating-linear-gradient(
+    -18deg,
+    rgba(164, 193, 255, 0.06) 0 1px,
+    transparent 1px 18px
+  );
 }
 
 :root[data-theme='dark'] .weather-mist-layer {

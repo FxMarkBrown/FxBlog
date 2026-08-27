@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import type {FormInstance, FormRules} from 'element-plus'
-import {ElMessage, ElMessageBox} from 'element-plus'
-import {marked} from 'marked'
+import type { FormInstance, FormRules } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { marked } from 'marked'
 import AvatarCropper from '@/components/Common/AvatarCropper.vue'
-import {getConversationQuotaApi} from '@/api/ai'
-import {delArticleApi, favoriteArticleApi, getMyArticleApi, unlikeArticleApi} from '@/api/article'
-import {getDictDataApi} from '@/api/dict'
+import { getConversationQuotaApi } from '@/api/ai'
+import { delArticleApi, favoriteArticleApi, getMyArticleApi, unlikeArticleApi } from '@/api/article'
+import { getDictDataApi } from '@/api/dict'
 import {
   addFeedbackApi,
   delMyCommentApi,
@@ -22,9 +22,10 @@ import {
   updatePasswordApi,
   updateProfileApi
 } from '@/api/user'
-import {useNoIndexSeo} from '@/composables/useSeo'
-import {unwrapResponseData} from '@/utils/response'
+import { useNoIndexSeo } from '@/composables/useSeo'
+import { unwrapResponseData } from '@/utils/response'
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- 用户信息/列表等后端 payload 字段动态，刻意保留宽松别名（全文件 25+ 处复用）
 type AnyRecord = Record<string, any>
 
 interface ProfileTabItem {
@@ -114,7 +115,11 @@ const tabs: ProfileTabItem[] = [
 /**
  * 校验确认密码与新密码是否一致。
  */
-const validateConfirmPassword = (_rule: unknown, value: string, callback: (error?: Error) => void) => {
+const validateConfirmPassword = (
+  _rule: unknown,
+  value: string,
+  callback: (error?: Error) => void
+) => {
   if (value !== passwordForm.newPassword) {
     callback(new Error('两次输入的密码不一致'))
     return
@@ -293,7 +298,8 @@ async function loadProfileSummary() {
   try {
     const response = await getUserProfileApi()
     const payload = unwrapResponseData<AnyRecord | null>(response) || {}
-    const profile = payload.sysUser && typeof payload.sysUser === 'object' ? payload.sysUser : payload
+    const profile =
+      payload.sysUser && typeof payload.sysUser === 'object' ? payload.sysUser : payload
     userInfo.value = profile
     Object.assign(profileForm, {
       nickname: profile.nickname || '',
@@ -407,10 +413,12 @@ async function getFeedbackDict() {
   ])
 
   feedbackTypes.value = Array.isArray(unwrapResponseData<AnyRecord[] | null>(typeResponse || null))
-    ? (unwrapResponseData<AnyRecord[] | null>(typeResponse || null) || [])
+    ? unwrapResponseData<AnyRecord[] | null>(typeResponse || null) || []
     : []
-  feedbackStatus.value = Array.isArray(unwrapResponseData<AnyRecord[] | null>(statusResponse || null))
-    ? (unwrapResponseData<AnyRecord[] | null>(statusResponse || null) || [])
+  feedbackStatus.value = Array.isArray(
+    unwrapResponseData<AnyRecord[] | null>(statusResponse || null)
+  )
+    ? unwrapResponseData<AnyRecord[] | null>(statusResponse || null) || []
     : []
 }
 
@@ -869,7 +877,13 @@ function handleAvatarUpdate(newAvatarUrl: string) {
     <div class="profile-sidebar" role="complementary">
       <ElCard class="user-card">
         <div class="avatar-section">
-          <div class="avatar-wrapper" role="button" tabindex="0" aria-label="更换头像" @click="showCropper = true">
+          <div
+            class="avatar-wrapper"
+            role="button"
+            tabindex="0"
+            aria-label="更换头像"
+            @click="showCropper = true"
+          >
             <ElAvatar :size="100" :src="String(userInfo.avatar || '')" alt="用户头像" />
             <div class="upload-overlay" inert>
               <i class="fas fa-camera"></i>
@@ -946,11 +960,11 @@ function handleAvatarUpdate(newAvatarUrl: string) {
           <div class="ai-quota-tip">
             今日点赞 {{ quotaSnapshot.todayLikeCount || 0 }}
             <template v-if="quotaSnapshot.likeDailyLimit > 0">
-              / {{ quotaSnapshot.likeDailyLimit }}，还可获得 {{ quotaSnapshot.todayLikeRemainingCount || 0 }} 次，单篇上限 {{ quotaSnapshot.likeDailyPerArticleLimit || 0 }}
+              / {{ quotaSnapshot.likeDailyLimit }}，还可获得
+              {{ quotaSnapshot.todayLikeRemainingCount || 0 }} 次，单篇上限
+              {{ quotaSnapshot.likeDailyPerArticleLimit || 0 }}
             </template>
-            <template v-else>
-              / 不限次
-            </template>
+            <template v-else> / 不限次 </template>
           </div>
         </div>
       </ElCard>
@@ -966,15 +980,30 @@ function handleAvatarUpdate(newAvatarUrl: string) {
     <main class="content-area" role="main">
       <div v-if="currentTab === 'profile'" class="content-section">
         <h2 class="section-title">个人资料</h2>
-        <ElForm ref="profileFormRef" :model="profileForm" :rules="profileRules" label-width="80px" class="profile-form">
+        <ElForm
+          ref="profileFormRef"
+          :model="profileForm"
+          :rules="profileRules"
+          label-width="80px"
+          class="profile-form"
+        >
           <ElFormItem label="昵称" prop="nickname">
-            <ElInput v-model="profileForm.nickname" placeholder="请输入昵称" aria-label="昵称输入框" />
+            <ElInput
+              v-model="profileForm.nickname"
+              placeholder="请输入昵称"
+              aria-label="昵称输入框"
+            />
           </ElFormItem>
           <ElFormItem label="邮箱" prop="email">
             <ElInput v-model="profileForm.email" placeholder="请输入邮箱" aria-label="邮箱输入框" />
           </ElFormItem>
           <ElFormItem label="个人简介">
-            <ElInput v-model="profileForm.signature" type="textarea" :rows="4" placeholder="介绍一下自己吧..." />
+            <ElInput
+              v-model="profileForm.signature"
+              type="textarea"
+              :rows="4"
+              placeholder="介绍一下自己吧..."
+            />
           </ElFormItem>
           <ElFormItem label="性别">
             <ElRadioGroup v-model="profileForm.sex">
@@ -1000,7 +1029,12 @@ function handleAvatarUpdate(newAvatarUrl: string) {
         <h2 class="section-title">我的文章</h2>
         <div class="action-bar">
           <div class="search-group">
-            <ElInput v-model="params.title" class="search-input" size="small" placeholder="输入文字标题搜索文章...">
+            <ElInput
+              v-model="params.title"
+              class="search-input"
+              size="small"
+              placeholder="输入文字标题搜索文章..."
+            >
               <template #prefix>
                 <i class="fas fa-search"></i>
               </template>
@@ -1011,7 +1045,12 @@ function handleAvatarUpdate(newAvatarUrl: string) {
             </ElButton>
           </div>
 
-          <ElButton class="create-post-btn" type="primary" size="small" @click="router.push('/editor')">
+          <ElButton
+            class="create-post-btn"
+            type="primary"
+            size="small"
+            @click="router.push('/editor')"
+          >
             <i class="fas fa-pen"></i>
             写文章
           </ElButton>
@@ -1024,15 +1063,23 @@ function handleAvatarUpdate(newAvatarUrl: string) {
               <p class="post-excerpt">{{ post.summary }}</p>
               <div class="post-meta">
                 <ElTag size="small"><i class="far fa-calendar-alt"></i>{{ post.createTime }}</ElTag>
-                <ElTag size="small" type="info"><i class="far fa-eye"></i>{{ post.quantity }} 阅读</ElTag>
-                <ElTag size="small" type="success"><i class="far fa-comments"></i>{{ post.commentNum || 0 }} 评论</ElTag>
-                <ElTag size="small" type="warning"><i class="far fa-star"></i>{{ post.likeNum || 0 }} 点赞</ElTag>
+                <ElTag size="small" type="info"
+                  ><i class="far fa-eye"></i>{{ post.quantity }} 阅读</ElTag
+                >
+                <ElTag size="small" type="success"
+                  ><i class="far fa-comments"></i>{{ post.commentNum || 0 }} 评论</ElTag
+                >
+                <ElTag size="small" type="warning"
+                  ><i class="far fa-star"></i>{{ post.likeNum || 0 }} 点赞</ElTag
+                >
               </div>
             </div>
             <div class="post-actions">
               <ElButton link @click="viewPost(post.id)"><i class="far fa-eye"></i>查看</ElButton>
               <ElButton link @click="editPost(post.id)"><i class="fas fa-pen"></i>编辑</ElButton>
-              <ElButton link class="delete" @click="deletePost(post)"><i class="far fa-trash-alt"></i>删除</ElButton>
+              <ElButton link class="delete" @click="deletePost(post)"
+                ><i class="far fa-trash-alt"></i>删除</ElButton
+              >
             </div>
           </ElCard>
 
@@ -1057,12 +1104,18 @@ function handleAvatarUpdate(newAvatarUrl: string) {
           <ElCard v-for="comment in myComments" :key="comment.id" class="comment-item">
             <div class="comment-actions">
               <p class="comment-text" v-html="parseContent(comment.content)"></p>
-              <ElButton link class="delete" @click="deleteComment(comment.id)"><i class="far fa-trash-alt"></i>删除</ElButton>
+              <ElButton link class="delete" @click="deleteComment(comment.id)"
+                ><i class="far fa-trash-alt"></i>删除</ElButton
+              >
             </div>
             <div class="comment-meta">
-              <ElLink type="primary" @click="viewPost(comment.articleId)">文章：{{ comment.articleTitle }}</ElLink>
+              <ElLink type="primary" @click="viewPost(comment.articleId)"
+                >文章：{{ comment.articleTitle }}</ElLink
+              >
               <ElTag size="small"><i class="far fa-clock"></i>{{ comment.createTime }}</ElTag>
-              <ElTag size="small" type="success"><i class="far fa-star"></i>{{ comment.likeCount || 0 }} 赞</ElTag>
+              <ElTag size="small" type="success"
+                ><i class="far fa-star"></i>{{ comment.likeCount || 0 }} 赞</ElTag
+              >
             </div>
           </ElCard>
           <div class="pagination-box">
@@ -1089,10 +1142,14 @@ function handleAvatarUpdate(newAvatarUrl: string) {
                   <ElTag size="small" type="info">回复 @{{ reply.replyNickname }}</ElTag>
                   <div v-html="parseContent(reply.content)"></div>
                 </div>
-                <ElButton link class="delete" @click="deleteReply(reply.id)"><i class="far fa-trash-alt"></i>删除</ElButton>
+                <ElButton link class="delete" @click="deleteReply(reply.id)"
+                  ><i class="far fa-trash-alt"></i>删除</ElButton
+                >
               </div>
               <div class="reply-meta">
-                <ElLink type="primary" @click="viewPost(reply.articleId)">文章：{{ reply.articleTitle }}</ElLink>
+                <ElLink type="primary" @click="viewPost(reply.articleId)"
+                  >文章：{{ reply.articleTitle }}</ElLink
+                >
                 <ElTag size="small"><i class="far fa-clock"></i>{{ reply.createTime }}</ElTag>
               </div>
             </div>
@@ -1118,7 +1175,9 @@ function handleAvatarUpdate(newAvatarUrl: string) {
             <div class="like-content">
               <div class="comment-actions">
                 <ElLink class="article-title" @click="viewPost(like.id)">{{ like.title }}</ElLink>
-                <ElButton link class="delete" @click="cancelLike(like.id)"><i class="far fa-star"></i>取消点赞</ElButton>
+                <ElButton link class="delete" @click="cancelLike(like.id)"
+                  ><i class="far fa-star"></i>取消点赞</ElButton
+                >
               </div>
               <div class="like-meta">
                 <ElTag size="small"><i class="far fa-clock"></i>{{ like.createTime }}</ElTag>
@@ -1145,8 +1204,12 @@ function handleAvatarUpdate(newAvatarUrl: string) {
           <ElCard v-for="favorite in myFavorites" :key="favorite.id" class="like-item">
             <div class="like-content">
               <div class="comment-actions">
-                <ElLink class="article-title" @click="viewPost(favorite.id)">{{ favorite.title }}</ElLink>
-                <ElButton link class="delete" @click="cancelFavorite(favorite.id)"><i class="far fa-star"></i>取消收藏</ElButton>
+                <ElLink class="article-title" @click="viewPost(favorite.id)">{{
+                  favorite.title
+                }}</ElLink>
+                <ElButton link class="delete" @click="cancelFavorite(favorite.id)"
+                  ><i class="far fa-star"></i>取消收藏</ElButton
+                >
               </div>
               <div class="like-meta">
                 <ElTag size="small"><i class="far fa-clock"></i>{{ favorite.createTime }}</ElTag>
@@ -1174,10 +1237,18 @@ function handleAvatarUpdate(newAvatarUrl: string) {
             <div class="quota-log-main">
               <div class="quota-log-head">
                 <div class="quota-log-title">
-                  <ElTag size="small" :type="getQuotaLogTagType(log.bizType)">{{ getQuotaLogTypeLabel(log.bizType) }}</ElTag>
+                  <ElTag size="small" :type="getQuotaLogTagType(log.bizType)">{{
+                    getQuotaLogTypeLabel(log.bizType)
+                  }}</ElTag>
                   <span class="quota-log-source">{{ log.sourceTitle || 'AI 额度变动' }}</span>
                 </div>
-                <span class="quota-log-delta" :class="{ positive: Number(log.tokenDelta) > 0, negative: Number(log.tokenDelta) < 0 }">
+                <span
+                  class="quota-log-delta"
+                  :class="{
+                    positive: Number(log.tokenDelta) > 0,
+                    negative: Number(log.tokenDelta) < 0
+                  }"
+                >
                   {{ formatQuotaDelta(log.tokenDelta) }}
                 </span>
               </div>
@@ -1213,15 +1284,36 @@ function handleAvatarUpdate(newAvatarUrl: string) {
             :closable="false"
           />
         </div>
-        <ElForm ref="passwordFormRef" :model="passwordForm" :rules="passwordRules" label-width="100px" class="security-form">
+        <ElForm
+          ref="passwordFormRef"
+          :model="passwordForm"
+          :rules="passwordRules"
+          label-width="100px"
+          class="security-form"
+        >
           <ElFormItem label="当前密码" prop="oldPassword">
-            <ElInput v-model="passwordForm.oldPassword" type="password" show-password placeholder="请输入当前密码" />
+            <ElInput
+              v-model="passwordForm.oldPassword"
+              type="password"
+              show-password
+              placeholder="请输入当前密码"
+            />
           </ElFormItem>
           <ElFormItem label="新密码" prop="newPassword">
-            <ElInput v-model="passwordForm.newPassword" type="password" show-password placeholder="请输入新密码" />
+            <ElInput
+              v-model="passwordForm.newPassword"
+              type="password"
+              show-password
+              placeholder="请输入新密码"
+            />
           </ElFormItem>
           <ElFormItem label="确认新密码" prop="confirmPassword">
-            <ElInput v-model="passwordForm.confirmPassword" type="password" show-password placeholder="请再次输入新密码" />
+            <ElInput
+              v-model="passwordForm.confirmPassword"
+              type="password"
+              show-password
+              placeholder="请再次输入新密码"
+            />
           </ElFormItem>
           <ElFormItem>
             <ElButton size="small" type="primary" :loading="loading" @click="submitPasswordChange">
@@ -1236,7 +1328,13 @@ function handleAvatarUpdate(newAvatarUrl: string) {
         <h2 class="section-title">意见反馈</h2>
         <ElTabs>
           <ElTabPane label="提交反馈">
-            <ElForm ref="feedbackFormRef" :model="feedbackForm" :rules="feedbackRules" label-width="100px" class="feedback-form">
+            <ElForm
+              ref="feedbackFormRef"
+              :model="feedbackForm"
+              :rules="feedbackRules"
+              label-width="100px"
+              class="feedback-form"
+            >
               <ElFormItem label="反馈类型" prop="type">
                 <ElSelect v-model="feedbackForm.type" placeholder="请选择反馈类型">
                   <ElOption
@@ -1248,10 +1346,18 @@ function handleAvatarUpdate(newAvatarUrl: string) {
                 </ElSelect>
               </ElFormItem>
               <ElFormItem label="反馈内容" prop="content">
-                <ElInput v-model="feedbackForm.content" type="textarea" :rows="5" placeholder="请详细描述您的问题或建议..." />
+                <ElInput
+                  v-model="feedbackForm.content"
+                  type="textarea"
+                  :rows="5"
+                  placeholder="请详细描述您的问题或建议..."
+                />
               </ElFormItem>
               <ElFormItem label="联系邮箱" prop="email">
-                <ElInput v-model="feedbackForm.email" placeholder="请留下您的联系邮箱，方便我们回复您" />
+                <ElInput
+                  v-model="feedbackForm.email"
+                  placeholder="请留下您的联系邮箱，方便我们回复您"
+                />
               </ElFormItem>
               <ElFormItem>
                 <ElButton type="primary" :loading="loading" @click="submitFeedback">
@@ -1268,7 +1374,10 @@ function handleAvatarUpdate(newAvatarUrl: string) {
                 <ElCard v-for="feedback in myFeedbacks" :key="feedback.id" class="feedback-item">
                   <div class="feedback-header">
                     <div class="feedback-info">
-                      <ElTag v-if="getFeedbackTypeLabel(feedback.type)" :type="getFeedbackTypeStyle(feedback.type)">
+                      <ElTag
+                        v-if="getFeedbackTypeLabel(feedback.type)"
+                        :type="getFeedbackTypeStyle(feedback.type)"
+                      >
                         {{ getFeedbackTypeLabel(feedback.type) }}
                       </ElTag>
                       <span class="feedback-time">
@@ -1276,7 +1385,10 @@ function handleAvatarUpdate(newAvatarUrl: string) {
                         {{ feedback.createTime }}
                       </span>
                     </div>
-                    <ElTag v-if="getFeedbackStatusLabel(feedback.status)" :type="getFeedbackStatusStyle(feedback.status)">
+                    <ElTag
+                      v-if="getFeedbackStatusLabel(feedback.status)"
+                      :type="getFeedbackStatusStyle(feedback.status)"
+                    >
                       {{ getFeedbackStatusLabel(feedback.status) }}
                     </ElTag>
                   </div>
@@ -1309,7 +1421,11 @@ function handleAvatarUpdate(newAvatarUrl: string) {
       </div>
     </main>
 
-    <AvatarCropper v-model:visible="showCropper" :user="userInfo" @update-avatar="handleAvatarUpdate" />
+    <AvatarCropper
+      v-model:visible="showCropper"
+      :user="userInfo"
+      @update-avatar="handleAvatarUpdate"
+    />
   </div>
 </template>
 
@@ -1317,7 +1433,7 @@ function handleAvatarUpdate(newAvatarUrl: string) {
 @use '@/styles/variables.scss' as *;
 @use '@/styles/mixins.scss' as *;
 
-:deep(input[aria-hidden=true]) {
+:deep(input[aria-hidden='true']) {
   display: none !important;
 }
 

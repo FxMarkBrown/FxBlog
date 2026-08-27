@@ -1,11 +1,11 @@
-import type {ApiResponse, PageResult} from '@/types/common'
+import type { ApiResponse, PageResult } from '@/types/common'
 import type {
-    ArchiveGroup,
-    ArticleCategoryGroup,
-    ArticleComment,
-    ArticleCommentPayload,
-    ArticleDetail,
-    ArticleSummary
+  ArchiveGroup,
+  ArticleCategoryGroup,
+  ArticleComment,
+  ArticleCommentPayload,
+  ArticleDetail,
+  ArticleSummary
 } from '@/types/article'
 
 // 获取文章详情

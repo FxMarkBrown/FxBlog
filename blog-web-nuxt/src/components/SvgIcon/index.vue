@@ -11,7 +11,9 @@ const iconModules = import.meta.glob('@/assets/icons/*.svg', {
 }) as Record<string, string>
 
 const svgContent = computed(() => {
-  const matchedEntry = Object.entries(iconModules).find(([path]) => path.endsWith(`/${props.iconClass}.svg`))
+  const matchedEntry = Object.entries(iconModules).find(([path]) =>
+    path.endsWith(`/${props.iconClass}.svg`)
+  )
   return matchedEntry?.[1] || ''
 })
 

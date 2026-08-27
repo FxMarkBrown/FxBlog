@@ -42,7 +42,10 @@ function suppressUnderlyingClick() {
   const swallow = (event: Event) => {
     event.preventDefault()
     event.stopPropagation()
-    if ('stopImmediatePropagation' in event && typeof event.stopImmediatePropagation === 'function') {
+    if (
+      'stopImmediatePropagation' in event &&
+      typeof event.stopImmediatePropagation === 'function'
+    ) {
       event.stopImmediatePropagation()
     }
   }
@@ -136,8 +139,8 @@ function handleDocumentMouseDown(event: MouseEvent) {
 
   const target = event.target as Node | null
   const clickedInsidePreview = !!(
-    (previewWrapper.value && target && previewWrapper.value.contains(target))
-    || (navButtons.value && target && navButtons.value.contains(target))
+    (previewWrapper.value && target && previewWrapper.value.contains(target)) ||
+    (navButtons.value && target && navButtons.value.contains(target))
   )
 
   if (clickedInsidePreview) {
@@ -177,7 +180,10 @@ function startTouch(event: TouchEvent) {
     if (!touch1 || !touch2) {
       return
     }
-    initialDistance.value = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY)
+    initialDistance.value = Math.hypot(
+      touch2.clientX - touch1.clientX,
+      touch2.clientY - touch1.clientY
+    )
     initialScale.value = scale.value
     return
   }
@@ -202,7 +208,10 @@ function onTouch(event: TouchEvent) {
     if (!touch1 || !touch2 || initialDistance.value <= 0) {
       return
     }
-    const currentDistance = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY)
+    const currentDistance = Math.hypot(
+      touch2.clientX - touch1.clientX,
+      touch2.clientY - touch1.clientY
+    )
     const nextScale = (currentDistance / initialDistance.value) * initialScale.value
     if (nextScale >= 0.1 && nextScale <= 3) {
       scale.value = nextScale
@@ -280,14 +289,24 @@ defineExpose({
           @click.stop
           @mousedown.stop.prevent="startDrag"
           @touchstart.stop="startTouch"
-        >
+        />
       </div>
 
-      <div v-if="images.length > 1" ref="navButtons" class="nav-buttons" @click.stop @mousedown.stop>
+      <div
+        v-if="images.length > 1"
+        ref="navButtons"
+        class="nav-buttons"
+        @click.stop
+        @mousedown.stop
+      >
         <button class="nav-btn prev" :disabled="currentIndex <= 0" @click.stop="prev">
           <i class="fas fa-chevron-left"></i>
         </button>
-        <button class="nav-btn next" :disabled="currentIndex >= images.length - 1" @click.stop="next">
+        <button
+          class="nav-btn next"
+          :disabled="currentIndex >= images.length - 1"
+          @click.stop="next"
+        >
           <i class="fas fa-chevron-right"></i>
         </button>
       </div>

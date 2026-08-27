@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {ElMessage} from 'element-plus'
+import { ElMessage } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
@@ -13,11 +13,22 @@ const lastScrollTop = ref(0)
 const activeDropdown = ref<string | null>(null)
 const showDropdown = ref(false)
 let scrollFrame = 0
-const siteTitle = computed(() => String(siteStore.websiteInfo.title || siteStore.websiteInfo.name || runtimeConfig.public.siteName || 'Open Source Blog'))
+const siteTitle = computed(() =>
+  String(
+    siteStore.websiteInfo.title ||
+      siteStore.websiteInfo.name ||
+      runtimeConfig.public.siteName ||
+      'Open Source Blog'
+  )
+)
 const showUserSection = computed(() => authStore.isLoggedIn)
-const headerUserName = computed(() => String(authStore.userInfo?.nickname || authStore.userInfo?.username || '已登录用户'))
-const headerUserRole = computed(() => authStore.isAdmin ? '管理员' : '普通用户')
-const headerUserAvatar = computed(() => String(authStore.userInfo?.avatar || siteStore.websiteInfo.touristAvatar || ''))
+const headerUserName = computed(() =>
+  String(authStore.userInfo?.nickname || authStore.userInfo?.username || '已登录用户')
+)
+const headerUserRole = computed(() => (authStore.isAdmin ? '管理员' : '普通用户'))
+const headerUserAvatar = computed(() =>
+  String(authStore.userInfo?.avatar || siteStore.websiteInfo.touristAvatar || '')
+)
 
 interface MenuEntry {
   key?: string
@@ -47,7 +58,13 @@ const menuItems: MenuEntry[] = [
   { name: '留言', path: '/messages', icon: 'fas fa-envelope', colorClass: 'message-link' },
   { name: '友链', path: '/friends', icon: 'fas fa-users', colorClass: 'friend-link' },
   { name: 'AI', path: '/ai', icon: 'fas fa-robot', colorClass: 'ai-link' },
-  { key: 'about', name: '关于', path: '/about', icon: 'fas fa-info-circle', colorClass: 'about-link' }
+  {
+    key: 'about',
+    name: '关于',
+    path: '/about',
+    icon: 'fas fa-info-circle',
+    colorClass: 'about-link'
+  }
 ]
 
 const filteredMenuItems = computed(() => {
@@ -282,7 +299,11 @@ onBeforeUnmount(() => {
             target="_blank"
             rel="noopener noreferrer"
             class="nav-link"
-            :class="{ 'has-dropdown': item.children, active: isActive(item), [item.colorClass]: true }"
+            :class="{
+              'has-dropdown': item.children,
+              active: isActive(item),
+              [item.colorClass]: true
+            }"
             @mouseenter="handleMouseEnter(item)"
           >
             <i :class="item.icon"></i>
@@ -293,7 +314,11 @@ onBeforeUnmount(() => {
             v-else
             :to="item.path"
             class="nav-link"
-            :class="{ 'has-dropdown': item.children, active: isActive(item), [item.colorClass]: true }"
+            :class="{
+              'has-dropdown': item.children,
+              active: isActive(item),
+              [item.colorClass]: true
+            }"
             @mouseenter="handleMouseEnter(item)"
           >
             <i :class="item.icon"></i>
@@ -301,7 +326,11 @@ onBeforeUnmount(() => {
             <i v-if="item.children" class="fas fa-chevron-down dropdown-icon"></i>
           </NuxtLink>
 
-          <div v-if="item.children" class="dropdown-menu" :class="{ active: activeDropdown === item.name }">
+          <div
+            v-if="item.children"
+            class="dropdown-menu"
+            :class="{ active: activeDropdown === item.name }"
+          >
             <a
               v-for="child in item.children"
               :key="child.path"
@@ -356,7 +385,10 @@ onBeforeUnmount(() => {
             </div>
           </div>
           <div v-else class="avatar" @click="handleLogin">
-            <ElAvatar class="avatar-icon" :src="String(siteStore.websiteInfo.touristAvatar || '')" />
+            <ElAvatar
+              class="avatar-icon"
+              :src="String(siteStore.websiteInfo.touristAvatar || '')"
+            />
           </div>
         </div>
       </div>
@@ -390,7 +422,11 @@ onBeforeUnmount(() => {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(to bottom, rgba(var(--surface-rgb), 0.05), rgba(var(--surface-rgb), 0));
+    background: linear-gradient(
+      to bottom,
+      rgba(var(--surface-rgb), 0.05),
+      rgba(var(--surface-rgb), 0)
+    );
     pointer-events: none;
   }
 }
@@ -510,18 +546,42 @@ onBeforeUnmount(() => {
       }
     }
 
-    &.home-link i { color: #4CAF50; }
-    &.archive-link i { color: #9C27B0; }
-    &.clock-link i { color: #00BCD4; }
-    &.category-link i { color: #FF9800; }
-    &.tag-link i { color: #E91E63; }
-    &.talk-link i { color: #2196F3; }
-    &.photos-link i { color: #9b36f4; }
-    &.message-link i { color: #009688; }
-    &.friend-link i { color: #3F51B5; }
-    &.ai-link i { color: #00ACC1; }
-    &.about-link i { color: #795548; }
-    &.admin-link i { color: #5C6BC0; }
+    &.home-link i {
+      color: #4caf50;
+    }
+    &.archive-link i {
+      color: #9c27b0;
+    }
+    &.clock-link i {
+      color: #00bcd4;
+    }
+    &.category-link i {
+      color: #ff9800;
+    }
+    &.tag-link i {
+      color: #e91e63;
+    }
+    &.talk-link i {
+      color: #2196f3;
+    }
+    &.photos-link i {
+      color: #9b36f4;
+    }
+    &.message-link i {
+      color: #009688;
+    }
+    &.friend-link i {
+      color: #3f51b5;
+    }
+    &.ai-link i {
+      color: #00acc1;
+    }
+    &.about-link i {
+      color: #795548;
+    }
+    &.admin-link i {
+      color: #5c6bc0;
+    }
 
     &:hover i {
       transform: scale(1.1);
@@ -1008,15 +1068,33 @@ onBeforeUnmount(() => {
   }
 
   .nav-link {
-    &.home-link i { color: #81C784; }
-    &.archive-link i { color: #CE93D8; }
-    &.clock-link i { color: #4DD0E1; }
-    &.category-link i { color: #FFB74D; }
-    &.tag-link i { color: #F06292; }
-    &.talk-link i { color: #64B5F6; }
-    &.message-link i { color: #4DB6AC; }
-    &.friend-link i { color: #7986CB; }
-    &.about-link i { color: #A1887F; }
+    &.home-link i {
+      color: #81c784;
+    }
+    &.archive-link i {
+      color: #ce93d8;
+    }
+    &.clock-link i {
+      color: #4dd0e1;
+    }
+    &.category-link i {
+      color: #ffb74d;
+    }
+    &.tag-link i {
+      color: #f06292;
+    }
+    &.talk-link i {
+      color: #64b5f6;
+    }
+    &.message-link i {
+      color: #4db6ac;
+    }
+    &.friend-link i {
+      color: #7986cb;
+    }
+    &.about-link i {
+      color: #a1887f;
+    }
   }
 }
 </style>

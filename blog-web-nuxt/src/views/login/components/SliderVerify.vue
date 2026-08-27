@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import {getCaptchaApi} from '@/api/auth'
-import {unwrapResponseData} from '@/utils/response'
-import {getThemeMode} from '@/utils/theme'
+import { getCaptchaApi } from '@/api/auth'
+import { unwrapResponseData } from '@/utils/response'
+import { getThemeMode } from '@/utils/theme'
 
 type CaptchaPayload = {
   nonceStr?: string
@@ -10,34 +10,31 @@ type CaptchaPayload = {
   canvasSrc?: string
 }
 
-type EventName = 'success' | 'fail' | 'again'
-
-interface EventPayloadMap {
-  success: { nonceStr?: string; value: number }
-  fail: string | undefined
-  again: undefined
-}
-
-const props = withDefaults(defineProps<{
-  blockLength?: number
-  blockRadius?: number
-  canvasWidth?: number
-  canvasHeight?: number
-  sliderHint?: string
-  accuracy?: number
-  imageList?: string[]
-}>(), {
-  blockLength: 42,
-  blockRadius: 10,
-  canvasWidth: 320,
-  canvasHeight: 155,
-  sliderHint: '向右滑动',
-  accuracy: 3,
-  imageList: () => []
-})
+const props = withDefaults(
+  defineProps<{
+    blockLength?: number
+    blockRadius?: number
+    canvasWidth?: number
+    canvasHeight?: number
+    sliderHint?: string
+    accuracy?: number
+    imageList?: string[]
+  }>(),
+  {
+    blockLength: 42,
+    blockRadius: 10,
+    canvasWidth: 320,
+    canvasHeight: 155,
+    sliderHint: '向右滑动',
+    accuracy: 3,
+    imageList: () => []
+  }
+)
 
 const emit = defineEmits<{
-  <T extends EventName>(event: T, payload: EventPayloadMap[T]): void
+  success: [payload: { nonceStr?: string; value: number }]
+  fail: [message: string | undefined]
+  again: [payload: undefined]
 }>()
 
 const canvasRef = ref<HTMLCanvasElement | HTMLImageElement | null>(null)
@@ -202,7 +199,10 @@ function getNonceByRange(start: number, end: number) {
  */
 function drawBlock() {
   blockX.value = getNonceByRange(blockWidth.value + 10, props.canvasWidth - (blockWidth.value + 10))
-  blockY.value = getNonceByRange(10 + props.blockRadius * 2, props.canvasHeight - (blockWidth.value + 10))
+  blockY.value = getNonceByRange(
+    10 + props.blockRadius * 2,
+    props.canvasHeight - (blockWidth.value + 10)
+  )
   draw(canvasCtx, 'fill')
   draw(blockCtx, 'clip')
 }
@@ -386,7 +386,7 @@ function endEvent(nextOriginX: number) {
   }
 
   if (isFrontCheck.value) {
-    const accuracy = props.accuracy <= 1 ? 1 : (props.accuracy > 10 ? 10 : props.accuracy)
+    const accuracy = props.accuracy <= 1 ? 1 : props.accuracy > 10 ? 10 : props.accuracy
     const spliced = Math.abs(moveLength - blockX.value) <= accuracy
     if (!spliced) {
       verifyFailEvent()
@@ -408,7 +408,9 @@ function turingTest() {
 
   const average = distances.reduce((sum, item) => sum + item, 0) / distances.length
   const deviations = distances.map((item) => item - average)
-  const stdDev = Math.sqrt(deviations.map((item) => item * item).reduce((sum, item) => sum + item, 0) / distances.length)
+  const stdDev = Math.sqrt(
+    deviations.map((item) => item * item).reduce((sum, item) => sum + item, 0) / distances.length
+  )
   return average !== stdDev
 }
 
@@ -497,13 +499,36 @@ defineExpose({
     <div class="refresh-icon" @click="refresh" />
 
     <template v-if="isFrontCheck">
-      <canvas ref="canvasRef" class="slide-canvas" :width="props.canvasWidth" :height="props.canvasHeight" />
-      <canvas ref="blockRef" class="slide-block" :width="props.canvasWidth" :height="props.canvasHeight" />
+      <canvas
+        ref="canvasRef"
+        class="slide-canvas"
+        :width="props.canvasWidth"
+        :height="props.canvasHeight"
+      />
+      <canvas
+        ref="blockRef"
+        class="slide-block"
+        :width="props.canvasWidth"
+        :height="props.canvasHeight"
+      />
     </template>
 
     <template v-else>
-      <img ref="canvasRef" class="slide-canvas" src="" alt="" :width="props.canvasWidth" :height="props.canvasHeight">
-      <img ref="blockRef" class="slide-block" :class="{ 'verify-fail': verifyFail }" src="" alt="">
+      <img
+        ref="canvasRef"
+        class="slide-canvas"
+        src=""
+        alt=""
+        :width="props.canvasWidth"
+        :height="props.canvasHeight"
+      />
+      <img
+        ref="blockRef"
+        class="slide-block"
+        :class="{ 'verify-fail': verifyFail }"
+        src=""
+        alt=""
+      />
     </template>
 
     <div

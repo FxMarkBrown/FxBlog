@@ -1,5 +1,5 @@
-import {Mesh, Program, Renderer, Triangle} from 'ogl'
-import type {WeatherParticlePreset} from './useWeatherDecor'
+import { Mesh, Program, Renderer, Triangle } from 'ogl'
+import type { WeatherParticlePreset } from './useWeatherDecor'
 
 interface WeatherScene {
   particleEnabled?: boolean
@@ -501,7 +501,12 @@ class WeatherDecorEngine {
   }
 }
 
-function resizeRenderer(host: HTMLElement, renderer: Renderer, program: Program, renderScale: number) {
+function resizeRenderer(
+  host: HTMLElement,
+  renderer: Renderer,
+  program: Program,
+  renderScale: number
+) {
   const width = Math.max(host.clientWidth, 1)
   const height = Math.max(host.clientHeight, 1)
   const internalWidth = Math.max(Math.round(width * renderScale), 1)

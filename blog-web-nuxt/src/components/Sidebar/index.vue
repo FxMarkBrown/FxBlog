@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import {ElMessage} from 'element-plus'
-import {getRecommendArticlesApi} from '@/api/article'
+import { ElMessage } from 'element-plus'
+import { getRecommendArticlesApi } from '@/api/article'
 import TagCloud from '@/components/Sidebar/components/tagCloud.vue'
-import {IMAGE_ERROR_PLACEHOLDER} from '@/utils/placeholders'
-import type {ArticleSummary} from '@/types/article'
-import {unwrapResponseData} from '@/utils/response'
+import { IMAGE_ERROR_PLACEHOLDER } from '@/utils/placeholders'
+import type { ArticleSummary } from '@/types/article'
+import { unwrapResponseData } from '@/utils/response'
 
 const router = useRouter()
 const siteStore = useSiteStore()
@@ -21,10 +21,20 @@ const socialLinks = [
   { icon: 'fab fa-weixin', title: '微信', type: 'wechat', content: '点击复制微信号', icCopy: true }
 ]
 
-const announcements = computed(() => getValidAnnouncements((siteStore.notice?.right as Array<Record<string, unknown>> | undefined) || []))
-const profileAvatar = computed(() => siteStore.websiteInfo.profileAvatar || siteStore.websiteInfo.logo)
-const profileName = computed(() => siteStore.websiteInfo.profileName || siteStore.websiteInfo.author)
-const profileSignature = computed(() => siteStore.websiteInfo.profileSignature || siteStore.websiteInfo.authorInfo)
+const announcements = computed(() =>
+  getValidAnnouncements(
+    (siteStore.notice?.right as Array<Record<string, unknown>> | undefined) || []
+  )
+)
+const profileAvatar = computed(
+  () => siteStore.websiteInfo.profileAvatar || siteStore.websiteInfo.logo
+)
+const profileName = computed(
+  () => siteStore.websiteInfo.profileName || siteStore.websiteInfo.author
+)
+const profileSignature = computed(
+  () => siteStore.websiteInfo.profileSignature || siteStore.websiteInfo.authorInfo
+)
 const visibleSocialLinks = computed(() => {
   const showList = siteStore.websiteInfo.showList || []
   const linkMap: Record<string, string | undefined> = {
@@ -178,7 +188,12 @@ onBeforeUnmount(() => {
   <aside class="sidebar">
     <ElCard class="author-card">
       <div class="author-avatar-wrap">
-        <div ref="avatarRef" class="avatar-hitbox" @mouseenter="startAvatarMotion" @click="goToMessages">
+        <div
+          ref="avatarRef"
+          class="avatar-hitbox"
+          @mouseenter="startAvatarMotion"
+          @click="goToMessages"
+        >
           <ElAvatar class="avatar" :src="profileAvatar" alt="管理员头像" />
         </div>
       </div>
@@ -210,8 +225,19 @@ onBeforeUnmount(() => {
         </div>
       </div>
       <div v-if="visibleSocialLinks.length" class="social-links">
-        <ElTooltip v-for="item in visibleSocialLinks" :key="item.type" placement="top" :content="item.content" :teleported="false">
-          <a href="javascript:void(0)" :title="item.title" :class="`social-btn ${item.type}`" @click="copyToClipboard(item)">
+        <ElTooltip
+          v-for="item in visibleSocialLinks"
+          :key="item.type"
+          placement="top"
+          :content="item.content"
+          :teleported="false"
+        >
+          <a
+            href="javascript:void(0)"
+            :title="item.title"
+            :class="`social-btn ${item.type}`"
+            @click="copyToClipboard(item)"
+          >
             <i :class="item.icon"></i>
           </a>
         </ElTooltip>
@@ -237,7 +263,11 @@ onBeforeUnmount(() => {
       </h3>
       <div class="post-list">
         <NuxtLink v-for="post in hot" :key="post.id" :to="`/post/${post.id}`" class="post-item">
-          <img :src="post.cover || IMAGE_ERROR_PLACEHOLDER" :alt="post.title" @error="handleImageError">
+          <img
+            :src="post.cover || IMAGE_ERROR_PLACEHOLDER"
+            :alt="post.title"
+            @error="handleImageError"
+          />
           <div class="post-meta">
             <h4>{{ post.title }}</h4>
             <time>{{ post.createTime }}</time>
@@ -265,7 +295,11 @@ onBeforeUnmount(() => {
   top: 80px;
   width: 100%;
   max-width: 320px;
-  --sidebar-author-bg: linear-gradient(180deg, rgba(211, 236, 253, 0.92) 0%, rgba(235, 247, 255, 0.96) 100%);
+  --sidebar-author-bg: linear-gradient(
+    180deg,
+    rgba(211, 236, 253, 0.92) 0%,
+    rgba(235, 247, 255, 0.96) 100%
+  );
   --sidebar-author-border: rgba(103, 166, 220, 0.22);
   --sidebar-author-shadow: 0 18px 36px rgba(85, 131, 173, 0.14);
   --sidebar-avatar-border: rgba(255, 255, 255, 0.96);
@@ -499,7 +533,11 @@ onBeforeUnmount(() => {
       display: inline-block;
       width: 4px;
       height: 16px;
-      background: linear-gradient(to bottom, var(--sidebar-section-accent), var(--sidebar-section-accent-strong));
+      background: linear-gradient(
+        to bottom,
+        var(--sidebar-section-accent),
+        var(--sidebar-section-accent-strong)
+      );
       margin-right: 8px;
       border-radius: 2px;
       vertical-align: middle;
@@ -549,7 +587,7 @@ onBeforeUnmount(() => {
         --number-bg: #60a5fa;
       }
 
-      &:nth-child(n+4)::before {
+      &:nth-child(n + 4)::before {
         --number-bg: #9ca3af;
       }
 
@@ -608,7 +646,7 @@ onBeforeUnmount(() => {
 
           &::before {
             content: '\f017';
-            font-family: 'Font Awesome 5 Free',serif;
+            font-family: 'Font Awesome 5 Free', serif;
             font-size: 0.75rem;
             opacity: 0.8;
           }
@@ -654,7 +692,11 @@ onBeforeUnmount(() => {
 }
 
 :global(html[data-theme='dark']) .sidebar {
-  --sidebar-author-bg: linear-gradient(180deg, rgba(31, 43, 56, 0.96) 0%, rgba(20, 28, 38, 0.98) 100%);
+  --sidebar-author-bg: linear-gradient(
+    180deg,
+    rgba(31, 43, 56, 0.96) 0%,
+    rgba(20, 28, 38, 0.98) 100%
+  );
   --sidebar-author-border: rgba(113, 156, 194, 0.16);
   --sidebar-author-shadow: 0 20px 36px rgba(0, 0, 0, 0.2);
   --sidebar-avatar-border: rgba(255, 255, 255, 0.1);
@@ -680,10 +722,18 @@ onBeforeUnmount(() => {
 }
 
 @keyframes shake {
-  0% { transform: rotate(0deg); }
-  25% { transform: rotate(-10deg); }
-  75% { transform: rotate(10deg); }
-  100% { transform: rotate(0deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-10deg);
+  }
+  75% {
+    transform: rotate(10deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
 }
 
 .fa-star {

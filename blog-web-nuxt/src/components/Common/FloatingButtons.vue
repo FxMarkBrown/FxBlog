@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {getThemeMode, initTheme, setThemeMode} from '@/utils/theme'
+import { getThemeMode, initTheme, setThemeMode } from '@/utils/theme'
 
 const route = useRoute()
 const router = useRouter()
@@ -107,14 +107,31 @@ onBeforeUnmount(() => {
       </button>
     </ElTooltip>
 
-    <ElTooltip content="切换主题" placement="left" effect="light" popper-class="floating-tooltip" :teleported="false">
+    <ElTooltip
+      content="切换主题"
+      placement="left"
+      effect="light"
+      popper-class="floating-tooltip"
+      :teleported="false"
+    >
       <button class="float-btn theme-btn" title="切换主题" @click="toggleTheme">
         <i :class="['fas', isDarkMode ? 'fa-sun' : 'fa-moon']"></i>
       </button>
     </ElTooltip>
 
-    <ElTooltip content="回到顶部" placement="left" effect="light" popper-class="floating-tooltip" :teleported="false">
-      <button v-show="showBackToTop" class="float-btn top-btn" title="回到顶部" @click="scrollToTop">
+    <ElTooltip
+      content="回到顶部"
+      placement="left"
+      effect="light"
+      popper-class="floating-tooltip"
+      :teleported="false"
+    >
+      <button
+        v-show="showBackToTop"
+        class="float-btn top-btn"
+        title="回到顶部"
+        @click="scrollToTop"
+      >
         <i class="fas fa-arrow-up"></i>
       </button>
     </ElTooltip>

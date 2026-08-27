@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {ElMessage, ElMessageBox} from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   deleteNotificationApi,
   getNotificationsApi,
@@ -7,10 +7,10 @@ import {
   markAllNotificationsAsReadApi,
   markNotificationAsReadApi
 } from '@/api/message'
-import {useNoIndexSeo} from '@/composables/useSeo'
-import type {NotificationItem} from '@/types/article'
-import {formatTime} from '@/utils/time'
-import {unwrapResponseData} from '@/utils/response'
+import { useNoIndexSeo } from '@/composables/useSeo'
+import type { NotificationItem } from '@/types/article'
+import { formatTime } from '@/utils/time'
+import { unwrapResponseData } from '@/utils/response'
 
 interface NotificationCategory {
   type: string
@@ -40,7 +40,9 @@ const params = reactive({
 })
 const categories = ref<NotificationCategory[]>(createDefaultCategories())
 
-const currentCategoryName = computed(() => categories.value.find((item) => item.type === currentCategory.value)?.name || '全部消息')
+const currentCategoryName = computed(
+  () => categories.value.find((item) => item.type === currentCategory.value)?.name || '全部消息'
+)
 const hasUnread = computed(() => notifications.value.some((item) => !item.isRead))
 
 useNoIndexSeo({
@@ -125,7 +127,7 @@ async function fetchNotifications() {
   try {
     const response = await getNotificationsApi(params)
     const page = unwrapResponseData<Record<string, unknown> | null>(response) || {}
-    notifications.value = Array.isArray(page.records) ? page.records as NotificationItem[] : []
+    notifications.value = Array.isArray(page.records) ? (page.records as NotificationItem[]) : []
     total.value = Number(page.total || 0)
   } catch {
     notifications.value = []
@@ -150,7 +152,11 @@ async function handlePageChange(page: number) {
 async function markAllAsRead() {
   try {
     await markAllNotificationsAsReadApi()
-    await Promise.all([fetchNotifications(), getUnreadNotificationsCount(), siteStore.fetchUnreadStatus().catch(() => null)])
+    await Promise.all([
+      fetchNotifications(),
+      getUnreadNotificationsCount(),
+      siteStore.fetchUnreadStatus().catch(() => null)
+    ])
     showSuccess('已将所有消息标记为已读')
   } catch {
     showError('操作失败')
@@ -168,7 +174,10 @@ async function handleNotificationClick(notification: NotificationItem) {
   try {
     await markNotificationAsReadApi(notification.id)
     notification.isRead = true
-    await Promise.all([getUnreadNotificationsCount(), siteStore.fetchUnreadStatus().catch(() => null)])
+    await Promise.all([
+      getUnreadNotificationsCount(),
+      siteStore.fetchUnreadStatus().catch(() => null)
+    ])
   } catch {
     showError('标记已读失败')
   }
@@ -198,7 +207,10 @@ async function deleteNotification(id?: number | string) {
       await fetchNotifications()
     }
 
-    await Promise.all([getUnreadNotificationsCount(), siteStore.fetchUnreadStatus().catch(() => null)])
+    await Promise.all([
+      getUnreadNotificationsCount(),
+      siteStore.fetchUnreadStatus().catch(() => null)
+    ])
     showSuccess('删除成功')
   } catch (error) {
     if (error === 'cancel' || error === 'close') {
@@ -296,24 +308,34 @@ function renderTime(time?: string | number) {
                 <template v-if="notification.type === 'comment'">
                   <span v-if="notification.fromUserId">
                     {{ notification.fromNickname }} 回复了你在
-                    <span class="article-title" @click.stop="handleArticleClick(notification.articleId)">{{ notification.articleTitle }}</span>
+                    <span
+                      class="article-title"
+                      @click.stop="handleArticleClick(notification.articleId)"
+                      >{{ notification.articleTitle }}</span
+                    >
                     中的评论
                   </span>
-                  <span v-else>
-                    {{ notification.fromNickname }} 评论了你的文章
-                  </span>
+                  <span v-else> {{ notification.fromNickname }} 评论了你的文章 </span>
                   <div v-html="String(notification.message || '')"></div>
                 </template>
 
                 <template v-else-if="notification.type === 'like'">
                   {{ notification.fromNickname }} 点赞了你的
-                  <span class="article-title" @click.stop="handleArticleClick(notification.articleId)">{{ notification.articleTitle }}</span>
+                  <span
+                    class="article-title"
+                    @click.stop="handleArticleClick(notification.articleId)"
+                    >{{ notification.articleTitle }}</span
+                  >
                   文章
                 </template>
 
                 <template v-else-if="notification.type === 'favorite'">
                   {{ notification.fromNickname }} 收藏了你的
-                  <span class="article-title" @click.stop="handleArticleClick(notification.articleId)">{{ notification.articleTitle }}</span>
+                  <span
+                    class="article-title"
+                    @click.stop="handleArticleClick(notification.articleId)"
+                    >{{ notification.articleTitle }}</span
+                  >
                   文章
                 </template>
 
@@ -326,7 +348,9 @@ function renderTime(time?: string | number) {
                 </template>
               </div>
 
-              <div class="notification-time">{{ renderTime(notification.createTime as string | number | undefined) }}</div>
+              <div class="notification-time">
+                {{ renderTime(notification.createTime as string | number | undefined) }}
+              </div>
             </div>
 
             <div class="notification-actions">

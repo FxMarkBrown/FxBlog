@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import {getArticlesApi} from '@/api/article'
-import {getTagsApi} from '@/api/tags'
+import { getArticlesApi } from '@/api/article'
+import { getTagsApi } from '@/api/tags'
 import ArticleList from '@/components/ArticleList/index.vue'
 import Sidebar from '@/components/Sidebar/index.vue'
-import {usePageSeo} from '@/composables/useSeo'
-import type {ArticleSummary, TagSummary} from '@/types/article'
-import type {PageResult} from '@/types/common'
-import {unwrapResponseData} from '@/utils/response'
+import { usePageSeo } from '@/composables/useSeo'
+import type { ArticleSummary, TagSummary } from '@/types/article'
+import type { PageResult } from '@/types/common'
+import { unwrapResponseData } from '@/utils/response'
 
 const route = useRoute()
 const router = useRouter()
@@ -69,7 +69,7 @@ const selectedTag = computed(() => {
   return tags.value[0] || null
 })
 const activeTag = computed(() => selectedTag.value?.name || null)
-const selectedTagId = computed(() => selectedTag.value ? String(selectedTag.value.id) : '')
+const selectedTagId = computed(() => (selectedTag.value ? String(selectedTag.value.id) : ''))
 
 const { data: articlePageData, pending: articlePending } = await useAsyncData(
   () => `tag-articles:${selectedTagId.value}:${params.pageNum}:${params.pageSize}`,
@@ -220,7 +220,11 @@ onMounted(() => {
     height: 100%;
     background:
       radial-gradient(circle at 10% 20%, rgba($primary, 0.03) 0%, transparent 20%),
-      radial-gradient(circle at 90% 80%, rgba(color.adjust($primary, $hue: 60deg), 0.03) 0%, transparent 20%);
+      radial-gradient(
+        circle at 90% 80%,
+        rgba(color.adjust($primary, $hue: 60deg), 0.03) 0%,
+        transparent 20%
+      );
     pointer-events: none;
     z-index: -1;
   }
@@ -402,7 +406,11 @@ onMounted(() => {
       color: var(--text-secondary);
       margin-left: auto;
       padding: $spacing-xs $spacing-md;
-      background: linear-gradient(120deg, rgba($primary, 0.1), rgba(color.adjust($primary, $hue: 60deg), 0.1));
+      background: linear-gradient(
+        120deg,
+        rgba($primary, 0.1),
+        rgba(color.adjust($primary, $hue: 60deg), 0.1)
+      );
       backdrop-filter: blur(4px);
       border: 1px solid rgba($primary, 0.15);
       transition: all 0.3s ease;

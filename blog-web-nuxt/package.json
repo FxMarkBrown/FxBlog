@@ -5,8 +5,13 @@
   "private": true,
   "scripts": {
     "build": "nuxt build && node scripts/fix-popper-alias.mjs",
+    "check": "prettier --check . && eslint . --max-warnings=0",
     "dev": "nuxt dev",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "generate": "nuxt generate",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare"
   },
@@ -30,6 +35,10 @@
     "vue-cropper": "next"
   },
   "devDependencies": {
+    "@nuxt/eslint": "^1.17.0",
+    "eslint": "^10.9.1",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.6",
     "sass": "^1.93.2",
     "unplugin-auto-import": "^19.1.2",
     "unplugin-vue-components": "^28.4.1"

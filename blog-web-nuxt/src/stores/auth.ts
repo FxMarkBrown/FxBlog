@@ -1,12 +1,14 @@
-import {getUserInfoApi, logoutApi} from '@/api/auth'
-import type {LoginUserInfo} from '@/types/auth'
+import { getUserInfoApi, logoutApi } from '@/api/auth'
+import type { LoginUserInfo } from '@/types/auth'
 
 function shouldClearAuthForError(error: unknown) {
   const statusCode = Number(
-    (error as { status?: number; statusCode?: number; response?: { status?: number } })?.status
-    || (error as { status?: number; statusCode?: number; response?: { status?: number } })?.statusCode
-    || (error as { status?: number; statusCode?: number; response?: { status?: number } })?.response?.status
-    || 0
+    (error as { status?: number; statusCode?: number; response?: { status?: number } })?.status ||
+      (error as { status?: number; statusCode?: number; response?: { status?: number } })
+        ?.statusCode ||
+      (error as { status?: number; statusCode?: number; response?: { status?: number } })?.response
+        ?.status ||
+      0
   )
 
   return statusCode === 401

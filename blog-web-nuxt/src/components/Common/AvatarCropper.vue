@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import {ElMessage} from 'element-plus'
+import { ElMessage } from 'element-plus'
 import 'vue-cropper/dist/index.css'
-import {VueCropper} from 'vue-cropper'
-import {uploadFileApi} from '@/api/file'
-import {updateProfileApi} from '@/api/user'
-import {unwrapResponseData} from '@/utils/response'
+import { VueCropper } from 'vue-cropper'
+import { uploadFileApi } from '@/api/file'
+import { updateProfileApi } from '@/api/user'
+import { unwrapResponseData } from '@/utils/response'
 
 interface CropperPreview {
   url?: string
@@ -264,7 +264,7 @@ function closeDialog() {
               :can-move-box="options.canMoveBox"
               :center-box="options.centerBox"
               :output-type="options.outputType"
-              @realTime="realTime"
+              @real-time="realTime"
             />
           </div>
         </ClientOnly>
@@ -273,14 +273,19 @@ function closeDialog() {
       <div class="avatar-cropper-sidebar">
         <div class="avatar-cropper-sidebar__title">预览</div>
         <div class="avatar-upload-preview">
-          <img :src="previewImageUrl || String(user?.avatar || '')" alt="头像裁剪预览">
+          <img :src="previewImageUrl || String(user?.avatar || '')" alt="头像裁剪预览" />
         </div>
       </div>
     </div>
 
     <div class="avatar-cropper-toolbar">
       <div class="avatar-cropper-toolbar__group">
-        <ElUpload action="#" :http-request="requestUpload" :show-file-list="false" :before-upload="beforeUpload">
+        <ElUpload
+          action="#"
+          :http-request="requestUpload"
+          :show-file-list="false"
+          :before-upload="beforeUpload"
+        >
           <ElButton size="small">
             选择
             <i class="fas fa-upload upload-icon"></i>
@@ -381,21 +386,24 @@ function closeDialog() {
   background-image:
     linear-gradient(rgba(96, 165, 250, 0.12), rgba(96, 165, 250, 0.12)),
     linear-gradient(
-          90deg,
-          rgba(255, 255, 255, 0.18) 0,
-          rgba(255, 255, 255, 0.18) 1px,
-          transparent 1px,
-          transparent 33.333%
+      90deg,
+      rgba(255, 255, 255, 0.18) 0,
+      rgba(255, 255, 255, 0.18) 1px,
+      transparent 1px,
+      transparent 33.333%
     ),
     linear-gradient(
-          rgba(255, 255, 255, 0.18) 0,
-          rgba(255, 255, 255, 0.18) 1px,
-          transparent 1px,
-          transparent 33.333%
+      rgba(255, 255, 255, 0.18) 0,
+      rgba(255, 255, 255, 0.18) 1px,
+      transparent 1px,
+      transparent 33.333%
     );
   background-position: center;
   background-repeat: no-repeat, repeat, repeat;
-  background-size: auto, 33.333% 100%, 100% 33.333%;
+  background-size:
+    auto,
+    33.333% 100%,
+    100% 33.333%;
   opacity: 1;
   cursor: grab;
 }

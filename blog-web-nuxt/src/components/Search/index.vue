@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import {ElMessage} from 'element-plus'
-import {getArticlesApi} from '@/api/article'
-import {getTagsApi} from '@/api/tags'
-import type {ArticleSummary, TagSummary} from '@/types/article'
-import type {PageResult} from '@/types/common'
-import {unwrapResponseData} from '@/utils/response'
+import { ElMessage } from 'element-plus'
+import { getArticlesApi } from '@/api/article'
+import { getTagsApi } from '@/api/tags'
+import type { ArticleSummary, TagSummary } from '@/types/article'
+import type { PageResult } from '@/types/common'
+import { unwrapResponseData } from '@/utils/response'
 
 const router = useRouter()
 const uiStore = useUiStore()
@@ -190,7 +190,12 @@ function formatDate(date?: string) {
 </script>
 
 <template>
-  <ElDialog :model-value="uiStore.searchVisible" title="搜索" width="650px" @update:model-value="handleClose">
+  <ElDialog
+    :model-value="uiStore.searchVisible"
+    title="搜索"
+    width="650px"
+    @update:model-value="handleClose"
+  >
     <div class="search-input-wrapper" :class="{ loading }">
       <i class="fas fa-search search-icon"></i>
       <input
@@ -229,7 +234,12 @@ function formatDate(date?: string) {
     </div>
 
     <div v-if="searchResults.length > 0" v-loading="loading" class="search-results">
-      <div v-for="item in searchResults" :key="item.id" class="search-result-item" @click="handleResultClick(item)">
+      <div
+        v-for="item in searchResults"
+        :key="item.id"
+        class="search-result-item"
+        @click="handleResultClick(item)"
+      >
         <div class="result-header">
           <h3 v-html="highlightKeyword(item.title)"></h3>
           <span class="result-date">{{ formatDate(item.createTime) }}</span>

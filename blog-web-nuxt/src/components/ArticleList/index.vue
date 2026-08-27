@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type {ArticleSummary} from '@/types/article'
-import {IMAGE_ERROR_PLACEHOLDER} from '@/utils/placeholders'
+import type { ArticleSummary } from '@/types/article'
+import { IMAGE_ERROR_PLACEHOLDER } from '@/utils/placeholders'
 
 interface ArticleListProps {
   articles: ArticleSummary[]
@@ -52,12 +52,18 @@ function getReadTime(article: ArticleSummary) {
                   <i class="fas fa-thumbtack"></i>
                   置顶
                 </span>
-                <span class="post-title underline" @click="emit('articleClick', post.id)">{{ post.title }}</span>
+                <span class="post-title underline" @click="emit('articleClick', post.id)">{{
+                  post.title
+                }}</span>
               </h3>
               <p class="post-excerpt">{{ post.summary }}</p>
             </div>
             <div class="post-image" @click="emit('articleClick', post.id)">
-              <img :src="post.cover || IMAGE_ERROR_PLACEHOLDER" :alt="post.title" @error="handleImageError">
+              <img
+                :src="post.cover || IMAGE_ERROR_PLACEHOLDER"
+                :alt="post.title"
+                @error="handleImageError"
+              />
               <div class="image-placeholder">
                 <i class="fas fa-image"></i>
               </div>

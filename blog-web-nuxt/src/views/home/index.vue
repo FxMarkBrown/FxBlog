@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import {ElMessage} from 'element-plus'
-import {getAllCategoriesApi, getArticlesApi, getCarouselArticlesApi} from '@/api/article'
+import { ElMessage } from 'element-plus'
+import { getAllCategoriesApi, getArticlesApi, getCarouselArticlesApi } from '@/api/article'
 import ArticleList from '@/components/ArticleList/index.vue'
 import Sidebar from '@/components/Sidebar/index.vue'
-import {usePageSeo} from '@/composables/useSeo'
-import type {ArticleCategoryGroup, ArticleSummary} from '@/types/article'
-import type {PageResult} from '@/types/common'
-import {unwrapResponseData} from '@/utils/response'
+import { usePageSeo } from '@/composables/useSeo'
+import type { ArticleCategoryGroup, ArticleSummary } from '@/types/article'
+import type { PageResult } from '@/types/common'
+import { unwrapResponseData } from '@/utils/response'
 import Carousel from '@/views/home/components/carousel.vue'
 import MomentsList from '@/views/home/components/moments.vue'
 
@@ -40,8 +40,10 @@ const defaultCategory: CategoryTab = {
 const categories = ref<CategoryTab[]>([{ ...defaultCategory }])
 
 usePageSeo({
-  title: () => `${siteStore.websiteInfo.name || siteStore.websiteInfo.title || runtimeConfig.public.siteName}`,
-  description: () => siteStore.websiteInfo.summary || siteStore.websiteInfo.description || '个人知识库',
+  title: () =>
+    `${siteStore.websiteInfo.name || siteStore.websiteInfo.title || runtimeConfig.public.siteName}`,
+  description: () =>
+    siteStore.websiteInfo.summary || siteStore.websiteInfo.description || '个人知识库',
   image: () => siteStore.websiteInfo.logo || runtimeConfig.public.seoImage
 })
 
@@ -144,7 +146,14 @@ async function getCarouselArticles() {
  */
 async function getAllCategories() {
   const response = await getAllCategoriesApi().catch(() => null)
-  const icons = ['far fa-file-alt', 'fas fa-book-open', 'fas fa-feather-alt', 'fas fa-mug-hot', 'fas fa-bookmark', 'fas fa-pen-fancy']
+  const icons = [
+    'far fa-file-alt',
+    'fas fa-book-open',
+    'fas fa-feather-alt',
+    'fas fa-mug-hot',
+    'fas fa-bookmark',
+    'fas fa-pen-fancy'
+  ]
   const categoriesData = unwrapResponseData<ArticleCategoryGroup[] | null>(response) || []
 
   categories.value = [
@@ -166,12 +175,20 @@ onMounted(() => {
   <div class="home">
     <div class="content-layout">
       <main class="home-main-content">
-        <Carousel v-if="carouselSlides.length > 0" :slides="carouselSlides" @article-click="goToPost" />
+        <Carousel
+          v-if="carouselSlides.length > 0"
+          :slides="carouselSlides"
+          @article-click="goToPost"
+        />
         <MomentsList v-if="momentsReady" />
 
         <div ref="postsSection">
           <ElTabs v-model="activeName" @tab-change="handleClick">
-            <ElTabPane v-for="category in categories" :key="category.id" :name="String(category.id)">
+            <ElTabPane
+              v-for="category in categories"
+              :key="category.id"
+              :name="String(category.id)"
+            >
               <template #label>
                 <span class="label-info">
                   <i :class="category.icon"></i>

@@ -1,4 +1,4 @@
-import type {ApiResponse} from '@/types/common'
+import type { ApiResponse } from '@/types/common'
 
 export interface UploadedFileDetail {
   id?: string

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import {getArchivesApi} from '@/api/article'
+import { getArchivesApi } from '@/api/article'
 import Sidebar from '@/components/Sidebar/index.vue'
-import {usePageSeo} from '@/composables/useSeo'
-import type {ArchiveGroup, ArticleSummary} from '@/types/article'
-import {unwrapResponseData} from '@/utils/response'
+import { usePageSeo } from '@/composables/useSeo'
+import type { ArchiveGroup, ArticleSummary } from '@/types/article'
+import { unwrapResponseData } from '@/utils/response'
 
 const router = useRouter()
 const runtimeConfig = useRuntimeConfig()
@@ -23,7 +23,10 @@ async function getArchives() {
   loading.value = true
   try {
     const response = await getArchivesApi()
-    const result = unwrapResponseData<Array<{ year: string; posts: ArticleSummary[] }> | ArchiveGroup[] | null>(response) || []
+    const result =
+      unwrapResponseData<Array<{ year: string; posts: ArticleSummary[] }> | ArchiveGroup[] | null>(
+        response
+      ) || []
     archives.value = normalizeArchives(result)
     for (const item of archives.value) {
       collapsedYears[item.year] = false
@@ -76,7 +79,7 @@ function startTransition(element: Element) {
   target.style.height = 'auto'
   const height = target.scrollHeight
   target.style.height = '0px'
-  target.offsetHeight
+  void target.offsetHeight
   target.style.height = `${height}px`
 }
 
@@ -87,7 +90,7 @@ function startTransition(element: Element) {
 function endTransition(element: Element) {
   const target = element as HTMLElement
   target.style.height = `${target.scrollHeight}px`
-  target.offsetHeight
+  void target.offsetHeight
   target.style.height = '0px'
 }
 
@@ -105,7 +108,9 @@ function clearTransitionHeight(element: Element) {
  * @param payload 接口数据
  * @returns 页面可用归档结构
  */
-function normalizeArchives(payload: Array<{ year: string; posts: ArticleSummary[] }> | ArchiveGroup[]) {
+function normalizeArchives(
+  payload: Array<{ year: string; posts: ArticleSummary[] }> | ArchiveGroup[]
+) {
   return payload
     .map((item) => {
       const typedItem = item as ArchiveGroup & { year?: string; posts?: ArticleSummary[] }
@@ -128,20 +133,26 @@ onMounted(() => {
       <main class="main-content">
         <ElCard v-loading="loading" class="content-card">
           <div class="timeline">
-            <div
-              v-for="item in archives"
-              :key="item.year"
-              class="year-group"
-            >
+            <div v-for="item in archives" :key="item.year" class="year-group">
               <div class="year-header" @click="toggleYear(item.year)">
                 <span class="year">{{ item.year }}</span>
                 <span class="toggle-icon" :class="{ 'is-open': !collapsedYears[item.year] }">
                   <i class="fas fa-chevron-down"></i>
                 </span>
               </div>
-              <Transition name="expand" @enter="startTransition" @after-enter="clearTransitionHeight" @leave="endTransition">
+              <Transition
+                name="expand"
+                @enter="startTransition"
+                @after-enter="clearTransitionHeight"
+                @leave="endTransition"
+              >
                 <div v-show="!collapsedYears[item.year]" class="posts-list">
-                  <div v-for="post in item.posts" :key="post.id" class="post-item" @click="goToPost(post.id)">
+                  <div
+                    v-for="post in item.posts"
+                    :key="post.id"
+                    class="post-item"
+                    @click="goToPost(post.id)"
+                  >
                     <div class="post-date">
                       <span class="month">{{ formatMonth(post.createTime) }}</span>
                       <span class="day">{{ formatDay(post.createTime) }}</span>

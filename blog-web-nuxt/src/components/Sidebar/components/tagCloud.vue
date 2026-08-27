@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import {getTagsApi} from '@/api/tags'
-import type {TagSummary} from '@/types/article'
-import {unwrapResponseData} from '@/utils/response'
+import { getTagsApi } from '@/api/tags'
+import type { TagSummary } from '@/types/article'
+import { unwrapResponseData } from '@/utils/response'
 
 const router = useRouter()
 const data = ref<TagSummary[]>([])
@@ -81,8 +81,7 @@ function initTags() {
  */
 function setPosition(tag: { x: number; y: number; z: number; ele: HTMLElement }) {
   const scale = (tag.z / option.radius / 2 + 0.5) * (option.maxFont / 16)
-  tag.ele.style.transform =
-    `translate3d(${tag.x}px, ${tag.y}px, 0) translate3d(-50%, -50%, 0) scale(${scale})`
+  tag.ele.style.transform = `translate3d(${tag.x}px, ${tag.y}px, 0) translate3d(-50%, -50%, 0) scale(${scale})`
   tag.ele.style.opacity = String(tag.z / option.radius / 2 + 0.7)
 }
 
@@ -181,7 +180,11 @@ function clickTag(item: TagSummary) {
       <p
         v-for="(item, index) in data"
         :key="item.id || index"
-        :ref="(el) => { if (el) tagRefs[index] = el as HTMLElement }"
+        :ref="
+          (el) => {
+            if (el) tagRefs[index] = el as HTMLElement
+          }
+        "
         :class="{ 'tag-dimmed': hoveredIndex !== null && hoveredIndex !== index }"
         @click="clickTag(item)"
         @mouseenter="hoveredIndex = index"

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type {FormInstance, FormRules} from 'element-plus'
-import {ElMessage} from 'element-plus'
+import type { FormInstance, FormRules } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import {
   forgotPasswordApi,
   getAuthRenderApi,
@@ -12,14 +12,14 @@ import {
   registerApi,
   sendEmailCodeApi
 } from '@/api/auth'
-import {useNoIndexSeo} from '@/composables/useSeo'
+import { useNoIndexSeo } from '@/composables/useSeo'
 import LoginParticles from '@/views/login/components/LoginParticles.vue'
 import SliderVerify from '@/views/login/components/SliderVerify.vue'
-import {WECHAT_QR_PLACEHOLDER} from '@/utils/placeholders'
-import {setCookieExpires} from '@/utils/cookie'
-import {unwrapResponseData} from '@/utils/response'
-import {getThemeMode, initTheme} from '@/utils/theme'
-import type {LoginUserInfo} from '@/types/auth'
+import { WECHAT_QR_PLACEHOLDER } from '@/utils/placeholders'
+import { setCookieExpires } from '@/utils/cookie'
+import { unwrapResponseData } from '@/utils/response'
+import { getThemeMode, initTheme } from '@/utils/theme'
+import type { LoginUserInfo } from '@/types/auth'
 
 type LoginFormType = 'login' | 'account' | 'register' | 'forgot'
 type LoginType = 'github' | 'qq' | 'wechat' | 'gitee' | 'weibo'
@@ -104,9 +104,7 @@ const rules = reactive<FormRules>({
     { required: true, message: '请输入密码', trigger: 'blur' },
     { min: 6, max: 16, message: '长度在 6 到 16 个字符', trigger: 'blur' }
   ],
-  code: [
-    { required: true, message: '请输入验证码', trigger: 'blur' }
-  ]
+  code: [{ required: true, message: '请输入验证码', trigger: 'blur' }]
 })
 
 const enabledLoginTypeList = computed<string[]>(() => {
@@ -125,9 +123,14 @@ const enabledLoginTypeList = computed<string[]>(() => {
   return []
 })
 
-const oauthLoginTypes = computed(() => Object.fromEntries(
-  Object.entries(loginTypes).filter(([type]) => type !== 'wechat' && enabledLoginTypeList.value.includes(type))
-) as Record<string, LoginOptionItem>)
+const oauthLoginTypes = computed(
+  () =>
+    Object.fromEntries(
+      Object.entries(loginTypes).filter(
+        ([type]) => type !== 'wechat' && enabledLoginTypeList.value.includes(type)
+      )
+    ) as Record<string, LoginOptionItem>
+)
 
 const hasWechatLogin = computed(() => enabledLoginTypeList.value.includes('wechat'))
 const hasOauthLogin = computed(() => Object.keys(oauthLoginTypes.value).length > 0)
@@ -155,7 +158,8 @@ watch(
 onMounted(async () => {
   isDarkMode.value = initTheme()
   previousBodyOverflow.value = document.body.style.overflow
-  previousNuxtPaddingTop.value = (document.getElementById('__nuxt') as HTMLElement | null)?.style.paddingTop || ''
+  previousNuxtPaddingTop.value =
+    (document.getElementById('__nuxt') as HTMLElement | null)?.style.paddingTop || ''
   document.body.style.overflow = 'hidden'
   const nuxtRoot = document.getElementById('__nuxt') as HTMLElement | null
   if (nuxtRoot) {
@@ -462,7 +466,8 @@ async function getWechatLoginCode() {
   try {
     const response = await getWechatLoginCodeApi()
     const code = unwrapResponseData<string | Record<string, unknown> | null>(response)
-    wechatForm.code = typeof code === 'string' ? code : String((code as Record<string, unknown> | null)?.code || '')
+    wechatForm.code =
+      typeof code === 'string' ? code : String((code as Record<string, unknown> | null)?.code || '')
     pollingWechatIsLogin()
     startWechatCountdown()
   } catch (error) {
@@ -606,7 +611,6 @@ function handleSwitchForm() {
 function backToHome() {
   router.push('/')
 }
-
 </script>
 
 <template>
@@ -640,7 +644,7 @@ function backToHome() {
       <div v-show="currentForm === 'login'" class="form-container">
         <div v-if="hasWechatLogin" class="qrcode-content">
           <div class="qrcode-box">
-            <img :src="wechatQrPlaceholder" alt="微信二维码">
+            <img :src="wechatQrPlaceholder" alt="微信二维码" />
           </div>
           <p class="qrcode-tip">
             登录验证码：
@@ -680,7 +684,12 @@ function backToHome() {
 
         <ElForm ref="ruleFormRef" :model="loginForm" :rules="rules">
           <ElFormItem class="form-item" prop="username">
-            <ElInput v-model="loginForm.username" placeholder="请输入用户名" size="large" @keyup.enter="handleLogin">
+            <ElInput
+              v-model="loginForm.username"
+              placeholder="请输入用户名"
+              size="large"
+              @keyup.enter="handleLogin"
+            >
               <template #prefix>
                 <i class="fas fa-user"></i>
               </template>
@@ -688,7 +697,13 @@ function backToHome() {
           </ElFormItem>
 
           <ElFormItem class="form-item" prop="password">
-            <ElInput v-model="loginForm.password" placeholder="请输入密码" show-password size="large" @keyup.enter="handleLogin">
+            <ElInput
+              v-model="loginForm.password"
+              placeholder="请输入密码"
+              show-password
+              size="large"
+              @keyup.enter="handleLogin"
+            >
               <template #prefix>
                 <i class="fas fa-lock"></i>
               </template>
@@ -700,7 +715,12 @@ function backToHome() {
           </div>
 
           <ElFormItem class="form-item">
-            <ElButton class="submit-btn ripple" :loading="loading" type="primary" @click="handleLogin">
+            <ElButton
+              class="submit-btn ripple"
+              :loading="loading"
+              type="primary"
+              @click="handleLogin"
+            >
               登 录
             </ElButton>
           </ElFormItem>
@@ -742,7 +762,12 @@ function backToHome() {
                 <i class="fas fa-key"></i>
               </template>
               <template #append>
-                <ElButton class="code-btn" type="primary" :disabled="codeSending" @click="sendRegisterCode">
+                <ElButton
+                  class="code-btn"
+                  type="primary"
+                  :disabled="codeSending"
+                  @click="sendRegisterCode"
+                >
                   {{ codeButtonText }}
                 </ElButton>
               </template>
@@ -763,9 +788,7 @@ function backToHome() {
             </ElButton>
           </ElFormItem>
 
-          <div class="form-switch">
-            已有账号？<a @click="switchForm('account')">立即登录</a>
-          </div>
+          <div class="form-switch">已有账号？<a @click="switchForm('account')">立即登录</a></div>
         </ElForm>
       </div>
 
@@ -790,7 +813,12 @@ function backToHome() {
                 <i class="fas fa-key"></i>
               </template>
               <template #append>
-                <ElButton class="code-btn" type="primary" :disabled="codeSending" @click="sendVerificationCode">
+                <ElButton
+                  class="code-btn"
+                  type="primary"
+                  :disabled="codeSending"
+                  @click="sendVerificationCode"
+                >
                   {{ codeButtonText }}
                 </ElButton>
               </template>
@@ -806,7 +834,12 @@ function backToHome() {
           </ElFormItem>
 
           <ElFormItem class="form-item">
-            <ElButton class="submit-btn" type="primary" :loading="loading" @click="handleResetPassword">
+            <ElButton
+              class="submit-btn"
+              type="primary"
+              :loading="loading"
+              @click="handleResetPassword"
+            >
               重置密码
             </ElButton>
           </ElFormItem>
@@ -918,7 +951,10 @@ function backToHome() {
   font-weight: 600;
   letter-spacing: 0.22em;
   box-shadow: 0 14px 30px rgba(99, 102, 241, 0.26);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
 }
 
 :deep(.submit-btn.el-button:hover) {
@@ -939,7 +975,9 @@ function backToHome() {
   background: rgba(255, 255, 255, 0.72);
   box-shadow: 0 0 0 1px rgba(124, 139, 150, 0.14) inset;
   overflow: hidden;
-  transition: box-shadow 0.2s ease, background-color 0.2s ease;
+  transition:
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
 }
 
 .form-item :deep(.el-input-group:focus-within .el-input-group__append) {
@@ -957,7 +995,9 @@ function backToHome() {
   background: rgba(99, 102, 241, 0.08);
   color: #4f46e5;
   font-weight: 600;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 .form-item :deep(.el-input-group__append .el-button:hover) {
@@ -1316,7 +1356,8 @@ function backToHome() {
   .login-container {
     align-items: center;
     min-height: 100vh;
-    padding: calc(env(safe-area-inset-top, 0px) + 20px) 20px calc(env(safe-area-inset-bottom, 0px) + 20px);
+    padding: calc(env(safe-area-inset-top, 0px) + 20px) 20px
+      calc(env(safe-area-inset-bottom, 0px) + 20px);
   }
 
   .login-body {

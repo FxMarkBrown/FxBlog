@@ -1,4 +1,4 @@
-import type {ApiResponse, PageResult} from '@/types/common'
+import type { ApiResponse, PageResult } from '@/types/common'
 
 // 获取个人中心摘要信息。
 export function getUserProfileApi() {
@@ -51,16 +51,22 @@ export function getMyLikeApi(query: Record<string, unknown>) {
 
 // 获取我的收藏。
 export function getMyFavoriteApi(query: Record<string, unknown>) {
-  return useApiClient()<ApiResponse<PageResult<Record<string, unknown>>>>('/portal/user/myFavorite', {
-    query
-  })
+  return useApiClient()<ApiResponse<PageResult<Record<string, unknown>>>>(
+    '/portal/user/myFavorite',
+    {
+      query
+    }
+  )
 }
 
 // 获取我的 AI 额度流水。
 export function getMyAiQuotaLogApi(query: Record<string, unknown>) {
-  return useApiClient()<ApiResponse<PageResult<Record<string, unknown>>>>('/portal/user/aiQuotaLog', {
-    query
-  })
+  return useApiClient()<ApiResponse<PageResult<Record<string, unknown>>>>(
+    '/portal/user/aiQuotaLog',
+    {
+      query
+    }
+  )
 }
 
 // 获取我的反馈列表。

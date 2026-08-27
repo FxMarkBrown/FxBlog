@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import {getCategoriesApi} from '@/api/article'
+import { getCategoriesApi } from '@/api/article'
 import Sidebar from '@/components/Sidebar/index.vue'
-import {usePageSeo} from '@/composables/useSeo'
-import type {ArticleCategoryGroup} from '@/types/article'
-import {unwrapResponseData} from '@/utils/response'
+import { usePageSeo } from '@/composables/useSeo'
+import type { ArticleCategoryGroup } from '@/types/article'
+import { unwrapResponseData } from '@/utils/response'
 
 const router = useRouter()
 const route = useRoute()
@@ -50,11 +50,14 @@ function formatDay(date?: string) {
   return date ? new Date(date).getDate().toString().padStart(2, '0') : ''
 }
 
-const { data: categoriesData, pending: categoriesPending } = await useAsyncData('categories-list', async () => {
-  const response = await getCategoriesApi()
-  const result = unwrapResponseData<ArticleCategoryGroup[] | null>(response) || []
-  return normalizeCategories(result)
-})
+const { data: categoriesData, pending: categoriesPending } = await useAsyncData(
+  'categories-list',
+  async () => {
+    const response = await getCategoriesApi()
+    const result = unwrapResponseData<ArticleCategoryGroup[] | null>(response) || []
+    return normalizeCategories(result)
+  }
+)
 
 const categories = computed(() => categoriesData.value || [])
 const loading = computed(() => categoriesPending.value)
@@ -198,7 +201,12 @@ watch(
                 </h2>
               </div>
               <div class="posts-list">
-                <div v-for="post in category.posts" :key="post.id" class="post-item" @click="goToPost(post.id)">
+                <div
+                  v-for="post in category.posts"
+                  :key="post.id"
+                  class="post-item"
+                  @click="goToPost(post.id)"
+                >
                   <div class="post-date">
                     <span class="month">{{ formatMonth(post.createTime) }}</span>
                     <span class="day">{{ formatDay(post.createTime) }}</span>

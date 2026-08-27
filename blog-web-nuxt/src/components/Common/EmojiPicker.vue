@@ -49,7 +49,7 @@ onBeforeUnmount(() => {
       <i class="far fa-smile"></i>
     </button>
 
-    <div v-if="show" class="emoji-panel" v-click-outside="closePanel">
+    <div v-if="show" v-click-outside="closePanel" class="emoji-panel">
       <div class="emoji-grid">
         <div
           v-for="emoji in emojis"
@@ -57,11 +57,7 @@ onBeforeUnmount(() => {
           class="emoji-item"
           @click="selectEmoji(emoji)"
         >
-          <img
-            :src="emoji.url"
-            :alt="emoji.name"
-            :title="emoji.name"
-          >
+          <img :src="emoji.url" :alt="emoji.name" :title="emoji.name" />
         </div>
       </div>
     </div>

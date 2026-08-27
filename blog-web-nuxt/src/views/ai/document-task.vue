@@ -1,11 +1,19 @@
 <script setup lang="ts">
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
-import {ElMessage} from 'element-plus'
-import type {Connection, Edge, Node, OnConnectStartParams} from '@vue-flow/core'
-import {ConnectionMode, MarkerType, VueFlow} from '@vue-flow/core'
+import { ElMessage } from 'element-plus'
+import type {
+  Connection,
+  Edge,
+  Node,
+  NodeDragEvent,
+  NodeMouseEvent,
+  OnConnectStartParams
+} from '@vue-flow/core'
+import type ELK from 'elkjs/lib/elk.bundled.js'
+import { ConnectionMode, MarkerType, VueFlow } from '@vue-flow/core'
 import DocumentCanvasNode from '@/components/ai-document/DocumentCanvasNode.vue'
-import {getConversationModelOptionsApi, getConversationQuotaApi} from '@/api/ai'
+import { getConversationModelOptionsApi, getConversationQuotaApi } from '@/api/ai'
 import {
   getDocumentNodeMessagesApi,
   getDocumentNodeThreadApi,
@@ -23,12 +31,13 @@ import type {
   DocumentTaskDetail,
   DocumentTreeNode
 } from '@/types/ai-document'
-import type {PageResult} from '@/types/common'
-import {normalizeMarkdownContent} from '@/utils/ai-markdown'
-import {unwrapResponseData} from '@/utils/response'
-import {getThemeMode, initTheme, setThemeMode} from '@/utils/theme'
+import type { PageResult } from '@/types/common'
+import { normalizeMarkdownContent } from '@/utils/ai-markdown'
+import { unwrapResponseData } from '@/utils/response'
+import { getThemeMode, initTheme, setThemeMode } from '@/utils/theme'
 
 type QueryModePreset = 'strict' | 'balanced' | 'explore'
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- 模型/配额等后端 payload 字段动态，刻意保留宽松别名
 type AnyRecord = Record<string, any>
 const AI_DOCUMENT_MODEL_STORAGE_KEY = 'BLOG_AI_DOCUMENT_SELECTED_MODEL_ID'
 
@@ -148,7 +157,7 @@ const selectedModelId = ref('')
 const quotaSnapshot = ref(createEmptyQuotaSnapshot())
 const activeAnswerNodeId = ref('')
 const connectingSocketChatNodeId = ref('')
-const elkEngine = shallowRef<any | null>(null)
+const elkEngine = shallowRef<InstanceType<typeof ELK> | null>(null)
 const streamAbortControllerMap = new Map<string, AbortController>()
 let layoutRequestId = 0
 let pendingViewportAction: ViewportAction = 'none'
@@ -157,7 +166,9 @@ let pendingViewportNodeId = ''
 const visibleNodes = ref<CanvasFlowNode[]>([])
 const visibleEdges = ref<Edge[]>([])
 const outlineSearchKeyword = computed(() => outlineSearch.value.trim().toLowerCase())
-const outlinePanelItems = computed(() => buildOutlinePanelItems(parseResult.value?.root, outlineSearchKeyword.value))
+const outlinePanelItems = computed(() =>
+  buildOutlinePanelItems(parseResult.value?.root, outlineSearchKeyword.value)
+)
 const documentNodeLookup = computed<Record<string, DocumentTreeNode>>(() => {
   const lookup: Record<string, DocumentTreeNode> = {}
   for (const node of flattenTree(parseResult.value?.root)) {
@@ -165,17 +176,47 @@ const documentNodeLookup = computed<Record<string, DocumentTreeNode>>(() => {
   }
   return lookup
 })
-const activeAnswerState = computed(() => (activeAnswerNodeId.value ? chatStateMap.value[activeAnswerNodeId.value] : undefined))
+const activeAnswerState = computed(() =>
+  activeAnswerNodeId.value ? chatStateMap.value[activeAnswerNodeId.value] : undefined
+)
 const contextControlState = computed(() => {
   if (connectingSocketChatNodeId.value) {
     return chatStateMap.value[connectingSocketChatNodeId.value]
   }
   return activeAnswerState.value
 })
-const activeUsedNodeIds = computed(() => new Set((activeAnswerState.value?.usedNodes || []).map((node) => String(node.nodeId || '')).filter(Boolean)))
-const activeCandidateNodeIds = computed(() => new Set((activeAnswerState.value?.candidateNodes || []).map((node) => String(node.nodeId || '')).filter(Boolean)))
-const activeCitationNodeIds = computed(() => new Set((activeAnswerState.value?.citations || []).map((citation) => String(citation.nodeId || '')).filter(Boolean)))
-const activeSelectedContextNodeIds = computed(() => new Set((contextControlState.value?.selectedNodeIds || []).map((nodeId) => String(nodeId || '')).filter(Boolean)))
+const activeUsedNodeIds = computed(
+  () =>
+    new Set(
+      (activeAnswerState.value?.usedNodes || [])
+        .map((node) => String(node.nodeId || ''))
+        .filter(Boolean)
+    )
+)
+const activeCandidateNodeIds = computed(
+  () =>
+    new Set(
+      (activeAnswerState.value?.candidateNodes || [])
+        .map((node) => String(node.nodeId || ''))
+        .filter(Boolean)
+    )
+)
+const activeCitationNodeIds = computed(
+  () =>
+    new Set(
+      (activeAnswerState.value?.citations || [])
+        .map((citation) => String(citation.nodeId || ''))
+        .filter(Boolean)
+    )
+)
+const activeSelectedContextNodeIds = computed(
+  () =>
+    new Set(
+      (contextControlState.value?.selectedNodeIds || [])
+        .map((nodeId) => String(nodeId || ''))
+        .filter(Boolean)
+    )
+)
 const activeKnowledgeFlowEdges = computed(() => activeAnswerState.value?.knowledgeFlowEdges || [])
 
 const nodeTypes = markRaw({
@@ -183,7 +224,17 @@ const nodeTypes = markRaw({
 })
 
 watch(
-  [parseResult, expandedNodeIds, previewOpenIds, chatOpenIds, chatStateMap, isDarkMode, isMobileViewport, activeAnswerNodeId, connectingSocketChatNodeId],
+  [
+    parseResult,
+    expandedNodeIds,
+    previewOpenIds,
+    chatOpenIds,
+    chatStateMap,
+    isDarkMode,
+    isMobileViewport,
+    activeAnswerNodeId,
+    connectingSocketChatNodeId
+  ],
   () => {
     void rebuildCanvas()
   },
@@ -202,7 +253,9 @@ watch(selectedOutlineNodeId, () => {
 })
 
 function normalizeTaskStatus(status?: string) {
-  return String(status || '').trim().toUpperCase()
+  return String(status || '')
+    .trim()
+    .toUpperCase()
 }
 
 function isParsedTask(status?: string) {
@@ -301,7 +354,9 @@ function ensureSelectedModel() {
   }
   const nextModelId = availableIds.has(selectedModelId.value)
     ? selectedModelId.value
-    : (availableIds.has(storedModelId) ? storedModelId : defaultModel.id)
+    : availableIds.has(storedModelId)
+      ? storedModelId
+      : defaultModel.id
   selectedModelId.value = nextModelId
   persistSelectedModel(nextModelId)
 }
@@ -337,7 +392,9 @@ function isStructureNode(node?: DocumentTreeNode | null) {
   }
 
   const normalizedType = String(node.type || '').toLowerCase()
-  return normalizedType === 'document' || normalizedType === 'section' || normalizedType === 'subsection'
+  return (
+    normalizedType === 'document' || normalizedType === 'section' || normalizedType === 'subsection'
+  )
 }
 
 function getVisibleTreeChildren(node?: DocumentTreeNode | null) {
@@ -579,23 +636,23 @@ async function rebuildCanvas() {
       id: descriptor.id,
       type: 'documentNode',
       position,
-        data: {
-          kind: 'outline',
-          nodeId: descriptor.id,
-          isActive: descriptor.id === selectedOutlineNodeId.value,
-          highlightRole: resolveNodeHighlightRole(descriptor.id),
-          themeMode: isDarkMode.value ? 'dark' : 'light',
+      data: {
+        kind: 'outline',
+        nodeId: descriptor.id,
+        isActive: descriptor.id === selectedOutlineNodeId.value,
+        highlightRole: resolveNodeHighlightRole(descriptor.id),
+        themeMode: isDarkMode.value ? 'dark' : 'light',
         title: String(node.title || '未命名节点'),
         subtitle: buildSubtitle(node),
         body: String(node.summary || ''),
-          badge: buildBadge(node),
-          expandable: Boolean(getVisibleTreeChildren(node).length),
-          expanded: expandedNodeIds.value.has(descriptor.id),
-          acceptContextDrop: Boolean(connectingSocketChatNodeId.value),
-          onToggleExpand: handleToggleExpand,
-          onTogglePreview: handleTogglePreview,
-          onToggleChat: handleToggleChat
-        }
+        badge: buildBadge(node),
+        expandable: Boolean(getVisibleTreeChildren(node).length),
+        expanded: expandedNodeIds.value.has(descriptor.id),
+        acceptContextDrop: Boolean(connectingSocketChatNodeId.value),
+        onToggleExpand: handleToggleExpand,
+        onTogglePreview: handleTogglePreview,
+        onToggleChat: handleToggleChat
+      }
     })
 
     if (descriptor.parentId) {
@@ -648,7 +705,8 @@ function appendAttachmentNodes(
       continue
     }
 
-    const desktopStacked = !isMobileViewport.value && previewOpenIds.value.has(node.id) && chatOpenIds.value.has(node.id)
+    const desktopStacked =
+      !isMobileViewport.value && previewOpenIds.value.has(node.id) && chatOpenIds.value.has(node.id)
     const desktopStackBaseY = anchor.y - 96
     let attachmentIndex = 0
 
@@ -658,12 +716,16 @@ function appendAttachmentNodes(
       const previewPosition = isMobileViewport.value
         ? {
             x: anchor.x,
-            y: anchor.y + metrics.previewOffsetY + attachmentIndex * (metrics.mobileAttachmentHeight + metrics.attachmentStackGap)
+            y:
+              anchor.y +
+              metrics.previewOffsetY +
+              attachmentIndex * (metrics.mobileAttachmentHeight + metrics.attachmentStackGap)
           }
         : {
             x: anchor.x + metrics.attachmentOffsetX,
             y: desktopStacked
-              ? desktopStackBaseY + attachmentIndex * (metrics.desktopAttachmentHeight + metrics.attachmentStackGap)
+              ? desktopStackBaseY +
+                attachmentIndex * (metrics.desktopAttachmentHeight + metrics.attachmentStackGap)
               : anchor.y + metrics.previewOffsetY
           }
       result.nodes.push({
@@ -712,12 +774,16 @@ function appendAttachmentNodes(
       const chatPosition = isMobileViewport.value
         ? {
             x: anchor.x,
-            y: anchor.y + metrics.chatOffsetY + attachmentIndex * (metrics.mobileAttachmentHeight + metrics.attachmentStackGap)
+            y:
+              anchor.y +
+              metrics.chatOffsetY +
+              attachmentIndex * (metrics.mobileAttachmentHeight + metrics.attachmentStackGap)
           }
         : {
             x: anchor.x + metrics.attachmentOffsetX,
             y: desktopStacked
-              ? desktopStackBaseY + attachmentIndex * (metrics.desktopAttachmentHeight + metrics.attachmentStackGap)
+              ? desktopStackBaseY +
+                attachmentIndex * (metrics.desktopAttachmentHeight + metrics.attachmentStackGap)
               : anchor.y + metrics.chatOffsetY
           }
       result.nodes.push({
@@ -782,12 +848,21 @@ function appendAttachmentNodes(
   }
 }
 
-function appendKnowledgeFlowEdges(result: { nodes: CanvasFlowNode[]; edges: Edge[]; centers: Map<string, { x: number; y: number }> }) {
+function appendKnowledgeFlowEdges(result: {
+  nodes: CanvasFlowNode[]
+  edges: Edge[]
+  centers: Map<string, { x: number; y: number }>
+}) {
   const visibleNodeIds = new Set(result.nodes.map((node) => node.id))
   activeKnowledgeFlowEdges.value.forEach((edge: DocumentKnowledgeFlowEdge, index: number) => {
     const fromNodeId = resolveKnowledgeEdgeEndpoint(String(edge.fromNodeId || ''))
     const toNodeId = resolveKnowledgeEdgeEndpoint(String(edge.toNodeId || ''))
-    if (!fromNodeId || !toNodeId || !visibleNodeIds.has(fromNodeId) || !visibleNodeIds.has(toNodeId)) {
+    if (
+      !fromNodeId ||
+      !toNodeId ||
+      !visibleNodeIds.has(fromNodeId) ||
+      !visibleNodeIds.has(toNodeId)
+    ) {
       return
     }
     result.edges.push({
@@ -813,7 +888,11 @@ function appendKnowledgeFlowEdges(result: { nodes: CanvasFlowNode[]; edges: Edge
   })
 }
 
-function appendUserContextControlEdges(result: { nodes: CanvasFlowNode[]; edges: Edge[]; centers: Map<string, { x: number; y: number }> }) {
+function appendUserContextControlEdges(result: {
+  nodes: CanvasFlowNode[]
+  edges: Edge[]
+  centers: Map<string, { x: number; y: number }>
+}) {
   const visibleNodeIds = new Set(result.nodes.map((node) => node.id))
   Object.entries(chatStateMap.value).forEach(([chatNodeId, chatState]) => {
     if (!chatOpenIds.value.has(chatNodeId)) {
@@ -903,7 +982,10 @@ function collectOutlineSubtreeIds(node: DocumentTreeNode | null | undefined) {
   return ids
 }
 
-function findOutlineNode(root: DocumentTreeNode | null | undefined, nodeId: string): DocumentTreeNode | null {
+function findOutlineNode(
+  root: DocumentTreeNode | null | undefined,
+  nodeId: string
+): DocumentTreeNode | null {
   if (!root || !nodeId) {
     return null
   }
@@ -1008,7 +1090,11 @@ function resolveKnowledgeEdgeEndpoint(nodeId: string) {
   if (!nodeId) {
     return ''
   }
-  if (activeAnswerNodeId.value && nodeId === activeAnswerNodeId.value && chatOpenIds.value.has(nodeId)) {
+  if (
+    activeAnswerNodeId.value &&
+    nodeId === activeAnswerNodeId.value &&
+    chatOpenIds.value.has(nodeId)
+  ) {
     return `${nodeId}__chat`
   }
   return nodeId
@@ -1037,7 +1123,8 @@ function buildKnowledgeEdgeLabel(edge?: DocumentKnowledgeFlowEdge) {
 }
 
 function buildChatSubtitle(chatState?: ChatState) {
-  const modelLabel = resolveModelDisplayName(chatState?.modelId || selectedModelId.value) || '默认模型'
+  const modelLabel =
+    resolveModelDisplayName(chatState?.modelId || selectedModelId.value) || '默认模型'
   if (chatState?.sending) {
     return `正在生成回答 · ${modelLabel}`
   }
@@ -1275,89 +1362,107 @@ async function handleSubmitQuestion(nodeId: string) {
   streamAbortControllerMap.set(nodeId, abortController)
 
   try {
-    const selectedNodeIds = Array.from(new Set([
-      ...(currentState.selectedNodeIds || []),
-      selectedOutlineNodeId.value
-    ].filter((id) => id && id !== nodeId)))
-    await streamDocumentNodeApi(taskId.value, nodeId, {
-      question,
-      modelId: currentState.modelId || selectedModelId.value || undefined,
-      selectedNodeIds,
-      ...buildAskPayloadByMode(currentState.mode)
-    }, {
-      onMeta: (event) => {
-        const metaAnswer = event?.answer as DocumentNodeAnswer | undefined
-        chatStateMap.value = {
-          ...chatStateMap.value,
-          [nodeId]: {
-            ...getChatState(nodeId),
-            question,
-            sending: true,
-            threadId: metaAnswer?.threadId,
-            historyLoaded: true,
-            error: '',
-            selectedNodeIds,
-            modelId: String(metaAnswer?.modelId || selectedModelId.value || ''),
-            reasoningContent: normalizeMarkdownContent(String(metaAnswer?.reasoningContent || ''), true),
-            citations: metaAnswer?.citations || [],
-            usedNodes: metaAnswer?.usedNodes || [],
-            candidateNodes: metaAnswer?.candidateNodes || [],
-            knowledgeFlowEdges: metaAnswer?.knowledgeFlowEdges || [],
-            contextPlan: metaAnswer?.contextPlan,
-            budgetReport: metaAnswer?.budgetReport
+    const selectedNodeIds = Array.from(
+      new Set(
+        [...(currentState.selectedNodeIds || []), selectedOutlineNodeId.value].filter(
+          (id) => id && id !== nodeId
+        )
+      )
+    )
+    await streamDocumentNodeApi(
+      taskId.value,
+      nodeId,
+      {
+        question,
+        modelId: currentState.modelId || selectedModelId.value || undefined,
+        selectedNodeIds,
+        ...buildAskPayloadByMode(currentState.mode)
+      },
+      {
+        onMeta: (event) => {
+          const metaAnswer = event?.answer as DocumentNodeAnswer | undefined
+          chatStateMap.value = {
+            ...chatStateMap.value,
+            [nodeId]: {
+              ...getChatState(nodeId),
+              question,
+              sending: true,
+              threadId: metaAnswer?.threadId,
+              historyLoaded: true,
+              error: '',
+              selectedNodeIds,
+              modelId: String(metaAnswer?.modelId || selectedModelId.value || ''),
+              reasoningContent: normalizeMarkdownContent(
+                String(metaAnswer?.reasoningContent || ''),
+                true
+              ),
+              citations: metaAnswer?.citations || [],
+              usedNodes: metaAnswer?.usedNodes || [],
+              candidateNodes: metaAnswer?.candidateNodes || [],
+              knowledgeFlowEdges: metaAnswer?.knowledgeFlowEdges || [],
+              contextPlan: metaAnswer?.contextPlan,
+              budgetReport: metaAnswer?.budgetReport
+            }
+          }
+        },
+        onDelta: (event) => {
+          const current = getChatState(nodeId)
+          chatStateMap.value = {
+            ...chatStateMap.value,
+            [nodeId]: {
+              ...current,
+              sending: true,
+              answer: normalizeMarkdownContent(
+                `${current.answer || ''}${String(event?.content || '')}`,
+                true
+              ),
+              reasoningContent: normalizeMarkdownContent(
+                `${current.reasoningContent || ''}${String(event?.reasoningContent || '')}`,
+                true
+              )
+            }
+          }
+        },
+        onDone: (event) => {
+          const answer = event?.answer as DocumentNodeAnswer | undefined
+          chatStateMap.value = {
+            ...chatStateMap.value,
+            [nodeId]: {
+              ...getChatState(nodeId),
+              question,
+              sending: false,
+              threadId: answer?.threadId,
+              historyLoaded: true,
+              error: '',
+              selectedNodeIds,
+              modelId: String(answer?.modelId || selectedModelId.value || ''),
+              answer: normalizeMarkdownContent(answer?.answer || '', true),
+              reasoningContent: normalizeMarkdownContent(answer?.reasoningContent || '', true),
+              citations: answer?.citations || [],
+              usedNodes: answer?.usedNodes || [],
+              candidateNodes: answer?.candidateNodes || [],
+              knowledgeFlowEdges: answer?.knowledgeFlowEdges || [],
+              contextPlan: answer?.contextPlan,
+              budgetReport: answer?.budgetReport
+            }
+          }
+          void loadQuotaSnapshot()
+        },
+        onError: (error) => {
+          chatStateMap.value = {
+            ...chatStateMap.value,
+            [nodeId]: {
+              ...getChatState(nodeId),
+              question,
+              sending: false,
+              historyLoaded: true,
+              error: error.message || '节点问答失败'
+            }
           }
         }
       },
-      onDelta: (event) => {
-        const current = getChatState(nodeId)
-        chatStateMap.value = {
-          ...chatStateMap.value,
-          [nodeId]: {
-            ...current,
-            sending: true,
-            answer: normalizeMarkdownContent(`${current.answer || ''}${String(event?.content || '')}`, true),
-            reasoningContent: normalizeMarkdownContent(`${current.reasoningContent || ''}${String(event?.reasoningContent || '')}`, true)
-          }
-        }
-      },
-      onDone: (event) => {
-        const answer = event?.answer as DocumentNodeAnswer | undefined
-        chatStateMap.value = {
-          ...chatStateMap.value,
-          [nodeId]: {
-            ...getChatState(nodeId),
-            question,
-            sending: false,
-            threadId: answer?.threadId,
-            historyLoaded: true,
-            error: '',
-            selectedNodeIds,
-            modelId: String(answer?.modelId || selectedModelId.value || ''),
-            answer: normalizeMarkdownContent(answer?.answer || '', true),
-            reasoningContent: normalizeMarkdownContent(answer?.reasoningContent || '', true),
-            citations: answer?.citations || [],
-            usedNodes: answer?.usedNodes || [],
-            candidateNodes: answer?.candidateNodes || [],
-            knowledgeFlowEdges: answer?.knowledgeFlowEdges || [],
-            contextPlan: answer?.contextPlan,
-            budgetReport: answer?.budgetReport
-          }
-        }
-        void loadQuotaSnapshot()
-      },
-      onError: (error) => {
-        chatStateMap.value = {
-          ...chatStateMap.value,
-          [nodeId]: {
-            ...getChatState(nodeId),
-            question,
-            sending: false,
-            historyLoaded: true,
-            error: error.message || '节点问答失败'
-          }
-        }
-      }
-    }, abortController.signal)
+      abortController.signal
+    )
     streamAbortControllerMap.delete(nodeId)
   } catch (error) {
     if ((error as Error)?.name === 'AbortError') {
@@ -1401,14 +1506,18 @@ async function loadNodeThreadState(nodeId: string) {
       return
     }
 
-    const messageResponse = await getDocumentNodeMessagesApi(taskId.value, nodeId, { pageNum: 1, pageSize: 50 })
+    const messageResponse = await getDocumentNodeMessagesApi(taskId.value, nodeId, {
+      pageNum: 1,
+      pageSize: 50
+    })
     const page = unwrapResponseData<PageResult<DocumentNodeMessage> | null>(messageResponse) || {}
     const messages = Array.isArray(page.records) ? page.records : []
     const assistantIndex = findLastMessageIndex(messages, 'assistant')
     const assistantMessage = assistantIndex >= 0 ? messages[assistantIndex] : null
-    const userMessage = assistantIndex >= 0
-      ? findPreviousMessage(messages, assistantIndex - 1, 'user')
-      : findPreviousMessage(messages, messages.length - 1, 'user')
+    const userMessage =
+      assistantIndex >= 0
+        ? findPreviousMessage(messages, assistantIndex - 1, 'user')
+        : findPreviousMessage(messages, messages.length - 1, 'user')
 
     chatStateMap.value = {
       ...chatStateMap.value,
@@ -1417,8 +1526,12 @@ async function loadNodeThreadState(nodeId: string) {
         threadId: Number(thread.threadId),
         historyLoaded: true,
         question: String(userMessage?.content || currentState.question || ''),
-        answer: assistantMessage?.content ? normalizeMarkdownContent(String(assistantMessage.content), true) : '',
-        reasoningContent: assistantMessage?.reasoningContent ? normalizeMarkdownContent(String(assistantMessage.reasoningContent), true) : '',
+        answer: assistantMessage?.content
+          ? normalizeMarkdownContent(String(assistantMessage.content), true)
+          : '',
+        reasoningContent: assistantMessage?.reasoningContent
+          ? normalizeMarkdownContent(String(assistantMessage.reasoningContent), true)
+          : '',
         modelId: String(assistantMessage?.modelId || thread.modelId || currentState.modelId || ''),
         error: '',
         citations: assistantMessage?.citations || [],
@@ -1510,7 +1623,7 @@ function handleToggleSelectedContextNode(nodeId: string, targetNodeId: string) {
   activeAnswerNodeId.value = nodeId
 }
 
-function handleNodeClick(event: any) {
+function handleNodeClick(event: NodeMouseEvent) {
   const clickedNode = event.node
   if (!clickedNode || clickedNode.data.kind !== 'outline') {
     return
@@ -1559,7 +1672,7 @@ function handleConnectEnd() {
   connectingSocketChatNodeId.value = ''
 }
 
-function handleNodeDoubleClick(event: any) {
+function handleNodeDoubleClick(event: NodeMouseEvent) {
   event?.event?.stopPropagation?.()
   const clickedNode = event?.node
   if (!clickedNode || clickedNode.data?.kind !== 'outline') {
@@ -1592,7 +1705,7 @@ function handleNodeDoubleClick(event: any) {
   requestViewportAction('focus-node', clickedNode.id)
 }
 
-function handleNodeDragStop(event: any) {
+function handleNodeDragStop(event: NodeDragEvent) {
   const draggedNode = event?.node
   if (!draggedNode?.id || !draggedNode?.position) {
     return
@@ -1651,9 +1764,10 @@ function getNodeFrameSize(kind?: CanvasNodeData['kind']) {
 
   const viewport = getViewportDimensions()
   if (isMobileViewport.value) {
-    const width = viewport.width <= 420
-      ? Math.min(Math.max(viewport.width - 24, 252), 332)
-      : Math.min(Math.max(viewport.width - 40, 272), 360)
+    const width =
+      viewport.width <= 420
+        ? Math.min(Math.max(viewport.width - 24, 252), 332)
+        : Math.min(Math.max(viewport.width - 40, 272), 360)
     return {
       width,
       height: Math.max(360, Math.min(viewport.height * 0.62, 560))
@@ -1680,7 +1794,11 @@ function getNodeBoundsByIds(nodeIds: string[]) {
   let maxY = Number.NEGATIVE_INFINITY
   let foundNode = false
 
-  for (const node of visibleNodes.value as Array<{ id: string; position: { x: number; y: number }; data?: CanvasNodeData }>) {
+  for (const node of visibleNodes.value as Array<{
+    id: string
+    position: { x: number; y: number }
+    data?: CanvasNodeData
+  }>) {
     if (!lookup.has(node.id)) {
       continue
     }
@@ -1734,7 +1852,10 @@ function getOutlineBounds() {
   let maxY = Number.NEGATIVE_INFINITY
   let foundOutlineNode = false
 
-  for (const node of visibleNodes.value as Array<{ position: { x: number; y: number }; data?: CanvasNodeData }>) {
+  for (const node of visibleNodes.value as Array<{
+    position: { x: number; y: number }
+    data?: CanvasNodeData
+  }>) {
     if (node.data?.kind !== 'outline') {
       continue
     }
@@ -1961,8 +2082,12 @@ onBeforeUnmount(() => {
       <div class="task-toolbar__right">
         <div class="toolbar-token">
           <span class="toolbar-token__label">当前 Token</span>
-          <strong>{{ quotaLoading ? '同步中...' : formatTokenCount(quotaSnapshot.availableTokens) }}</strong>
-          <small v-if="quotaSnapshot.enabled">门槛 {{ formatTokenCount(quotaSnapshot.minRequestTokens) }}</small>
+          <strong>{{
+            quotaLoading ? '同步中...' : formatTokenCount(quotaSnapshot.availableTokens)
+          }}</strong>
+          <small v-if="quotaSnapshot.enabled"
+            >门槛 {{ formatTokenCount(quotaSnapshot.minRequestTokens) }}</small
+          >
           <small v-else>额度未启用</small>
         </div>
       </div>
@@ -1974,7 +2099,12 @@ onBeforeUnmount(() => {
         class="outline-drawer"
         :class="{ 'is-open': outlineDrawerOpen, 'is-dark': isDarkMode }"
       >
-        <button type="button" class="outline-drawer__toggle" :title="outlineDrawerOpen ? '收起目录' : '展开目录'" @click="toggleOutlineDrawer">
+        <button
+          type="button"
+          class="outline-drawer__toggle"
+          :title="outlineDrawerOpen ? '收起目录' : '展开目录'"
+          @click="toggleOutlineDrawer"
+        >
           <i :class="['fas', outlineDrawerOpen ? 'fa-chevron-left' : 'fa-chevron-right']"></i>
         </button>
         <aside v-if="outlineDrawerOpen" class="outline-drawer__panel">
@@ -1982,14 +2112,23 @@ onBeforeUnmount(() => {
             <strong>文档结构</strong>
             <div class="outline-drawer__header-actions">
               <span>{{ outlinePanelItems.length }} 项</span>
-              <button type="button" class="outline-drawer__close" title="关闭目录" @click="toggleOutlineDrawer">
+              <button
+                type="button"
+                class="outline-drawer__close"
+                title="关闭目录"
+                @click="toggleOutlineDrawer"
+              >
                 <i class="fas fa-xmark"></i>
               </button>
             </div>
           </div>
           <label class="outline-search">
             <i class="fas fa-magnifying-glass"></i>
-            <input v-model.trim="outlineSearch" type="text" placeholder="搜索节点标题、摘要或内容" />
+            <input
+              v-model.trim="outlineSearch"
+              type="text"
+              placeholder="搜索节点标题、摘要或内容"
+            />
           </label>
           <div class="outline-drawer__list">
             <div
@@ -2010,15 +2149,20 @@ onBeforeUnmount(() => {
                 :disabled="!item.hasChildren"
                 @click.stop="item.hasChildren && handleOutlineItemToggle(item.id)"
               >
-                <i v-if="item.hasChildren" :class="['fas', item.expanded ? 'fa-chevron-down' : 'fa-chevron-right']"></i>
+                <i
+                  v-if="item.hasChildren"
+                  :class="['fas', item.expanded ? 'fa-chevron-down' : 'fa-chevron-right']"
+                ></i>
               </button>
-              <button type="button" class="outline-item__button" @click="handleOutlineItemSelect(item.id)">
+              <button
+                type="button"
+                class="outline-item__button"
+                @click="handleOutlineItemSelect(item.id)"
+              >
                 <span class="outline-item__title">{{ item.title }}</span>
               </button>
             </div>
-            <div v-if="!outlinePanelItems.length" class="outline-empty">
-              未找到匹配节点
-            </div>
+            <div v-if="!outlinePanelItems.length" class="outline-empty">未找到匹配节点</div>
           </div>
         </aside>
       </div>
@@ -2034,7 +2178,9 @@ onBeforeUnmount(() => {
           :min-zoom="0.3"
           :max-zoom="1.5"
           :connection-mode="ConnectionMode.Strict"
-          :connection-line-options="{ markerEnd: { type: MarkerType.ArrowClosed, color: '#f59e0b', width: 18, height: 18 } }"
+          :connection-line-options="{
+            markerEnd: { type: MarkerType.ArrowClosed, color: '#f59e0b', width: 18, height: 18 }
+          }"
           :connection-line-style="{ stroke: '#f59e0b', strokeWidth: 2.2 }"
           :nodes-connectable="false"
           :elements-selectable="true"
@@ -2053,19 +2199,47 @@ onBeforeUnmount(() => {
       </ClientOnly>
     </div>
 
-    <ElTooltip content="切换主题" placement="left" effect="light" popper-class="document-theme-tooltip" :teleported="false">
-      <button type="button" class="document-theme-toggle" :title="isDarkMode ? '切换为亮色' : '切换为暗色'" @click="toggleTheme">
+    <ElTooltip
+      content="切换主题"
+      placement="left"
+      effect="light"
+      popper-class="document-theme-tooltip"
+      :teleported="false"
+    >
+      <button
+        type="button"
+        class="document-theme-toggle"
+        :title="isDarkMode ? '切换为亮色' : '切换为暗色'"
+        @click="toggleTheme"
+      >
         <i :class="['fas', isDarkMode ? 'fa-sun' : 'fa-moon']"></i>
       </button>
     </ElTooltip>
 
     <div class="document-action-rail">
-      <ElTooltip content="刷新结果" placement="left" effect="light" popper-class="document-theme-tooltip" :teleported="false">
-        <button type="button" class="document-floating-action is-secondary" title="刷新结果" @click="loadTask()">
+      <ElTooltip
+        content="刷新结果"
+        placement="left"
+        effect="light"
+        popper-class="document-theme-tooltip"
+        :teleported="false"
+      >
+        <button
+          type="button"
+          class="document-floating-action is-secondary"
+          title="刷新结果"
+          @click="loadTask()"
+        >
           <i class="fas fa-rotate-right"></i>
         </button>
       </ElTooltip>
-      <ElTooltip content="重新聚焦" placement="left" effect="light" popper-class="document-theme-tooltip" :teleported="false">
+      <ElTooltip
+        content="重新聚焦"
+        placement="left"
+        effect="light"
+        popper-class="document-theme-tooltip"
+        :teleported="false"
+      >
         <button type="button" class="document-floating-action" title="重新聚焦" @click="fitCanvas">
           <i class="fas fa-expand"></i>
         </button>
@@ -2568,7 +2742,9 @@ onBeforeUnmount(() => {
   background-image:
     radial-gradient(circle, rgba(99, 102, 241, 0.12) 1px, transparent 1px),
     linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.04));
-  background-size: 24px 24px, 100% 100%;
+  background-size:
+    24px 24px,
+    100% 100%;
   pointer-events: none;
 }
 

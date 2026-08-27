@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import {ElMessage} from 'element-plus'
-import {getAlbumListApi} from '@/api/album'
-import {usePageSeo} from '@/composables/useSeo'
-import type {AlbumSummary} from '@/types/article'
-import {IMAGE_ERROR_PLACEHOLDER} from '@/utils/placeholders'
-import {unwrapResponseData} from '@/utils/response'
+import { ElMessage } from 'element-plus'
+import { getAlbumListApi } from '@/api/album'
+import { usePageSeo } from '@/composables/useSeo'
+import type { AlbumSummary } from '@/types/article'
+import { IMAGE_ERROR_PLACEHOLDER } from '@/utils/placeholders'
+import { unwrapResponseData } from '@/utils/response'
 
 const router = useRouter()
 const runtimeConfig = useRuntimeConfig()
@@ -30,7 +30,16 @@ const { data: albumsData } = await useAsyncData('albums-list', async () => {
   const response = await getAlbumListApi().catch(() => null)
   if (!response) {
     showError('获取相册列表失败')
-    return [] as Array<AlbumSummary & { id: number | string; name: string; description: string; cover: string; photoNum: number; isLock: number }>
+    return [] as Array<
+      AlbumSummary & {
+        id: number | string
+        name: string
+        description: string
+        cover: string
+        photoNum: number
+        isLock: number
+      }
+    >
   }
 
   return normalizeAlbums(unwrapResponseData<AlbumSummary[] | null>(response) || [])
@@ -72,7 +81,7 @@ function showError(message: string) {
     <div class="photos-grid">
       <div v-for="album in albums" :key="album.id" class="album-card" @click="openAlbum(album)">
         <div class="album-cover">
-          <img :src="album.cover" :alt="album.name" @error="handleCoverError">
+          <img :src="album.cover" :alt="album.name" @error="handleCoverError" />
           <div v-if="album.isLock === 1" class="lock-icon">
             <i class="fas fa-lock"></i>
           </div>
@@ -183,13 +192,17 @@ function showError(message: string) {
   background: var(--surface);
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
   transition: all 0.3s ease;
   cursor: pointer;
 
   &:hover {
     transform: translateY(-5px);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    box-shadow:
+      0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -2px rgba(0, 0, 0, 0.05);
 
     .album-cover img {
       transform: scale(1.05);

@@ -5,7 +5,14 @@ const runtimeConfig = useRuntimeConfig()
 const authStore = useAuthStore()
 const siteStore = useSiteStore()
 const uiStore = useUiStore()
-const siteTitle = computed(() => String(siteStore.websiteInfo.title || siteStore.websiteInfo.name || runtimeConfig.public.siteName || 'Open Source Blog'))
+const siteTitle = computed(() =>
+  String(
+    siteStore.websiteInfo.title ||
+      siteStore.websiteInfo.name ||
+      runtimeConfig.public.siteName ||
+      'Open Source Blog'
+  )
+)
 
 interface MobileMenuEntry {
   path: string
@@ -185,7 +192,13 @@ async function handleLogout() {
               <span>{{ aboutEntry.title }}</span>
             </NuxtLink>
 
-            <button v-if="authStore.isLoggedIn" key="logout" type="button" class="menu-item menu-action" @click="handleLogout">
+            <button
+              v-if="authStore.isLoggedIn"
+              key="logout"
+              type="button"
+              class="menu-item menu-action"
+              @click="handleLogout"
+            >
               <i class="fas fa-sign-out-alt"></i>
               <span>退出登录</span>
             </button>

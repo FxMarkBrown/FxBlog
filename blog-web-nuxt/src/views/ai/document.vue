@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import {ElMessage, ElMessageBox} from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   createDocumentTaskApi,
   deleteDocumentTaskApi,
   getDocumentTaskListApi,
   renameDocumentTaskApi
 } from '@/api/ai-document'
-import {uploadFileApi} from '@/api/file'
-import {useNoIndexSeo} from '@/composables/useSeo'
-import {unwrapResponseData} from '@/utils/response'
-import type {DocumentTaskListItem} from '@/types/ai-document'
+import { uploadFileApi } from '@/api/file'
+import { useNoIndexSeo } from '@/composables/useSeo'
+import { unwrapResponseData } from '@/utils/response'
+import type { DocumentTaskListItem } from '@/types/ai-document'
 
 const runtimeConfig = useRuntimeConfig()
 const router = useRouter()
@@ -27,7 +27,9 @@ useNoIndexSeo({
 })
 
 function normalizeTaskStatus(status?: string) {
-  return String(status || '').trim().toUpperCase()
+  return String(status || '')
+    .trim()
+    .toUpperCase()
 }
 
 function isTaskReady(status?: string) {
@@ -35,7 +37,9 @@ function isTaskReady(status?: string) {
 }
 
 function shouldPollTaskList() {
-  return tasks.value.some((task) => ['SUBMITTED', 'PROCESSING'].includes(normalizeTaskStatus(task.status)))
+  return tasks.value.some((task) =>
+    ['SUBMITTED', 'PROCESSING'].includes(normalizeTaskStatus(task.status))
+  )
 }
 
 function stopTaskPolling() {
@@ -155,13 +159,17 @@ async function handleRenameTask(task: DocumentTaskListItem) {
 
 async function handleDeleteTask(task: DocumentTaskListItem) {
   try {
-    await ElMessageBox.confirm(`确认删除“${task.title || task.fileName || `文档任务 #${task.taskId}`}”吗？`, '删除任务', {
-      type: 'warning',
-      confirmButtonText: '删除',
-      cancelButtonText: '取消'
-    })
+    await ElMessageBox.confirm(
+      `确认删除“${task.title || task.fileName || `文档任务 #${task.taskId}`}”吗？`,
+      '删除任务',
+      {
+        type: 'warning',
+        confirmButtonText: '删除',
+        cancelButtonText: '取消'
+      }
+    )
     await deleteDocumentTaskApi(task.taskId)
-    tasks.value = tasks.value.filter(item => item.taskId !== task.taskId)
+    tasks.value = tasks.value.filter((item) => item.taskId !== task.taskId)
     syncTaskPolling()
     ElMessage.success('任务已删除')
   } catch (error) {
@@ -246,7 +254,12 @@ onBeforeUnmount(() => {
             <span class="meta-label">任务数量</span>
             <strong class="meta-value">{{ tasks.length }}</strong>
           </div>
-          <button type="button" class="hero-create-btn" :disabled="creating" @click="triggerDocumentUpload">
+          <button
+            type="button"
+            class="hero-create-btn"
+            :disabled="creating"
+            @click="triggerDocumentUpload"
+          >
             <i :class="['fas', creating ? 'fa-spinner fa-spin' : 'fa-cloud-arrow-up']"></i>
             <span>{{ creating ? '处理中' : '上传并创建任务' }}</span>
           </button>
@@ -267,17 +280,15 @@ onBeforeUnmount(() => {
             <p>上传 PDF、Office 文档或 Markdown 后即可进入结构画布，继续浏览、追问和整理上下文。</p>
           </div>
           <div class="document-section__actions">
-            <button type="button" class="back-link as-button" @click="loadPageData">刷新列表</button>
+            <button type="button" class="back-link as-button" @click="loadPageData">
+              刷新列表
+            </button>
             <NuxtLink to="/ai" class="back-link">返回 AI</NuxtLink>
           </div>
         </div>
 
         <div v-loading="loading" class="task-list">
-          <article
-            v-for="task in tasks"
-            :key="task.taskId"
-            class="task-item"
-          >
+          <article v-for="task in tasks" :key="task.taskId" class="task-item">
             <div
               role="button"
               :tabindex="isTaskReady(task.status) ? 0 : -1"
@@ -291,7 +302,9 @@ onBeforeUnmount(() => {
                 <div class="task-item__top">
                   <div class="task-item__headline">
                     <h3>{{ task.title || `文档任务 #${task.taskId}` }}</h3>
-                    <span class="task-status" :class="statusClass(task.status)">{{ formatTaskStatus(task.status) }}</span>
+                    <span class="task-status" :class="statusClass(task.status)">{{
+                      formatTaskStatus(task.status)
+                    }}</span>
                   </div>
                   <span class="task-item__pages">{{ task.pageCount || 0 }} 页</span>
                 </div>
@@ -346,8 +359,7 @@ onBeforeUnmount(() => {
   border: 1px solid var(--border-color);
   background:
     radial-gradient(circle at top left, rgba(99, 102, 241, 0.14), transparent 28%),
-    linear-gradient(135deg, rgba(14, 165, 233, 0.08), rgba(16, 185, 129, 0.08)),
-    var(--card-bg);
+    linear-gradient(135deg, rgba(14, 165, 233, 0.08), rgba(16, 185, 129, 0.08)), var(--card-bg);
   box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
 }
 
@@ -537,7 +549,10 @@ onBeforeUnmount(() => {
   cursor: pointer;
   text-align: left;
   color: inherit;
-  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+  transition:
+    transform 0.22s ease,
+    box-shadow 0.22s ease,
+    border-color 0.22s ease;
 
   &:hover {
     transform: translateY(-3px);
@@ -652,7 +667,10 @@ onBeforeUnmount(() => {
   background: rgba(255, 255, 255, 0.72);
   color: #334155;
   cursor: pointer;
-  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease;
 
   &:hover {
     transform: translateY(-2px);
@@ -709,8 +727,7 @@ onBeforeUnmount(() => {
 :global(:root[data-theme='dark'] .task-item__surface) {
   border-color: rgba(71, 85, 105, 0.28);
   background:
-    linear-gradient(135deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.9)),
-    rgba(15, 23, 42, 0.72);
+    linear-gradient(135deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.9)), rgba(15, 23, 42, 0.72);
   box-shadow: 0 12px 26px rgba(2, 6, 23, 0.2);
 }
 

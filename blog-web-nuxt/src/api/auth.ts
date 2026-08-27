@@ -1,5 +1,5 @@
-import type {LoginUserInfo} from '@/types/auth'
-import type {ApiResponse} from '@/types/common'
+import type { LoginUserInfo } from '@/types/auth'
+import type { ApiResponse } from '@/types/common'
 
 // 登录
 export function loginApi(data: Record<string, unknown>) {
@@ -70,5 +70,7 @@ export function getCaptchaApi() {
 
 // 获取验证码开关
 export function getCaptchaSwitchApi() {
-  return useApiClient()<ApiResponse<boolean | Record<string, unknown>>>('/sys/config/getConfigByKey/slider_verify_switch')
+  return useApiClient()<ApiResponse<boolean | Record<string, unknown>>>(
+    '/sys/config/getConfigByKey/slider_verify_switch'
+  )
 }

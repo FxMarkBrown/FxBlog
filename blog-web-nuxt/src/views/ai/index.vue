@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import {defineAsyncComponent} from 'vue'
-import {ElMessage, ElMessageBox} from 'element-plus'
+import { defineAsyncComponent } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import 'md-editor-v3/lib/style.css'
 import {
   createArticleConversationApi,
@@ -14,15 +14,18 @@ import {
   renameConversationApi,
   streamConversationMessageApi
 } from '@/api/ai'
-import {useNoIndexSeo} from '@/composables/useSeo'
-import {normalizeMarkdownContent} from '@/utils/ai-markdown'
-import {removeToken} from '@/utils/cookie'
-import {getThemeMode, initTheme, setThemeMode} from '@/utils/theme'
-import {unwrapResponseData} from '@/utils/response'
+import { useNoIndexSeo } from '@/composables/useSeo'
+import { normalizeMarkdownContent } from '@/utils/ai-markdown'
+import { removeToken } from '@/utils/cookie'
+import { getThemeMode, initTheme, setThemeMode } from '@/utils/theme'
+import { unwrapResponseData } from '@/utils/response'
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- 会话/消息等后端 payload 字段动态，刻意保留宽松别名（全文件 30+ 处复用）
 type AnyRecord = Record<string, any>
 
-const MdPreview = defineAsyncComponent(() => import('md-editor-v3').then((module) => module.MdPreview))
+const MdPreview = defineAsyncComponent(() =>
+  import('md-editor-v3').then((module) => module.MdPreview)
+)
 
 const AI_MODEL_STORAGE_KEY = 'BLOG_AI_SELECTED_MODEL_ID'
 
@@ -82,26 +85,44 @@ let themeChangeHandler: (() => void) | null = null
 
 const conversationId = computed(() => Number(route.query.conversationId || 0))
 const articleId = computed(() => Number(route.query.articleId || 0))
-const isArticleMode = computed(() => route.query.mode === 'article' || currentConversation.value.type === 'article')
+const isArticleMode = computed(
+  () => route.query.mode === 'article' || currentConversation.value.type === 'article'
+)
 const heroBadge = computed(() => (isArticleMode.value ? '文章问答任务' : '一般对话任务'))
-const heroTitle = computed(() => (isArticleMode.value ? '这篇文章的一般问答任务' : '站内一般对话任务'))
+const heroTitle = computed(() =>
+  isArticleMode.value ? '这篇文章的一般问答任务' : '站内一般对话任务'
+)
 const chatTitle = computed(() => (isArticleMode.value ? '文章上下文工作区' : '通用对话工作区'))
-const chatSubtitle = computed(() => (isArticleMode.value
-  ? '当前会话已绑定文章，会优先结合文章 Markdown 上下文回答'
-  : '当前会话支持全站知识问答、工具查询与引用片段展示'))
-const currentConversationTypeLabel = computed(() => getTypeLabel(currentConversation.value.type || (isArticleMode.value ? 'article' : 'global')))
+const chatSubtitle = computed(() =>
+  isArticleMode.value
+    ? '当前会话已绑定文章，会优先结合文章 Markdown 上下文回答'
+    : '当前会话支持全站知识问答、工具查询与引用片段展示'
+)
+const currentConversationTypeLabel = computed(() =>
+  getTypeLabel(currentConversation.value.type || (isArticleMode.value ? 'article' : 'global'))
+)
 const conversationCount = computed(() => {
   if (isArticleMode.value) {
     if (articleId.value) {
-      return conversations.value.filter((item) => item.type === 'article' && Number(item.articleId) === articleId.value).length
+      return conversations.value.filter(
+        (item) => item.type === 'article' && Number(item.articleId) === articleId.value
+      ).length
     }
     return conversations.value.filter((item) => item.type === 'article').length
   }
   return conversations.value.filter((item) => item.type === 'global').length
 })
-const selectedModelOption = computed(() => chatModels.value.find((item) => item.id === selectedModelId.value) || null)
-const composerHint = computed(() => (isArticleMode.value ? '支持文章上下文、工具查询与流式回复' : '支持全站问答、工具调用与流式回复'))
-const canSend = computed(() => Boolean(conversationId.value && messageDraft.value.trim() && !sending.value && !bootstrapping.value))
+const selectedModelOption = computed(
+  () => chatModels.value.find((item) => item.id === selectedModelId.value) || null
+)
+const composerHint = computed(() =>
+  isArticleMode.value ? '支持文章上下文、工具查询与流式回复' : '支持全站问答、工具调用与流式回复'
+)
+const canSend = computed(() =>
+  Boolean(
+    conversationId.value && messageDraft.value.trim() && !sending.value && !bootstrapping.value
+  )
+)
 
 useNoIndexSeo({
   title: () => `一般对话任务 - ${runtimeConfig.public.siteName}`,
@@ -211,9 +232,10 @@ async function ensureConversation() {
     await router.replace({ path: '/ai/chat', query: buildConversationQuery(existingConversation) })
     return
   }
-  const response = isArticleMode.value && articleId.value
-    ? await createArticleConversationApi(articleId.value, buildCreateConversationPayload())
-    : await createGlobalConversationApi(buildCreateConversationPayload())
+  const response =
+    isArticleMode.value && articleId.value
+      ? await createArticleConversationApi(articleId.value, buildCreateConversationPayload())
+      : await createGlobalConversationApi(buildCreateConversationPayload())
   const conversation = unwrapResponseData<AnyRecord | null>(response)
   if (conversation) {
     await router.replace({ path: '/ai/chat', query: buildConversationQuery(conversation) })
@@ -259,7 +281,9 @@ function ensureSelectedModel() {
   }
   const nextModelId = availableIds.has(selectedModelId.value)
     ? selectedModelId.value
-    : (availableIds.has(storedModelId) ? storedModelId : defaultModel.id)
+    : availableIds.has(storedModelId)
+      ? storedModelId
+      : defaultModel.id
   selectedModelId.value = nextModelId
   persistSelectedModel(nextModelId)
 }
@@ -289,7 +313,11 @@ function pickDefaultConversation() {
     return null
   }
   if (isArticleMode.value && articleId.value) {
-    return conversations.value.find((item) => item.type === 'article' && Number(item.articleId) === articleId.value) || null
+    return (
+      conversations.value.find(
+        (item) => item.type === 'article' && Number(item.articleId) === articleId.value
+      ) || null
+    )
   }
   return conversations.value.find((item) => item.type === 'global') || null
 }
@@ -346,9 +374,14 @@ async function loadMessages() {
   }
   messageLoading.value = true
   try {
-    const response = await getConversationMessagesApi(conversationId.value, { pageNum: 1, pageSize: 50 })
+    const response = await getConversationMessagesApi(conversationId.value, {
+      pageNum: 1,
+      pageSize: 50
+    })
     const page = unwrapResponseData<AnyRecord | null>(response) || {}
-    messages.value = (Array.isArray(page.records) ? page.records : []).map((item) => normalizeMessage(item))
+    messages.value = (Array.isArray(page.records) ? page.records : []).map((item) =>
+      normalizeMessage(item)
+    )
     await nextTick()
     scrollMessagesToBottom()
   } finally {
@@ -389,7 +422,9 @@ function formatQuotaMultiplier(value: unknown) {
   if (Number.isNaN(normalized) || normalized <= 0) {
     return '1'
   }
-  return Number.isInteger(normalized) ? String(normalized) : normalized.toFixed(1).replace(/\.0$/, '')
+  return Number.isInteger(normalized)
+    ? String(normalized)
+    : normalized.toFixed(1).replace(/\.0$/, '')
 }
 
 /**
@@ -437,7 +472,10 @@ function normalizeMessage(message: AnyRecord) {
   return {
     ...message,
     content: normalizeMarkdownContent(message.content || '', true),
-    reasoningContent: normalizeMarkdownContent(message.reasoningContent || parseReasoningContent(message.quotePayload), true),
+    reasoningContent: normalizeMarkdownContent(
+      message.reasoningContent || parseReasoningContent(message.quotePayload),
+      true
+    ),
     citations: parseCitations(message.quotePayload),
     toolCalls,
     activities: buildMessageActivities(toolCalls),
@@ -544,7 +582,9 @@ function parseToolCalls(quotePayload: string, toolCalls: AnyRecord[]) {
  * 使用服务端回写内容替换本地临时消息。
  */
 function replaceMessage(tempId: string, nextMessage: AnyRecord) {
-  messages.value = messages.value.map((item) => (item.id === tempId ? normalizeMessage(nextMessage) : item))
+  messages.value = messages.value.map((item) =>
+    item.id === tempId ? normalizeMessage(nextMessage) : item
+  )
 }
 
 /**
@@ -555,11 +595,18 @@ function appendStreamDelta(tempId: string, event: AnyRecord) {
     if (item.id !== tempId) {
       return item
     }
-    const nextToolCalls = normalizeToolCalls(Array.isArray(event.toolCalls) && event.toolCalls.length ? event.toolCalls : (item.toolCalls || []))
+    const nextToolCalls = normalizeToolCalls(
+      Array.isArray(event.toolCalls) && event.toolCalls.length
+        ? event.toolCalls
+        : item.toolCalls || []
+    )
     return {
       ...item,
       content: normalizeMarkdownContent(`${item.content || ''}${event.content || ''}`, true),
-      reasoningContent: normalizeMarkdownContent(`${item.reasoningContent || ''}${event.reasoningContent || ''}`, true),
+      reasoningContent: normalizeMarkdownContent(
+        `${item.reasoningContent || ''}${event.reasoningContent || ''}`,
+        true
+      ),
       toolCalls: nextToolCalls,
       activities: buildMessageActivities(nextToolCalls)
     }
@@ -637,7 +684,12 @@ async function handleSend() {
       abortController.signal
     )
     streamAbortController.value = null
-    await Promise.all([loadMessages(), loadConversationDetail(), loadConversationList(), loadQuotaSnapshot()])
+    await Promise.all([
+      loadMessages(),
+      loadConversationDetail(),
+      loadConversationList(),
+      loadQuotaSnapshot()
+    ])
     await nextTick()
     scrollMessagesToBottom()
   } catch (error) {
@@ -796,9 +848,7 @@ function getRoleLabel(role: string) {
           <div>
             <h1 class="sidebar-title">{{ heroTitle }}</h1>
           </div>
-          <button class="primary-btn" type="button" @click="createGlobalConversation">
-            新建
-          </button>
+          <button class="primary-btn" type="button" @click="createGlobalConversation">新建</button>
         </div>
 
         <div class="sidebar-status">
@@ -830,12 +880,16 @@ function getRoleLabel(role: string) {
             </ElSelect>
             <template #fallback>
               <div class="model-select-fallback">
-                {{ selectedModelOption ? buildModelOptionLabel(selectedModelOption) : '请选择模型' }}
+                {{
+                  selectedModelOption ? buildModelOptionLabel(selectedModelOption) : '请选择模型'
+                }}
               </div>
             </template>
           </ClientOnly>
           <div v-if="selectedModelOption" class="model-tip">
-            当前倍率：x{{ formatQuotaMultiplier(selectedModelOption.quotaMultiplier) }}，会影响额度消耗
+            当前倍率：x{{
+              formatQuotaMultiplier(selectedModelOption.quotaMultiplier)
+            }}，会影响额度消耗
           </div>
           <div v-else class="empty-text">暂无可用模型，请先检查后端 provider 配置。</div>
         </div>
@@ -844,9 +898,15 @@ function getRoleLabel(role: string) {
           <div class="panel-head compact quota-head">
             <div>
               <span>额度概览</span>
-              <span class="panel-tip quota-mode">{{ quotaLoading ? '同步中...' : (quotaSnapshot.enabled ? 'Token 计费' : '已关闭限制') }}</span>
+              <span class="panel-tip quota-mode">{{
+                quotaLoading ? '同步中...' : quotaSnapshot.enabled ? 'Token 计费' : '已关闭限制'
+              }}</span>
             </div>
-            <button class="link-btn quota-toggle" type="button" @click="quotaExpanded = !quotaExpanded">
+            <button
+              class="link-btn quota-toggle"
+              type="button"
+              @click="quotaExpanded = !quotaExpanded"
+            >
               {{ quotaExpanded ? '收起' : '展开' }}
             </button>
           </div>
@@ -891,13 +951,19 @@ function getRoleLabel(role: string) {
                 </div>
               </div>
               <div class="quota-rule-tip">
-                规则：签到 +{{ formatTokenCount(quotaSnapshot.signRewardUnitTokens) }} / 发文 +{{ formatTokenCount(quotaSnapshot.articleRewardUnitTokens) }} / 点赞 +{{ formatTokenCount(quotaSnapshot.likeRewardUnitTokens) }} / 收藏 +{{ formatTokenCount(quotaSnapshot.favoriteRewardUnitTokens) }}
+                规则：签到 +{{ formatTokenCount(quotaSnapshot.signRewardUnitTokens) }} / 发文 +{{
+                  formatTokenCount(quotaSnapshot.articleRewardUnitTokens)
+                }}
+                / 点赞 +{{ formatTokenCount(quotaSnapshot.likeRewardUnitTokens) }} / 收藏 +{{
+                  formatTokenCount(quotaSnapshot.favoriteRewardUnitTokens)
+                }}
                 <template v-if="quotaSnapshot.likeDailyLimit > 0">
-                  / 今日已用 {{ quotaSnapshot.todayLikeCount || 0 }} / {{ quotaSnapshot.likeDailyLimit }} / 剩余 {{ quotaSnapshot.todayLikeRemainingCount || 0 }} / 单篇 {{ quotaSnapshot.likeDailyPerArticleLimit || 0 }}
+                  / 今日已用 {{ quotaSnapshot.todayLikeCount || 0 }} /
+                  {{ quotaSnapshot.likeDailyLimit }} / 剩余
+                  {{ quotaSnapshot.todayLikeRemainingCount || 0 }} / 单篇
+                  {{ quotaSnapshot.likeDailyPerArticleLimit || 0 }}
                 </template>
-                <template v-else>
-                  / 点赞奖励不限次
-                </template>
+                <template v-else> / 点赞奖励不限次 </template>
               </div>
             </div>
           </template>
@@ -926,7 +992,10 @@ function getRoleLabel(role: string) {
               <ElDropdown
                 trigger="click"
                 placement="bottom-end"
-                @command="(command: string | number | object) => handleConversationCommand(String(command), conversation)"
+                @command="
+                  (command: string | number | object) =>
+                    handleConversationCommand(String(command), conversation)
+                "
                 @click.stop
               >
                 <button type="button" class="history-menu-btn" @click.stop>
@@ -958,10 +1027,20 @@ function getRoleLabel(role: string) {
               <i class="fas fa-arrow-left"></i>
               <span>返回 AI</span>
             </NuxtLink>
-            <button class="theme-toggle-btn" type="button" :title="isDarkMode ? '切到亮色' : '切到暗色'" @click="toggleTheme">
+            <button
+              class="theme-toggle-btn"
+              type="button"
+              :title="isDarkMode ? '切到亮色' : '切到暗色'"
+              @click="toggleTheme"
+            >
               <i :class="['fas', isDarkMode ? 'fa-sun' : 'fa-moon']"></i>
             </button>
-            <span class="meta-chip">模型 {{ currentConversation.modelDisplayName || currentConversation.modelName || '加载中' }}</span>
+            <span class="meta-chip"
+              >模型
+              {{
+                currentConversation.modelDisplayName || currentConversation.modelName || '加载中'
+              }}</span
+            >
             <span class="meta-chip warm">当前会话</span>
           </div>
         </div>
@@ -1015,7 +1094,9 @@ function getRoleLabel(role: string) {
               >
                 <div class="citation-meta">
                   <span class="citation-article">{{ citation.articleTitle || '未命名文章' }}</span>
-                  <span v-if="citation.sectionPath" class="citation-section">{{ citation.sectionPath }}</span>
+                  <span v-if="citation.sectionPath" class="citation-section">{{
+                    citation.sectionPath
+                  }}</span>
                 </div>
                 <div v-if="citation.content" class="citation-content markdown-preview">
                   <MdPreview
@@ -1649,7 +1730,10 @@ function getRoleLabel(role: string) {
   border: 1px solid rgba(var(--border-color-rgb), 0.12);
   background: rgba(var(--border-color-rgb), 0.05);
   text-align: left;
-  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
 }
 
 .citation-card.clickable {

@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import {ElMessage} from 'element-plus'
+import { ElMessage } from 'element-plus'
 import VueDanmaku from 'vue-danmaku'
 import 'vue-danmaku/style.css'
-import {addMessageApi, getMessagesApi} from '@/api/message'
-import {usePageSeo} from '@/composables/useSeo'
-import type {MessageItem} from '@/types/article'
-import {unwrapResponseData} from '@/utils/response'
+import { addMessageApi, getMessagesApi } from '@/api/message'
+import { usePageSeo } from '@/composables/useSeo'
+import type { MessageItem } from '@/types/article'
+import { unwrapResponseData } from '@/utils/response'
 
 const authStore = useAuthStore()
 const siteStore = useSiteStore()
@@ -19,7 +19,14 @@ const timer = ref<ReturnType<typeof setInterval> | null>(null)
 const barrageList = ref<MessageItem[]>([])
 
 const currentUser = computed(() => authStore.userInfo)
-const touristAvatar = computed(() => String(siteStore.websiteInfo.touristAvatar || siteStore.websiteInfo.authorAvatar || siteStore.websiteInfo.profileAvatar || ''))
+const touristAvatar = computed(() =>
+  String(
+    siteStore.websiteInfo.touristAvatar ||
+      siteStore.websiteInfo.authorAvatar ||
+      siteStore.websiteInfo.profileAvatar ||
+      ''
+  )
+)
 
 usePageSeo({
   title: () => `留言 - ${runtimeConfig.public.siteName}`,
@@ -156,9 +163,7 @@ async function listMessage() {
             @keyup.enter="addToList"
             @focus="show = true"
           />
-          <ElButton v-show="show" class="send-btn ml-3" round @click="addToList">
-            发送
-          </ElButton>
+          <ElButton v-show="show" class="send-btn ml-3" round @click="addToList"> 发送 </ElButton>
         </div>
       </div>
 
@@ -180,7 +185,7 @@ async function listMessage() {
                   width="30"
                   height="30"
                   style="border-radius: 50%"
-                >
+                />
                 {{ danmu.nickname }}:{{ danmu.content }}
               </span>
             </template>
@@ -269,7 +274,7 @@ async function listMessage() {
   overflow: hidden;
 
   &::before {
-    content: "";
+    content: '';
     position: absolute;
     inset: 0;
     background: linear-gradient(180deg, rgba(15, 23, 42, 0.16), rgba(15, 23, 42, 0.32));

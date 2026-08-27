@@ -1,28 +1,30 @@
-$primary: #409eff;
-$secondary: #a855f7;
+// Poetize 风格设计令牌（见 Blog2/docs/redesign/design-tokens.md）
+$primary: #39c5bb;
+$accent: #ffa500;
+$secondary: #03a9f4;
 
 // 浅色模式
-$text-primary: #1f2937;
-$text-secondary: #666;
-$background: linear-gradient(125deg, #e0f2ff 0%, #f0f5ff 20%, #f5f0ff 40%, #fff0f7 60%, #fff5f5 80%, #fff8f0 100%);
+$text-primary: #1f1f1f;
+$text-secondary: #797979;
+$background: #f7f9fe;
 $surface: #ffffff;
 $loading-bg: rgba(255, 255, 255, 0.95);
 // 深色模式
 $dark: (
-  text-primary: #e2e8f0,
-  text-secondary: #94a3b8,
-  background: linear-gradient(90deg, rgba(47, 49, 51, 0.9), rgba(43, 42, 85, 0.9) 15%, rgba(39, 38, 123, 0.9) 30%, rgba(31, 32, 71, 0.9) 44%, rgba(30, 35, 84, 0.9) 58%, rgba(16, 52, 73, 0.9) 72%, rgba(7, 49, 55, 0.9) 86%, rgba(29, 46, 30, 0.9)),
-  surface: #000c,
-  loading-bg: rgba(18, 17, 17, 0.55),
-  border: rgba(255, 255, 255, 0.1),
-  card-bg: #1a1e24,
-  hover-bg: rgba(255, 255, 255, 0.05),
-  input-bg: rgba(255, 255, 255, 0.05)
+  text-primary: #e8e8e8,
+  text-secondary: #8a8a8a,
+  background: #1e1e1e,
+  surface: #272727,
+  loading-bg: rgba(30, 30, 30, 0.9),
+  border: #4f4f4f,
+  card-bg: #272727,
+  hover-bg: rgba(255, 255, 255, 0.06),
+  input-bg: rgba(255, 255, 255, 0.06)
 );
 
-$border-color: rgba(15, 23, 42, 0.08);
-$card-bg: rgba(255, 255, 255, 0.9);
-$hover-bg: rgba(64, 158, 255, 0.08);
+$border-color: #eeeeee;
+$card-bg: #ffffff;
+$hover-bg: rgba(57, 197, 187, 0.08);
 
 $breakpoint-sm: 640px;
 $breakpoint-md: 768px;
@@ -36,13 +38,15 @@ $spacing-md: $spacing-base * 4;
 $spacing-lg: $spacing-base * 6;
 $spacing-xl: $spacing-base * 8;
 
-$border-radius-sm: 4px;
-$border-radius-md: 8px;
+$border-radius-sm: 6px;
+$border-radius-md: 10px;
 $border-radius-lg: 10px;
+$border-radius-pill: 999px;
 
-$shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-$shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-$shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+// Poetize 卡片浮起阴影
+$shadow-sm: 1px 1px 3px rgba(0, 0, 0, 0.3);
+$shadow-md: 0 1px 20px -6px rgba(0, 0, 0, 0.5);
+$shadow-lg: 0 5px 10px 5px rgba(110, 110, 110, 0.4);
 $page-width: 1400px;
 
 @mixin image-fallback {

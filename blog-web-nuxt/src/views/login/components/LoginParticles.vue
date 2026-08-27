@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {Mesh, Program, Renderer, Triangle} from 'ogl'
+import { Mesh, Program, Renderer, Triangle } from 'ogl'
 
 const hostRef = ref<HTMLElement | null>(null)
 let renderer: Renderer | null = null
@@ -177,7 +177,9 @@ function resizeScene() {
   const width = Math.max(hostRef.value.clientWidth, 1)
   const height = Math.max(hostRef.value.clientHeight, 1)
   const isMobile = window.innerWidth < 768
-  const deviceMemory = Number((navigator as Navigator & { deviceMemory?: number }).deviceMemory || 8)
+  const deviceMemory = Number(
+    (navigator as Navigator & { deviceMemory?: number }).deviceMemory || 8
+  )
   const renderScale = isMobile ? 0.42 : deviceMemory <= 4 ? 0.5 : 0.58
   const internalWidth = Math.max(Math.round(width * renderScale), 1)
   const internalHeight = Math.max(Math.round(height * renderScale), 1)

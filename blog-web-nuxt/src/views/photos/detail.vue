@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import {ElMessage} from 'element-plus'
-import {getAlbumDetailApi, getAlbumPhotosApi, verifyAlbumPasswordApi} from '@/api/album'
+import { ElMessage } from 'element-plus'
+import { getAlbumDetailApi, getAlbumPhotosApi, verifyAlbumPasswordApi } from '@/api/album'
 import ImagePreview from '@/components/Common/ImagePreview.vue'
-import {usePageSeo} from '@/composables/useSeo'
-import type {AlbumPhoto, AlbumSummary} from '@/types/article'
-import {IMAGE_ERROR_PLACEHOLDER} from '@/utils/placeholders'
-import {unwrapResponseData} from '@/utils/response'
+import { usePageSeo } from '@/composables/useSeo'
+import type { AlbumPhoto, AlbumSummary } from '@/types/article'
+import { IMAGE_ERROR_PLACEHOLDER } from '@/utils/placeholders'
+import { unwrapResponseData } from '@/utils/response'
 import AlbumPasswordDialog from '@/views/photos/components/password.vue'
 
 type AlbumDetailState = AlbumSummary & {
@@ -225,26 +225,23 @@ async function handlePasswordCancel() {
   await router.push('/photos')
 }
 
-watch(
-  albumId,
-  async (nextId, prevId) => {
-    if (!nextId || nextId === prevId) {
-      return
-    }
-
-    Object.assign(album, {
-      id: nextId,
-      name: '',
-      description: '',
-      createTime: '',
-      isLock: 0
-    })
-    photos.value = []
-    images.value = []
-    isAuthenticated.value = false
-    shouldPromptPassword.value = false
+watch(albumId, async (nextId, prevId) => {
+  if (!nextId || nextId === prevId) {
+    return
   }
-)
+
+  Object.assign(album, {
+    id: nextId,
+    name: '',
+    description: '',
+    createTime: '',
+    isLock: 0
+  })
+  photos.value = []
+  images.value = []
+  isAuthenticated.value = false
+  shouldPromptPassword.value = false
+})
 </script>
 
 <template>
@@ -291,7 +288,7 @@ watch(
         <div v-if="photos.length > 0" class="photo-grid">
           <div v-for="(photo, index) in photos" :key="photo.url" class="photo-item">
             <a href="javascript:;" class="photo-card" @click="previewImage(index)">
-              <img :src="photo.url" :alt="photo.description" @error="handlePhotoError">
+              <img :src="photo.url" :alt="photo.description" @error="handlePhotoError" />
               <div class="photo-overlay">
                 <div class="photo-info">
                   <h3 class="photo-description">{{ photo.description }}</h3>
@@ -350,11 +347,7 @@ watch(
     .gradient-overlay {
       position: absolute;
       inset: 0;
-      background: linear-gradient(
-        135deg,
-        rgba(30, 41, 59, 0.95) 0%,
-        rgba(30, 41, 59, 0.8) 100%
-      );
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(30, 41, 59, 0.8) 100%);
     }
 
     .pattern-overlay {
@@ -367,7 +360,11 @@ watch(
         linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.1) 75%),
         linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.1) 75%);
       background-size: 20px 20px;
-      background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+      background-position:
+        0 0,
+        0 10px,
+        10px -10px,
+        -10px 0;
       animation: patternMove 20s linear infinite;
     }
   }
@@ -650,10 +647,18 @@ watch(
 
 @keyframes patternMove {
   from {
-    background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+    background-position:
+      0 0,
+      0 10px,
+      10px -10px,
+      -10px 0;
   }
   to {
-    background-position: 40px 0, 40px 10px, 50px -10px, 30px 0;
+    background-position:
+      40px 0,
+      40px 10px,
+      50px -10px,
+      30px 0;
   }
 }
 
