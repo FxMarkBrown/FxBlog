@@ -154,14 +154,12 @@ function previewImage(images: string[], index: number) {
         </div>
       </div>
       <div class="pagination-box">
-        <ElPagination
+        <NPagination
           v-if="moments.length"
-          background
-          :current-page="params.pageNum"
+          :page="params.pageNum"
           :page-size="params.pageSize"
-          layout="prev, pager, next"
-          :total="total"
-          @current-change="handlePageChange"
+          :item-count="total"
+          @update:page="handlePageChange"
         />
       </div>
     </div>
@@ -181,10 +179,11 @@ function previewImage(images: string[], index: number) {
 }
 
 .moment-item {
-  border-radius: $border-radius-sm * 3;
+  border-radius: $border-radius-md;
   padding: $spacing-lg;
   margin-bottom: $spacing-sm;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  background: var(--card-bg);
+  box-shadow: var(--shadow-card);
   display: flex;
   gap: 16px;
 
@@ -256,12 +255,11 @@ function previewImage(images: string[], index: number) {
 }
 
 .moment-content-wrapper {
-  background: var(--card-bg);
-  padding: 16px;
-  border-radius: 0 $border-radius-lg * 2 $border-radius-lg * 2 $border-radius-lg * 2;
+  background: transparent;
+  padding: 16px 16px 16px 0;
 
   @media screen and (max-width: 768px) {
-    border-radius: $border-radius-lg;
+    padding: 0;
   }
 
   .moment-content {
@@ -325,6 +323,41 @@ function previewImage(images: string[], index: number) {
 }
 
 .pagination-box {
+  display: flex;
+  justify-content: center;
   margin-top: $spacing-lg;
+
+  :deep(.n-pagination-item) {
+    color: var(--text-secondary);
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    transition: all 0.3s ease;
+
+    &:hover {
+      color: $primary;
+      border-color: $primary;
+    }
+
+    &.n-pagination-item--active {
+      background: $primary;
+      color: #fff;
+      border-color: $primary;
+      font-weight: bold;
+
+      &:hover {
+        color: #fff;
+      }
+    }
+
+    &.n-pagination-item--disabled {
+      cursor: not-allowed;
+
+      &:hover {
+        color: var(--text-secondary);
+        border-color: var(--border-color);
+      }
+    }
+  }
 }
 </style>

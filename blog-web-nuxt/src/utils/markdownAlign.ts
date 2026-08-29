@@ -1,65 +1,21 @@
-interface MarkdownAlignToken {
-  block: boolean
-  map?: [number, number]
-  content: string
-  meta?: Record<string, unknown>
-  attrSet: (name: string, value: string) => void
-}
-
-interface MarkdownAlignState {
-  bMarks: number[]
-  tShift: number[]
-  eMarks: number[]
-  src: string
-  line: number
-  push: (type: string, tag: string, nesting: number) => MarkdownAlignToken
-  getLines: (begin: number, end: number, indent: number, keepLastLF: boolean) => string
-}
-
-type MarkdownAlignRenderRule = (
-  tokens: MarkdownAlignToken[],
-  idx: number,
-  options: unknown,
-  env: unknown,
-  self: { renderToken: (tokens: MarkdownAlignToken[], idx: number, options: unknown) => string }
-) => string
-
-interface MarkdownAlignRenderer {
-  rules: Record<string, MarkdownAlignRenderRule | undefined>
-}
-
-interface MarkdownAlignRuler {
-  before: (
-    beforeName: string,
-    ruleName: string,
-    fn: (state: MarkdownAlignState, startLine: number, endLine: number, silent: boolean) => boolean,
-    options?: { alt?: string[] }
-  ) => void
-}
-
-interface MarkdownAlignIt {
-  render: (content: string) => string
-  block: {
-    ruler: MarkdownAlignRuler
-  }
-  renderer: MarkdownAlignRenderer
-}
+import type MarkdownIt from 'markdown-it'
+import type StateBlock from 'markdown-it/lib/rules_block/state_block.mjs'
 
 const ALIGN_BLOCK_OPEN_PATTERN = /^:::\s*align-(left|right|center)\s*$/
 const ALIGN_BLOCK_CLOSE_PATTERN = /^:::\s*$/
 
-function renderAlignBody(md: MarkdownAlignIt, content: string) {
+function renderAlignBody(md: MarkdownIt, content: string) {
   return `<div class="blog-align-scroll"><div class="blog-align-scroll-content">${md.render(content)}</div></div>`
 }
 
 /**
  * 为 Markdown 渲染器补充 `::: align-*` 容器语法。
  */
-export function installMarkdownAlignPlugin(md: MarkdownAlignIt) {
+export function installMarkdownAlignPlugin(md: MarkdownIt) {
   md.block.ruler.before(
     'fence',
     'blog-align',
-    (state: MarkdownAlignState, startLine: number, endLine: number, silent: boolean) => {
+    (state: StateBlock, startLine: number, endLine: number, silent: boolean) => {
       const start = (state.bMarks[startLine] ?? 0) + (state.tShift[startLine] ?? 0)
       const max = state.eMarks[startLine] ?? start
       const firstLine = state.src.slice(start, max).trim()

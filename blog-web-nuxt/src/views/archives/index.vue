@@ -131,7 +131,7 @@ onMounted(() => {
   <div class="archives-page">
     <div class="content-layout">
       <main class="main-content">
-        <ElCard v-loading="loading" class="content-card">
+        <div v-loading="loading" class="content-card poetize-card">
           <div class="timeline">
             <div v-for="item in archives" :key="item.year" class="year-group">
               <div class="year-header" @click="toggleYear(item.year)">
@@ -165,7 +165,7 @@ onMounted(() => {
               </Transition>
             </div>
           </div>
-        </ElCard>
+        </div>
       </main>
       <Sidebar />
     </div>
@@ -204,6 +204,13 @@ onMounted(() => {
   height: 100%;
 }
 
+.poetize-card {
+  background: var(--card-bg);
+  border-radius: 10px;
+  box-shadow: var(--shadow-card);
+  padding: 20px;
+}
+
 .timeline {
   position: relative;
   padding-left: $spacing-xl * 2;
@@ -216,7 +223,7 @@ onMounted(() => {
     top: 0;
     bottom: 0;
     width: 2px;
-    background: linear-gradient(to bottom, $primary, $secondary);
+    background: linear-gradient(to bottom, var(--accent-color), transparent);
     animation: grow 1s ease-out forwards;
   }
 }
@@ -245,7 +252,7 @@ onMounted(() => {
     top: 50%;
     width: $spacing-lg;
     height: 2px;
-    background: $primary;
+    background: var(--accent-color);
     animation: slideRight 0.5s ease-out forwards;
   }
 
@@ -270,7 +277,7 @@ onMounted(() => {
 
   &:hover {
     .toggle-icon i {
-      color: $primary;
+      color: var(--accent-color);
     }
   }
 }
@@ -280,17 +287,19 @@ onMounted(() => {
   align-items: center;
   gap: $spacing-xl;
   padding: $spacing-md;
-  border-radius: $border-radius-md;
+  background: var(--card-bg);
+  border-radius: 10px;
+  box-shadow: var(--shadow-card);
   cursor: pointer;
   transition: all 0.3s ease;
 
   &:hover {
-    background: var(--hover-bg);
+    box-shadow: var(--shadow-card-hover);
     transform: translateX(10px);
 
     .post-date {
-      border-color: $primary;
-      background: rgba($primary, 0.1);
+      border-color: var(--accent-color);
+      background: rgba($accent, 0.1);
     }
   }
 
@@ -330,7 +339,7 @@ onMounted(() => {
       text-overflow: ellipsis;
 
       &:hover {
-        color: $primary;
+        color: var(--accent-color);
       }
     }
   }
@@ -397,6 +406,9 @@ onMounted(() => {
 .posts-list {
   overflow: hidden;
   transition: height 0.3s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
 }
 
 .expand-enter-active,

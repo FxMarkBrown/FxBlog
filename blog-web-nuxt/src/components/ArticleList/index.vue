@@ -29,85 +29,89 @@ function handleImageError(event: Event) {
 }
 
 /**
- * 计算阅读时长
- * @param article 文章
- * @returns 阅读时长
+ * 提取文章标签名列表
+ * @param post 文章
+ * @returns 标签名数组
  */
-function getReadTime(article: ArticleSummary) {
-  const content = String(article.summary || article.introduction || article.title || '')
-  const readableLength = content.replace(/\s+/g, '').length
-  return Math.max(1, Math.ceil(readableLength / 180))
+function getTagNames(post: ArticleSummary): string[] {
+  const raw = post.tags ?? post.labels
+  if (!Array.isArray(raw)) {
+    return []
+  }
+  return raw
+    .map((tag) => String((tag as { name?: unknown })?.name ?? tag ?? ''))
+    .filter((name) => name.length > 0)
 }
 </script>
 
 <template>
   <div v-loading="props.loading" class="article-list-component">
     <TransitionGroup name="post-list" tag="div" class="posts-list">
-      <article v-for="post in props.articles" :key="post.id" class="post-item">
+      <article
+        v-for="post in props.articles"
+        :key="post.id"
+        class="post-item"
+        :class="{ 'no-cover': !post.cover }"
+      >
+        <div v-if="post.cover" class="post-cover" @click="emit('articleClick', post.id)">
+          <img :src="post.cover" :alt="post.title" @error="handleImageError" />
+        </div>
+
         <div class="post-content">
-          <div class="post-main">
-            <div class="post-text">
-              <h3>
-                <span v-if="post.isStick" class="stick-tag">
-                  <i class="fas fa-thumbtack"></i>
-                  置顶
-                </span>
-                <span class="post-title underline" @click="emit('articleClick', post.id)">{{
-                  post.title
-                }}</span>
-              </h3>
-              <p class="post-excerpt">{{ post.summary }}</p>
-            </div>
-            <div class="post-image" @click="emit('articleClick', post.id)">
-              <img
-                :src="post.cover || IMAGE_ERROR_PLACEHOLDER"
-                :alt="post.title"
-                @error="handleImageError"
-              />
-              <div class="image-placeholder">
-                <i class="fas fa-image"></i>
-              </div>
-            </div>
+          <div class="post-top">
+            <NAvatar v-if="post.avatar" :size="24" round :src="post.avatar" />
+            <span v-if="post.nickname" class="post-author">{{ post.nickname }}</span>
+            <span class="post-date">{{ formatTime(post.createTime) }}</span>
           </div>
 
-          <div class="post-footer">
-            <div class="footer-left">
-              <div class="author-info">
-                <ElAvatar :size="24" :src="post.avatar" />
-                <span class="author-name">{{ post.nickname }}</span>
-              </div>
-              <div class="post-date">
-                <i class="far fa-calendar"></i>
-                {{ formatTime(post.createTime) }}
-              </div>
-              <div class="post-view">
-                <i class="far fa-eye"></i>
-                {{ post.quantity || 0 }}
-              </div>
-            </div>
-            <div class="footer-right">
-              <span class="category-tag">{{ post.categoryName }}</span>
-              <span class="read-time">
-                <i class="far fa-clock"></i>
-                {{ getReadTime(post) }}分钟阅读
-              </span>
-            </div>
+          <h3 class="post-title" @click="emit('articleClick', post.id)">
+            <span v-if="post.isStick" class="stick-tag">
+              <i class="fas fa-thumbtack"></i>
+              置顶
+            </span>
+            {{ post.title }}
+          </h3>
+
+          <div class="post-meta">
+            <span class="meta-item meta-view">
+              <i class="fas fa-fire"></i>
+              {{ post.quantity || 0 }}
+            </span>
+            <span class="meta-item meta-comment">
+              <i class="far fa-comment-dots"></i>
+              {{ post.commentNum || 0 }}
+            </span>
+            <span class="meta-item meta-like">
+              <i class="far fa-heart"></i>
+              {{ post.likeNum || 0 }}
+            </span>
+          </div>
+
+          <p class="post-excerpt">{{ post.summary }}</p>
+
+          <div class="post-tags">
+            <span v-if="post.categoryName" class="tag-pill">
+              <i class="fas fa-folder-open"></i>
+              {{ post.categoryName }}
+            </span>
+            <span v-for="tagName in getTagNames(post)" :key="tagName" class="tag-pill">
+              <i class="fas fa-tag"></i>
+              {{ tagName }}
+            </span>
           </div>
         </div>
       </article>
     </TransitionGroup>
 
-    <ElEmpty v-if="!props.loading && props.articles.length === 0" description="暂无文章" />
+    <NEmpty v-if="!props.loading && props.articles.length === 0" description="暂无文章" />
 
     <div class="pagination-box">
-      <ElPagination
+      <NPagination
         v-if="props.articles.length"
-        background
-        :current-page="props.params.pageNum"
+        :page="props.params.pageNum"
         :page-size="props.params.pageSize"
-        layout="prev, pager, next"
-        :total="props.total || 0"
-        @current-change="emit('pageChange', $event)"
+        :item-count="props.total || 0"
+        @update:page="emit('pageChange', $event)"
       />
     </div>
   </div>
@@ -120,34 +124,89 @@ function getReadTime(article: ArticleSummary) {
 .posts-list {
   display: flex;
   flex-direction: column;
-  gap: $spacing-md;
+  gap: $spacing-lg;
 }
 
+// Poetize 横向大卡：封面与内容各占一半，奇偶左右交替
 .post-item {
-  @include card;
+  display: flex;
+  height: 280px;
   background: var(--card-bg);
-  padding: $spacing-lg;
+  border-radius: $border-radius-md;
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
   transition: all 0.3s ease;
 
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  &:nth-child(even) {
+    flex-direction: row-reverse;
+  }
+
+  &.no-cover {
+    .post-content {
+      flex: 1 1 100%;
+    }
   }
 }
 
-.post-main {
-  display: grid;
-  grid-template-columns: 1fr 200px;
-  gap: $spacing-lg;
-  margin-bottom: $spacing-md;
+.post-cover {
+  flex: 0 0 50%;
+  overflow: hidden;
+  cursor: pointer;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: all 1s ease;
+  }
+
+  &:hover img {
+    transform: scale(1.2);
+  }
 }
 
-.post-text h3 {
-  font-size: 1.2em;
-  margin-bottom: $spacing-md;
+.post-content {
+  flex: 1 1 50%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: $spacing-lg;
+}
+
+.post-top {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  color: var(--text-secondary);
+  font-size: 0.9em;
+}
+
+.post-author {
+  font-weight: 500;
+}
+
+.post-date {
+  margin-left: auto;
+}
+
+.post-title {
+  margin: $spacing-sm 0;
+  font-size: 1.25em;
   line-height: 1.4;
   color: var(--text-primary);
   cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+
+  &:hover {
+    color: var(--accent-color);
+  }
 }
 
 .stick-tag {
@@ -160,114 +219,73 @@ function getReadTime(article: ArticleSummary) {
   padding: 3px 8px;
   border-radius: 4px;
   margin-right: $spacing-sm;
+  vertical-align: middle;
 
   i {
     transform: rotate(45deg);
   }
 }
 
-.post-title {
-  cursor: pointer;
+.post-meta {
+  display: flex;
+  align-items: center;
+  gap: $spacing-lg;
+  margin-bottom: $spacing-sm;
+  color: var(--text-secondary);
+  font-size: 0.9em;
+}
 
-  &:hover {
-    color: $primary;
-  }
+.meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.meta-view i {
+  color: $accent;
+}
+
+.meta-comment i {
+  color: $secondary;
+}
+
+.meta-like i {
+  color: #ff4d6d;
 }
 
 .post-excerpt {
+  flex: 1;
   color: var(--text-secondary);
   line-height: 1.6;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
-  line-clamp: 3;
+  line-clamp: 4;
   overflow: hidden;
 }
 
-.post-image {
-  position: relative;
-  height: 140px;
-  border-radius: 8px;
-  overflow: hidden;
-  cursor: pointer;
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.3s ease;
-  }
-
-  &:hover img {
-    transform: scale(1.05);
-  }
-}
-
-.post-footer {
+.post-tags {
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+  margin-top: $spacing-md;
+}
+
+.tag-pill {
+  display: inline-flex;
   align-items: center;
-  padding-top: $spacing-md;
-  border-top: 1px solid var(--border-color);
+  gap: $spacing-base;
+  padding: 4px 12px;
+  background: var(--hover-bg);
+  border-radius: 999px;
+  font-size: 0.85em;
   color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.3s ease;
 
-  .fa-calendar {
-    color: $primary;
-  }
-
-  .fa-eye {
-    color: #67c23a;
-  }
-
-  .fa-clock {
-    color: #2fa9e1;
-  }
-}
-
-.footer-left {
-  display: flex;
-  align-items: center;
-  gap: $spacing-lg;
-
-  .author-info {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-
-    .author-name {
-      font-weight: 500;
-      color: $primary;
-    }
-  }
-
-  .post-date {
-    color: var(--text-secondary);
-    font-size: 0.9em;
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-  }
-}
-
-.footer-right {
-  display: flex;
-  align-items: center;
-  gap: $spacing-lg;
-
-  .category-tag {
-    padding: 4px 12px;
-    background: var(--hover-bg);
-    border-radius: 20px;
-    font-size: 0.9em;
-    color: var(--text-secondary);
-  }
-
-  .read-time {
-    color: var(--text-secondary);
-    font-size: 0.9em;
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
+  &:hover {
+    background: var(--accent-color);
+    color: #fff;
   }
 }
 
@@ -275,33 +293,54 @@ function getReadTime(article: ArticleSummary) {
   display: flex;
   justify-content: center;
   margin-top: $spacing-lg;
-}
 
-@include responsive(md) {
-  .post-main {
-    grid-template-columns: 1fr;
+  // 复刻原 el-pagination.is-background 观感：圆角页码、激活主色
+  :deep(.n-pagination-item) {
+    color: var(--text-secondary);
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    transition: all 0.3s ease;
 
-    .post-image {
-      height: 200px;
-      order: -1;
+    &:hover {
+      color: $primary;
+      border-color: $primary;
+    }
+
+    &.n-pagination-item--active {
+      background: $primary;
+      color: #fff;
+      border-color: $primary;
+      font-weight: bold;
+
+      &:hover {
+        color: #fff;
+      }
+    }
+
+    &.n-pagination-item--disabled {
+      cursor: not-allowed;
+
+      &:hover {
+        color: var(--text-secondary);
+        border-color: var(--border-color);
+      }
     }
   }
 }
 
-@include responsive(sm) {
-  .post-item {
-    padding: $spacing-sm;
-  }
-
-  .post-footer {
+// ≤700px：封面移到顶部，变纵向卡
+@media (max-width: 700px) {
+  .post-item,
+  .post-item:nth-child(even) {
     flex-direction: column;
-    gap: $spacing-md;
+    height: auto;
+  }
 
-    .footer-left,
-    .footer-right {
-      width: 100%;
-      justify-content: space-between;
-    }
+  .post-cover {
+    flex: 0 0 auto;
+    width: 100%;
+    height: 180px;
   }
 }
 

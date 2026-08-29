@@ -18,6 +18,8 @@ const option = {
   maxFont: 24
 }
 
+const tagColors = ['#39c5bb', '#ffa500', '#03a9f4', '#e73c7e', '#23d5ab', '#ee7752']
+
 const tagList = ref<Array<{ x: number; y: number; z: number; ele: HTMLElement }>>([])
 
 onMounted(async () => {
@@ -66,7 +68,7 @@ function initTags() {
       continue
     }
 
-    element.style.color = `rgb(${Math.round(255 * Math.random())},${Math.round(255 * Math.random())},${Math.round(255 * Math.random())})`
+    element.style.color = tagColors[index % tagColors.length] ?? ''
     const tag = { x, y, z, ele: element }
     tagList.value.push(tag)
     setPosition(tag)

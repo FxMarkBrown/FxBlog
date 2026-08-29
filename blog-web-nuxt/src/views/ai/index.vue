@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { defineAsyncComponent } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import type { DropdownOption } from 'naive-ui'
 import 'md-editor-v3/lib/style.css'
 import {
   createArticleConversationApi,
@@ -17,6 +17,7 @@ import {
 import { useNoIndexSeo } from '@/composables/useSeo'
 import { normalizeMarkdownContent } from '@/utils/ai-markdown'
 import { removeToken } from '@/utils/cookie'
+import { dialog, message, promptInput } from '@/utils/feedback'
 import { getThemeMode, initTheme, setThemeMode } from '@/utils/theme'
 import { unwrapResponseData } from '@/utils/response'
 
@@ -115,6 +116,17 @@ const conversationCount = computed(() => {
 const selectedModelOption = computed(
   () => chatModels.value.find((item) => item.id === selectedModelId.value) || null
 )
+const modelSelectOptions = computed(() =>
+  chatModels.value.map((model) => ({
+    label: buildModelOptionLabel(model),
+    value: model.id
+  }))
+)
+const conversationMenuOptions: DropdownOption[] = [
+  { label: '重命名', key: 'rename' },
+  { type: 'divider', key: 'divider-1' },
+  { label: '删除', key: 'delete' }
+]
 const composerHint = computed(() =>
   isArticleMode.value ? '支持文章上下文、工具查询与流式回复' : '支持全站问答、工具调用与流式回复'
 )
@@ -170,18 +182,18 @@ onBeforeUnmount(() => {
 /**
  * 统一弹出错误提示，避免服务端阶段误触发消息组件。
  */
-function showError(message: string) {
+function showError(text: string) {
   if (import.meta.client) {
-    ElMessage.error(message)
+    message.error(text)
   }
 }
 
 /**
  * 统一弹出成功提示，避免重复编写客户端判断。
  */
-function showSuccess(message: string) {
+function showSuccess(text: string) {
   if (import.meta.client) {
-    ElMessage.success(message)
+    message.success(text)
   }
 }
 
@@ -291,11 +303,12 @@ function ensureSelectedModel() {
 /**
  * 把当前模型选择写入本地缓存，供后续新建会话复用。
  */
-function persistSelectedModel(modelId = selectedModelId.value) {
-  if (!import.meta.client || !modelId) {
+function persistSelectedModel(modelId: unknown = selectedModelId.value) {
+  const normalizedModelId = String(modelId || '')
+  if (!import.meta.client || !normalizedModelId) {
     return
   }
-  window.localStorage.setItem(AI_MODEL_STORAGE_KEY, modelId)
+  window.localStorage.setItem(AI_MODEL_STORAGE_KEY, normalizedModelId)
 }
 
 /**
@@ -729,15 +742,16 @@ async function handleConversationCommand(command: string, conversation: AnyRecor
  */
 async function renameConversation(conversation: AnyRecord) {
   try {
-    const result = await ElMessageBox.prompt('请输入新的会话标题', '重命名会话', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      inputValue: conversation.title,
-      inputPlaceholder: '例如：深入聊聊 RAG 设计',
-      inputPattern: /\S+/,
-      inputErrorMessage: '会话标题不能为空'
+    const value = await promptInput({
+      title: '重命名会话',
+      content: '请输入新的会话标题',
+      positiveText: '确定',
+      negativeText: '取消',
+      defaultValue: conversation.title,
+      placeholder: '例如：深入聊聊 RAG 设计',
+      validator: (v) => (/\S+/.test(v) ? undefined : '会话标题不能为空')
     })
-    const title = result.value.trim()
+    const title = value.trim()
     await renameConversationApi(conversation.id, title)
     if (conversation.id === conversationId.value) {
       currentConversation.value = {
@@ -751,7 +765,7 @@ async function renameConversation(conversation: AnyRecord) {
     }
     showSuccess('会话已重命名')
   } catch (error) {
-    if (error === 'cancel' || error === 'close') {
+    if (error instanceof Error && error.message === 'cancel') {
       return
     }
     showError((error as Error)?.message || '重命名失败')
@@ -763,10 +777,16 @@ async function renameConversation(conversation: AnyRecord) {
  */
 async function deleteConversation(conversation: AnyRecord) {
   try {
-    await ElMessageBox.confirm(`确认删除会话《${conversation.title}》吗？`, '删除会话', {
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-      type: 'warning'
+    await new Promise<void>((resolve, reject) => {
+      dialog.warning({
+        title: '删除会话',
+        content: `确认删除会话《${conversation.title}》吗？`,
+        positiveText: '删除',
+        negativeText: '取消',
+        onPositiveClick: () => resolve(),
+        onNegativeClick: () => reject(new Error('cancel')),
+        onClose: () => reject(new Error('cancel'))
+      })
     })
     await deleteConversationApi(conversation.id)
     showSuccess('会话已删除')
@@ -784,7 +804,7 @@ async function deleteConversation(conversation: AnyRecord) {
     }
     await router.replace({ path: '/ai/chat' })
   } catch (error) {
-    if (error === 'cancel' || error === 'close') {
+    if (error instanceof Error && error.message === 'cancel') {
       return
     }
     showError((error as Error)?.message || '删除失败')
@@ -863,21 +883,14 @@ function getRoleLabel(role: string) {
             <span class="panel-tip">仅对新建会话生效</span>
           </div>
           <ClientOnly>
-            <ElSelect
-              v-model="selectedModelId"
+            <NSelect
+              v-model:value="selectedModelId"
               class="model-select"
-              popper-class="ai-model-select-dropdown"
+              :options="modelSelectOptions"
               placeholder="请选择模型"
               :disabled="modelOptionsLoading || !chatModels.length"
-              @change="persistSelectedModel"
-            >
-              <ElOption
-                v-for="model in chatModels"
-                :key="model.id"
-                :label="buildModelOptionLabel(model)"
-                :value="model.id"
-              />
-            </ElSelect>
+              @update:value="persistSelectedModel"
+            />
             <template #fallback>
               <div class="model-select-fallback">
                 {{
@@ -989,25 +1002,18 @@ function getRoleLabel(role: string) {
                 </span>
                 <span class="history-summary">{{ conversation.summary || '暂无摘要' }}</span>
               </button>
-              <ElDropdown
+              <NDropdown
                 trigger="click"
                 placement="bottom-end"
-                @command="
-                  (command: string | number | object) =>
-                    handleConversationCommand(String(command), conversation)
+                :options="conversationMenuOptions"
+                @select="
+                  (key: string | number) => handleConversationCommand(String(key), conversation)
                 "
-                @click.stop
               >
                 <button type="button" class="history-menu-btn" @click.stop>
                   <i class="fas fa-ellipsis-h"></i>
                 </button>
-                <template #dropdown>
-                  <ElDropdownMenu>
-                    <ElDropdownItem command="rename">重命名</ElDropdownItem>
-                    <ElDropdownItem command="delete" divided>删除</ElDropdownItem>
-                  </ElDropdownMenu>
-                </template>
-              </ElDropdown>
+              </NDropdown>
             </div>
             <div v-if="!conversationListLoading && !conversations.length" class="empty-text">
               还没有会话，先创建一个吧。
@@ -1047,35 +1053,38 @@ function getRoleLabel(role: string) {
 
         <div ref="messageListRef" v-loading="messageLoading || bootstrapping" class="message-list">
           <div
-            v-for="message in messages"
-            :key="message.id"
+            v-for="chatMessage in messages"
+            :key="chatMessage.id"
             class="message-item"
-            :class="[message.role, { pending: message.pending }]"
+            :class="[chatMessage.role, { pending: chatMessage.pending }]"
           >
-            <div class="message-role">{{ getRoleLabel(message.role) }}</div>
-            <details v-if="message.reasoningContent" class="message-reasoning">
+            <div class="message-role">{{ getRoleLabel(chatMessage.role) }}</div>
+            <details v-if="chatMessage.reasoningContent" class="message-reasoning">
               <summary>思考过程</summary>
               <div class="reasoning-content markdown-preview reasoning-preview">
                 <MdPreview
-                  :model-value="message.reasoningContent"
+                  :model-value="chatMessage.reasoningContent"
                   :theme="isDarkMode ? 'dark' : 'light'"
                   preview-theme="github"
                   code-theme="github"
                 />
               </div>
             </details>
-            <div v-if="message.content" class="message-content markdown-preview">
+            <div v-if="chatMessage.content" class="message-content markdown-preview">
               <MdPreview
-                :model-value="message.content"
+                :model-value="chatMessage.content"
                 :theme="isDarkMode ? 'dark' : 'light'"
                 preview-theme="github"
                 code-theme="github"
               />
             </div>
-            <div v-if="message.activities && message.activities.length" class="message-activities">
+            <div
+              v-if="chatMessage.activities && chatMessage.activities.length"
+              class="message-activities"
+            >
               <div
-                v-for="activity in message.activities"
-                :key="`${message.id}-activity-${activity.key}`"
+                v-for="activity in chatMessage.activities"
+                :key="`${chatMessage.id}-activity-${activity.key}`"
                 class="message-activity"
                 :class="[activity.kind, activity.status]"
               >
@@ -1083,11 +1092,14 @@ function getRoleLabel(role: string) {
                 <span class="message-activity-label">{{ activity.label }}</span>
               </div>
             </div>
-            <div v-if="message.citations && message.citations.length" class="message-citations">
+            <div
+              v-if="chatMessage.citations && chatMessage.citations.length"
+              class="message-citations"
+            >
               <div class="citation-title">引用片段</div>
               <div
-                v-for="(citation, citationIndex) in message.citations"
-                :key="`${message.id}-citation-${citationIndex}`"
+                v-for="(citation, citationIndex) in chatMessage.citations"
+                :key="`${chatMessage.id}-citation-${citationIndex}`"
                 class="citation-card"
                 :class="{ clickable: !!citation.articleId }"
                 @click="openCitation(citation)"
@@ -1109,7 +1121,7 @@ function getRoleLabel(role: string) {
                 <div v-if="citation.articleId" class="citation-action">查看原文</div>
               </div>
             </div>
-            <div v-if="message.pending" class="message-pending">生成中...</div>
+            <div v-if="chatMessage.pending" class="message-pending">生成中...</div>
           </div>
           <div v-if="!messageLoading && !messages.length" class="empty-text chat-empty">
             暂无消息，发一条试试。
@@ -1273,32 +1285,6 @@ function getRoleLabel(role: string) {
   color: var(--text-primary);
   font-size: 14px;
   line-height: 20px;
-}
-
-.model-select :deep(.el-input__wrapper),
-.model-select :deep(.el-select__wrapper),
-.model-select :deep(.el-input__inner) {
-  background: rgba(var(--border-color-rgb), 0.06) !important;
-  color: var(--text-primary) !important;
-}
-
-.model-select :deep(.el-input__wrapper),
-.model-select :deep(.el-select__wrapper) {
-  border-radius: 16px !important;
-  box-shadow: 0 0 0 1px rgba(var(--border-color-rgb), 0.16) inset !important;
-}
-
-.model-select :deep(.el-select__selection),
-.model-select :deep(.el-select__selected-item),
-.model-select :deep(.el-select__placeholder) {
-  border-radius: 16px !important;
-}
-
-.model-select :deep(.el-select__placeholder),
-.model-select :deep(.el-select__selected-item),
-.model-select :deep(.el-select__caret),
-.model-select :deep(.el-input__icon) {
-  color: var(--text-primary) !important;
 }
 
 .model-tip {
@@ -1880,85 +1866,10 @@ function getRoleLabel(role: string) {
   color: #fde68a;
 }
 
-:global(:root[data-theme='dark'] .model-select .el-input__wrapper),
-:global(:root[data-theme='dark'] .model-select .el-select__wrapper),
-:global(:root[data-theme='dark'] .model-select .el-input__inner) {
-  background: rgba(15, 23, 42, 0.92) !important;
-  color: #e2e8f0 !important;
-}
-
 :global(:root[data-theme='dark'] .model-select-fallback) {
   background: rgba(15, 23, 42, 0.92) !important;
   box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.22) inset !important;
   color: #e2e8f0 !important;
-}
-
-:global(:root[data-theme='dark'] .model-select .el-input__wrapper),
-:global(:root[data-theme='dark'] .model-select .el-select__wrapper) {
-  border-radius: 16px !important;
-  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.22) inset !important;
-}
-
-:global(:root[data-theme='dark'] .model-select .el-select__placeholder),
-:global(:root[data-theme='dark'] .model-select .el-select__selected-item),
-:global(:root[data-theme='dark'] .model-select .el-select__caret),
-:global(:root[data-theme='dark'] .model-select .el-input__icon) {
-  color: #e2e8f0 !important;
-}
-
-:global(.ai-model-select-dropdown.el-popper) {
-  border-radius: 16px !important;
-  overflow: hidden !important;
-}
-
-:global(.ai-model-select-dropdown .el-select-dropdown__wrap),
-:global(.ai-model-select-dropdown .el-scrollbar),
-:global(.ai-model-select-dropdown .el-scrollbar__view),
-:global(.ai-model-select-dropdown .el-select-dropdown__list) {
-  background: transparent !important;
-}
-
-:global(.ai-model-select-dropdown .el-select-dropdown__list) {
-  padding: 6px !important;
-}
-
-:global(.ai-model-select-dropdown .el-select-dropdown__item) {
-  margin: 0 !important;
-  border-radius: 12px !important;
-}
-
-:global(:root[data-theme='dark'] .ai-model-select-dropdown) {
-  background: #0f172a !important;
-  border-color: rgba(148, 163, 184, 0.22) !important;
-  box-shadow: 0 18px 44px rgba(2, 6, 23, 0.36) !important;
-}
-
-:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-popper__arrow::before) {
-  background: #0f172a !important;
-  border-color: rgba(148, 163, 184, 0.22) !important;
-}
-
-:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__wrap),
-:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-scrollbar),
-:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-scrollbar__view),
-:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__list) {
-  background: #0f172a !important;
-}
-
-:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__item) {
-  background: transparent !important;
-  color: #e2e8f0 !important;
-}
-
-:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__item.hover),
-:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__item:hover) {
-  background: rgba(56, 189, 248, 0.14) !important;
-  color: #f8fafc !important;
-}
-
-:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__item.selected) {
-  background: rgba(56, 189, 248, 0.12) !important;
-  color: #67e8f9 !important;
 }
 
 @media (max-width: 1100px) {

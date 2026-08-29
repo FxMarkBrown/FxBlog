@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
+import { message } from '@/utils/feedback'
 import { addCommentApi, getCommentsApi } from '@/api/article'
 import EmojiPicker from '@/components/Common/EmojiPicker.vue'
 import { getBrowserInfo } from '@/utils/browser'
@@ -74,7 +74,7 @@ async function fetchComments() {
   } catch {
     comments.value = []
     total.value = 0
-    ElMessage.error('获取评论失败')
+    message.error('获取评论失败')
   }
 }
 
@@ -248,14 +248,14 @@ async function submitComment() {
   }
 
   if (!authStore.userInfo) {
-    ElMessage.error('请先登录')
+    message.error('请先登录')
     return
   }
 
   try {
     await addCommentApi(buildCommentPayload({ content: commentContent.value }))
     await fetchComments()
-    ElMessage.success('评论成功')
+    message.success('评论成功')
     emit('commentAdded')
     commentContent.value = ''
     clearEditor('comment')
@@ -264,7 +264,7 @@ async function submitComment() {
     await nextTick()
     document.querySelector('.comment-item')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   } catch (error) {
-    ElMessage.error((error as Error)?.message || '评论失败')
+    message.error((error as Error)?.message || '评论失败')
   }
 }
 
@@ -277,7 +277,7 @@ async function submitReply(comment: ArticleComment) {
   }
 
   if (!authStore.userInfo) {
-    ElMessage.error('请先登录')
+    message.error('请先登录')
     return
   }
 
@@ -290,14 +290,14 @@ async function submitReply(comment: ArticleComment) {
       })
     )
     await fetchComments()
-    ElMessage.success('回复成功')
+    message.success('回复成功')
     emit('commentAdded')
     replyContent.value = ''
     clearEditor('reply')
     replyingTo.value = null
     startCooldown()
   } catch (error) {
-    ElMessage.error((error as Error)?.message || '回复失败')
+    message.error((error as Error)?.message || '回复失败')
   }
 }
 
@@ -310,7 +310,7 @@ async function submitChildReply(reply: ArticleComment) {
   }
 
   if (!authStore.userInfo) {
-    ElMessage.error('请先登录')
+    message.error('请先登录')
     return
   }
 
@@ -323,14 +323,14 @@ async function submitChildReply(reply: ArticleComment) {
       })
     )
     await fetchComments()
-    ElMessage.success('回复成功')
+    message.success('回复成功')
     emit('commentAdded')
     replyContent.value = ''
     clearEditor('childReply')
     cancelReply()
     startCooldown()
   } catch (error) {
-    ElMessage.error((error as Error)?.message || '回复失败，请重试')
+    message.error((error as Error)?.message || '回复失败，请重试')
   }
 }
 
@@ -349,7 +349,7 @@ function replyTo(comment: ArticleComment) {
  */
 function handleReplyChild(reply: ArticleComment) {
   if (!authStore.userInfo) {
-    ElMessage.error('请先登录')
+    message.error('请先登录')
     return
   }
 
@@ -616,14 +616,12 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="pagination-box">
-          <ElPagination
+          <NPagination
             v-if="total"
-            background
-            :current-page="params.pageNum"
+            :page="params.pageNum"
             :page-size="params.pageSize"
-            layout="prev, pager, next"
-            :total="total"
-            @current-change="handlePageChange"
+            :item-count="total"
+            @update:page="handlePageChange"
           />
         </div>
       </template>
@@ -800,10 +798,14 @@ onBeforeUnmount(() => {
   display: flex;
   gap: $spacing-lg;
   padding: $spacing-md;
-  border-bottom: 1px dashed var(--border-color);
+  background: var(--card-bg);
+  border-radius: $border-radius-md;
+  box-shadow: var(--shadow-card);
+  margin-bottom: $spacing-md;
+  transition: all 0.3s ease;
 
   &:last-child {
-    border-bottom: none;
+    margin-bottom: 0;
   }
 }
 
@@ -876,6 +878,11 @@ onBeforeUnmount(() => {
 
 .reply-to .target {
   color: $primary;
+  transition: color 0.3s ease;
+
+  &:hover {
+    color: var(--accent-color);
+  }
 }
 
 .comment-actions {
@@ -955,6 +962,40 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: center;
   padding-top: $spacing-lg;
+
+  // 复刻原 el-pagination.is-background 观感：圆角页码、激活主色
+  :deep(.n-pagination-item) {
+    color: var(--text-secondary);
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    transition: all 0.3s ease;
+
+    &:hover {
+      color: var(--primary-color);
+      border-color: var(--primary-color);
+    }
+
+    &.n-pagination-item--active {
+      background: var(--primary-color);
+      color: #fff;
+      border-color: var(--primary-color);
+      font-weight: bold;
+
+      &:hover {
+        color: #fff;
+      }
+    }
+
+    &.n-pagination-item--disabled {
+      cursor: not-allowed;
+
+      &:hover {
+        color: var(--text-secondary);
+        border-color: var(--border-color);
+      }
+    }
+  }
 }
 
 .empty-state {

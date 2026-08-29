@@ -83,10 +83,15 @@ function startRotation() {
 
 .moments-list {
   background: var(--card-bg);
-  border-radius: $border-radius-lg;
+  border-radius: 10px;
   padding: $spacing-md $spacing-lg;
   margin-bottom: $spacing-xl;
-  box-shadow: $shadow-sm;
+  box-shadow: var(--shadow-card);
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: var(--shadow-card-hover);
+  }
 }
 
 .moments-row {

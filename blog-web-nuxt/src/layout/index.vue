@@ -1,12 +1,24 @@
 <script setup lang="ts">
+import { darkTheme } from 'naive-ui'
 import Announcement from '@/components/Announcement/index.vue'
 import BlogFooter from '@/layout/Footer/index.vue'
 import BlogHeader from '@/layout/Header/index.vue'
+import { naiveThemeOverrides } from '@/utils/naive-theme'
 
 const route = useRoute()
 const authStore = useAuthStore()
 const siteStore = useSiteStore()
 const shouldPrefetchOnServer = import.meta.server && !import.meta.dev
+
+// 与 utils/theme.ts 的 data-theme 切换联动，驱动 naive 明暗主题
+const isDarkTheme = ref(false)
+const onThemeChange = (event: Event) => {
+  isDarkTheme.value = (event as CustomEvent<{ mode: string }>).detail?.mode === 'dark'
+}
+
+if (import.meta.client) {
+  isDarkTheme.value = document.documentElement.hasAttribute('data-theme')
+}
 
 if (shouldPrefetchOnServer) {
   await siteStore.fetchWebsiteInfo().catch(() => null)
@@ -32,6 +44,9 @@ watch(
 )
 
 onMounted(() => {
+  isDarkTheme.value = document.documentElement.hasAttribute('data-theme')
+  window.addEventListener('theme-change', onThemeChange)
+
   if (!shouldPrefetchOnServer) {
     void siteStore.fetchWebsiteInfo().catch(() => null)
   }
@@ -49,21 +64,27 @@ onMounted(() => {
 
   void siteStore.reportVisit().catch(() => null)
 })
+
+onBeforeUnmount(() => {
+  window.removeEventListener('theme-change', onThemeChange)
+})
 </script>
 
 <template>
-  <div class="app-shell">
-    <BlogHeader />
-    <main class="app-content">
-      <Announcement />
-      <Transition name="page" mode="out-in">
-        <div :key="routeViewKey" class="page-shell">
-          <slot />
-        </div>
-      </Transition>
-    </main>
-    <BlogFooter />
-  </div>
+  <n-config-provider :theme="isDarkTheme ? darkTheme : null" :theme-overrides="naiveThemeOverrides">
+    <div class="app-shell">
+      <BlogHeader />
+      <main class="app-content">
+        <Announcement />
+        <Transition name="page" mode="out-in">
+          <div :key="routeViewKey" class="page-shell">
+            <slot />
+          </div>
+        </Transition>
+      </main>
+      <BlogFooter />
+    </div>
+  </n-config-provider>
 </template>
 
 <style scoped lang="scss">

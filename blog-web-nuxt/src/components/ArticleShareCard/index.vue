@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
+import { message } from '@/utils/feedback'
 import QRCode from 'qrcode'
 import type { ArticleDetail } from '@/types/article'
 
@@ -43,13 +43,6 @@ async function handleOpen() {
 }
 
 /**
- * 处理弹窗关闭事件。
- */
-function handleClose() {
-  emit('update:modelValue', false)
-}
-
-/**
  * 重新生成分享卡片。
  */
 async function generateCard() {
@@ -57,7 +50,7 @@ async function generateCard() {
   try {
     cardImage.value = await renderCardToDataUrl()
   } catch {
-    ElMessage.error('卡片生成失败，请稍后重试')
+    message.error('卡片生成失败，请稍后重试')
   } finally {
     generating.value = false
   }
@@ -383,8 +376,9 @@ function drawMultilineText(
   }
 
   const finalLines = lines.slice(0, maxLines)
-  if (lines.length > maxLines) {
-    finalLines[maxLines - 1] = `${finalLines[maxLines - 1].replace(/[，。；：、\s]*$/, '')}...`
+  const lastFinalLine = finalLines[maxLines - 1]
+  if (lines.length > maxLines && lastFinalLine) {
+    finalLines[maxLines - 1] = `${lastFinalLine.replace(/[，。；：、\s]*$/, '')}...`
   }
 
   finalLines.forEach((line, index) => {
@@ -446,9 +440,9 @@ async function copyLink() {
 
   try {
     await navigator.clipboard.writeText(props.url || window.location.href)
-    ElMessage.success('链接已复制到剪贴板')
+    message.success('链接已复制到剪贴板')
   } catch {
-    ElMessage.error('复制失败，请手动复制')
+    message.error('复制失败，请手动复制')
   }
 }
 
@@ -474,7 +468,7 @@ async function downloadCard() {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-    ElMessage.success('卡片已开始下载')
+    message.success('卡片已开始下载')
   } finally {
     downloading.value = false
   }
@@ -510,26 +504,16 @@ watch(
 </script>
 
 <template>
-  <ElDialog
-    :model-value="modelValue"
+  <NModal
+    :show="modelValue"
+    preset="card"
+    title="卡片分享"
+    style="width: 600px"
     class="share-card-dialog"
-    width="min(92vw, 720px)"
-    append-to-body
-    destroy-on-close
-    @open="handleOpen"
-    @close="handleClose"
-    @update:model-value="emit('update:modelValue', $event)"
+    @update:show="emit('update:modelValue', $event)"
   >
-    <template #header>
-      <div class="dialog-header">
-        <div>
-          <h3>卡片分享</h3>
-          <p>生成适合转发的文章卡片</p>
-        </div>
-      </div>
-    </template>
-
     <div v-loading="generating" class="share-card-body">
+      <p class="dialog-subtitle">生成适合转发的文章卡片</p>
       <div class="share-card-stage">
         <span class="stage-orb stage-orb-left"></span>
         <span class="stage-orb stage-orb-right"></span>
@@ -553,34 +537,28 @@ watch(
 
     <template #footer>
       <div class="dialog-footer">
-        <ElButton @click="copyLink">复制链接</ElButton>
-        <ElButton type="primary" :loading="downloading" @click="downloadCard"> 下载卡片 </ElButton>
+        <NButton @click="copyLink">复制链接</NButton>
+        <NButton type="primary" :loading="downloading" @click="downloadCard"> 下载卡片 </NButton>
       </div>
     </template>
-  </ElDialog>
+  </NModal>
 </template>
 
 <style scoped lang="scss">
 @use '@/styles/variables.scss' as *;
 @use '@/styles/mixins.scss' as *;
 
-.dialog-header {
-  h3 {
-    margin: 0;
-    font-size: 1.35rem;
-    color: var(--text-primary);
-  }
-
-  p {
-    margin: 6px 0 0;
-    color: var(--text-secondary);
-    font-size: 0.95rem;
-  }
+.dialog-subtitle {
+  margin: 0 0 6px;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  text-align: center;
 }
 
 .share-card-body {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
 }
 
 .share-card-stage {
@@ -745,19 +723,6 @@ watch(
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-}
-
-:deep(.share-card-dialog .el-dialog) {
-  border-radius: 28px;
-  overflow: hidden;
-  max-height: calc(100vh - 32px);
-  display: flex;
-  flex-direction: column;
-}
-
-:deep(.share-card-dialog .el-dialog__body) {
-  padding-top: 8px;
-  overflow: auto;
 }
 
 @media (max-width: 768px) {

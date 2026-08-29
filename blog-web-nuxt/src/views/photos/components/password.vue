@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { FormInstance, FormRules } from 'element-plus'
+import type { FormInst, FormRules } from 'naive-ui'
 
 const emit = defineEmits<{
   submit: [password: string, done: () => void]
@@ -8,12 +8,12 @@ const emit = defineEmits<{
 
 const visible = ref(false)
 const loading = ref(false)
-const formRef = ref<FormInstance>()
+const formRef = ref<FormInst | null>(null)
 const form = reactive({
   password: ''
 })
 
-const rules: FormRules<typeof form> = {
+const rules: FormRules = {
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }
 
@@ -22,7 +22,7 @@ function show() {
   loading.value = false
   form.password = ''
   nextTick(() => {
-    formRef.value?.clearValidate()
+    formRef.value?.restoreValidation()
   })
 }
 
@@ -42,8 +42,9 @@ async function handleSubmit(event?: Event) {
     return
   }
 
-  const valid = await formRef.value.validate().catch(() => false)
-  if (!valid) {
+  try {
+    await formRef.value.validate()
+  } catch {
     return
   }
 
@@ -61,34 +62,41 @@ defineExpose({
 </script>
 
 <template>
-  <ElDialog
-    v-model="visible"
+  <NModal
+    v-model:show="visible"
+    preset="card"
     title="相册密码验证"
-    width="400px"
-    :close-on-click-modal="false"
-    :close-on-press-escape="false"
-    :show-close="false"
+    style="width: 400px; border-radius: 10px"
+    :mask-closable="false"
+    :close-on-esc="false"
+    :closable="false"
   >
     <div class="password-dialog">
       <div class="dialog-icon">
         <i class="fas fa-lock"></i>
       </div>
       <p class="dialog-tip">这是一个加密相册，请输入密码访问</p>
-      <ElForm ref="formRef" :model="form" :rules="rules" @submit.prevent="handleSubmit">
-        <ElFormItem prop="password">
-          <ElInput v-model="form.password" type="password" placeholder="请输入相册密码">
+      <NForm ref="formRef" :model="form" :rules="rules" @submit.prevent="handleSubmit">
+        <NFormItem path="password" :show-label="false">
+          <NInput
+            v-model:value="form.password"
+            type="password"
+            show-password-on="click"
+            placeholder="请输入相册密码"
+            @keyup.enter="handleSubmit"
+          >
             <template #prefix>
               <i class="fas fa-key"></i>
             </template>
-          </ElInput>
-        </ElFormItem>
-      </ElForm>
+          </NInput>
+        </NFormItem>
+      </NForm>
       <div class="dialog-footer">
-        <ElButton @click="handleCancel">返回</ElButton>
-        <ElButton type="primary" :loading="loading" @click="handleSubmit"> 确认 </ElButton>
+        <NButton @click="handleCancel">返回</NButton>
+        <NButton type="primary" :loading="loading" @click="handleSubmit"> 确认 </NButton>
       </div>
     </div>
-  </ElDialog>
+  </NModal>
 </template>
 
 <style lang="scss" scoped>
@@ -110,10 +118,6 @@ defineExpose({
     color: var(--text-secondary);
     margin-bottom: 25px;
     font-size: 14px;
-  }
-
-  .el-input {
-    width: 100%;
   }
 
   .dialog-footer {

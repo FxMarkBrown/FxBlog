@@ -31,7 +31,7 @@ type CanvasNodeData = {
   contextSummary?: string
   usedNodes?: Array<{ nodeId: string; title?: string; relation?: string }>
   candidateNodes?: Array<{ nodeId: string; title?: string; relation?: string }>
-  citations?: Array<{ nodeId: string; title?: string; relation?: string }>
+  citations?: Array<{ nodeId: string; title?: string; relation?: string; displayLabel?: string }>
   selectedContextNodes?: Array<{ nodeId: string; title?: string; relation?: string }>
   showContextSocket?: boolean
   acceptContextDrop?: boolean
@@ -67,6 +67,12 @@ const selectedContextSet = computed(
 const showContextSocket = computed(() => isChat.value && Boolean(props.data.showContextSocket))
 const selectedModelOption = computed(
   () => (props.data.modelOptions || []).find((item) => item.id === props.data.modelId) || null
+)
+const modelSelectOptions = computed(() =>
+  (props.data.modelOptions || []).map((model) => ({
+    label: buildModelOptionLabel(model),
+    value: model.id
+  }))
 )
 const messageListRef = ref<HTMLElement | null>(null)
 
@@ -142,11 +148,12 @@ function handleQueryModeChange(mode: 'strict' | 'balanced' | 'explore') {
   props.data.onQueryModeChange(props.data.nodeId, mode)
 }
 
-function handleModelSelectChange(modelId: string) {
-  if (!props.data.nodeId || !props.data.onModelChange || !modelId) {
+function handleModelSelectChange(modelId: string | number | null) {
+  const normalizedModelId = String(modelId || '')
+  if (!props.data.nodeId || !props.data.onModelChange || !normalizedModelId) {
     return
   }
-  props.data.onModelChange(props.data.nodeId, modelId)
+  props.data.onModelChange(props.data.nodeId, normalizedModelId)
 }
 
 function handleToggleSelectedContextNode(targetNodeId?: string) {
@@ -428,20 +435,13 @@ watch(
             <div class="node-query-toolbar">
               <div v-if="data.modelOptions?.length" class="node-model-picker">
                 <ClientOnly>
-                  <ElSelect
-                    :model-value="data.modelId || ''"
+                  <NSelect
+                    :value="data.modelId || ''"
                     class="node-model-select"
-                    popper-class="ai-model-select-dropdown"
+                    :options="modelSelectOptions"
                     placeholder="请选择模型"
-                    @change="handleModelSelectChange"
-                  >
-                    <ElOption
-                      v-for="model in data.modelOptions"
-                      :key="model.id"
-                      :label="buildModelOptionLabel(model)"
-                      :value="model.id"
-                    />
-                  </ElSelect>
+                    @update:value="handleModelSelectChange"
+                  />
                   <template #fallback>
                     <div class="node-model-select-fallback">
                       {{ buildModelOptionLabel(selectedModelOption) }}
@@ -703,8 +703,8 @@ watch(
 }
 
 .is-citation:not(.is-active-node):not(.is-current) .node-card {
-  border-color: rgba(168, 85, 247, 0.44);
-  box-shadow: 0 16px 30px rgba(168, 85, 247, 0.1);
+  border-color: rgba($secondary, 0.44);
+  box-shadow: 0 16px 30px rgba($secondary, 0.1);
 }
 
 .is-selected-context:not(.is-active-node):not(.is-current) .node-card {
@@ -1016,33 +1016,6 @@ watch(
   color: #0f172a;
   font-size: 14px;
   line-height: 20px;
-}
-
-.node-model-select :deep(.el-input__wrapper),
-.node-model-select :deep(.el-select__wrapper),
-.node-model-select :deep(.el-input__inner) {
-  background: rgba(148, 163, 184, 0.06) !important;
-  color: #0f172a !important;
-}
-
-.node-model-select :deep(.el-input__wrapper),
-.node-model-select :deep(.el-select__wrapper) {
-  min-height: 38px;
-  border-radius: 16px !important;
-  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.16) inset !important;
-}
-
-.node-model-select :deep(.el-select__selection),
-.node-model-select :deep(.el-select__selected-item),
-.node-model-select :deep(.el-select__placeholder) {
-  border-radius: 16px !important;
-}
-
-.node-model-select :deep(.el-select__placeholder),
-.node-model-select :deep(.el-select__selected-item),
-.node-model-select :deep(.el-select__caret),
-.node-model-select :deep(.el-input__icon) {
-  color: #0f172a !important;
 }
 
 .node-query-modes {
@@ -1510,80 +1483,6 @@ watch(
   background: rgba(15, 23, 42, 0.92);
   box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.22) inset;
   color: #e2e8f0;
-}
-
-.document-canvas-node.is-dark .node-model-select :deep(.el-input__wrapper),
-.document-canvas-node.is-dark .node-model-select :deep(.el-select__wrapper),
-.document-canvas-node.is-dark .node-model-select :deep(.el-input__inner) {
-  background: rgba(15, 23, 42, 0.92) !important;
-  color: #e2e8f0 !important;
-}
-
-.document-canvas-node.is-dark .node-model-select :deep(.el-input__wrapper),
-.document-canvas-node.is-dark .node-model-select :deep(.el-select__wrapper) {
-  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.22) inset !important;
-}
-
-.document-canvas-node.is-dark .node-model-select :deep(.el-select__placeholder),
-.document-canvas-node.is-dark .node-model-select :deep(.el-select__selected-item),
-.document-canvas-node.is-dark .node-model-select :deep(.el-select__caret),
-.document-canvas-node.is-dark .node-model-select :deep(.el-input__icon) {
-  color: #e2e8f0 !important;
-}
-
-:global(.ai-model-select-dropdown.el-popper) {
-  border-radius: 16px !important;
-  overflow: hidden !important;
-}
-
-:global(.ai-model-select-dropdown .el-select-dropdown__wrap),
-:global(.ai-model-select-dropdown .el-scrollbar),
-:global(.ai-model-select-dropdown .el-scrollbar__view),
-:global(.ai-model-select-dropdown .el-select-dropdown__list) {
-  background: transparent !important;
-}
-
-:global(.ai-model-select-dropdown .el-select-dropdown__list) {
-  padding: 6px !important;
-}
-
-:global(.ai-model-select-dropdown .el-select-dropdown__item) {
-  margin: 0 !important;
-  border-radius: 12px !important;
-}
-
-:global(:root[data-theme='dark'] .ai-model-select-dropdown) {
-  background: #0f172a !important;
-  border-color: rgba(148, 163, 184, 0.22) !important;
-  box-shadow: 0 18px 44px rgba(2, 6, 23, 0.36) !important;
-}
-
-:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-popper__arrow::before) {
-  background: #0f172a !important;
-  border-color: rgba(148, 163, 184, 0.22) !important;
-}
-
-:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__wrap),
-:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-scrollbar),
-:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-scrollbar__view),
-:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__list) {
-  background: #0f172a !important;
-}
-
-:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__item) {
-  background: transparent !important;
-  color: #e2e8f0 !important;
-}
-
-:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__item.hover),
-:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__item:hover) {
-  background: rgba(56, 189, 248, 0.14) !important;
-  color: #f8fafc !important;
-}
-
-:global(:root[data-theme='dark'] .ai-model-select-dropdown .el-select-dropdown__item.selected) {
-  background: rgba(56, 189, 248, 0.12) !important;
-  color: #67e8f9 !important;
 }
 
 .document-canvas-node.is-dark .source-link {

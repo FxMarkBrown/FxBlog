@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
-import { getAllCategoriesApi, getArticlesApi, getCarouselArticlesApi } from '@/api/article'
+import { getAllCategoriesApi, getArticlesApi } from '@/api/article'
 import ArticleList from '@/components/ArticleList/index.vue'
+import Hero from '@/components/Hero/index.vue'
 import Sidebar from '@/components/Sidebar/index.vue'
 import { usePageSeo } from '@/composables/useSeo'
 import type { ArticleCategoryGroup, ArticleSummary } from '@/types/article'
 import type { PageResult } from '@/types/common'
+import { message } from '@/utils/feedback'
 import { unwrapResponseData } from '@/utils/response'
-import Carousel from '@/views/home/components/carousel.vue'
 import MomentsList from '@/views/home/components/moments.vue'
 
 const router = useRouter()
@@ -24,7 +24,6 @@ const params = reactive({
   categoryId: null as number | null
 })
 const articleList = ref<ArticleSummary[]>([])
-const carouselSlides = ref<ArticleSummary[]>([])
 const activeName = ref('all')
 type CategoryTab = {
   id: string | number
@@ -50,7 +49,6 @@ usePageSeo({
 async function bootstrapHome() {
   await getArticleList()
   setTimeout(() => {
-    void getCarouselArticles()
     void getAllCategories()
     momentsReady.value = true
     sidebarReady.value = true
@@ -126,19 +124,11 @@ async function getArticleList() {
     total.value = Number(page?.total || 0)
   } catch (error) {
     if (import.meta.client) {
-      ElMessage.error((error as Error)?.message || '获取文章列表失败')
+      message.error((error as Error)?.message || '获取文章列表失败')
     }
   } finally {
     loading.value = false
   }
-}
-
-/**
- * 获取轮播文章
- */
-async function getCarouselArticles() {
-  const response = await getCarouselArticlesApi().catch(() => null)
-  carouselSlides.value = unwrapResponseData<ArticleSummary[] | null>(response) || []
 }
 
 /**
@@ -172,42 +162,41 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="home">
-    <div class="content-layout">
-      <main class="home-main-content">
-        <Carousel
-          v-if="carouselSlides.length > 0"
-          :slides="carouselSlides"
-          @article-click="goToPost"
-        />
-        <MomentsList v-if="momentsReady" />
+  <div class="home-page">
+    <!-- Hero 放在 .home 容器外，避免 .home 的 padding 在大图四周留下白边 -->
+    <Hero />
+    <div class="home">
+      <div class="content-layout">
+        <main class="home-main-content">
+          <MomentsList v-if="momentsReady" />
 
-        <div ref="postsSection">
-          <ElTabs v-model="activeName" @tab-change="handleClick">
-            <ElTabPane
-              v-for="category in categories"
-              :key="category.id"
-              :name="String(category.id)"
-            >
-              <template #label>
-                <span class="label-info">
-                  <i :class="category.icon"></i>
-                  {{ category.name }}
-                </span>
-              </template>
-              <ArticleList
-                :articles="articleList"
-                :loading="loading"
-                :total="total"
-                :params="params"
-                @article-click="goToPost"
-                @page-change="changePage"
-              />
-            </ElTabPane>
-          </ElTabs>
-        </div>
-      </main>
-      <Sidebar v-if="sidebarReady" />
+          <div ref="postsSection" class="posts-section">
+            <div class="category-bar">
+              <button
+                v-for="category in categories"
+                :key="category.id"
+                type="button"
+                class="category-pill"
+                :class="{ active: activeName === String(category.id) }"
+                @click="handleClick(category.id)"
+              >
+                <i :class="category.icon"></i>
+                {{ category.name }}
+              </button>
+            </div>
+
+            <ArticleList
+              :articles="articleList"
+              :loading="loading"
+              :total="total"
+              :params="params"
+              @article-click="goToPost"
+              @page-change="changePage"
+            />
+          </div>
+        </main>
+        <Sidebar v-if="sidebarReady" />
+      </div>
     </div>
   </div>
 </template>
@@ -246,39 +235,43 @@ onMounted(() => {
   min-width: 0;
   width: 100%;
   height: 100%;
-
-  .carousel {
-    margin-bottom: $spacing-xl;
-    width: 100%;
-    max-height: 480px;
-
-    @include responsive(md) {
-      margin-bottom: $spacing-xl;
-      max-height: 280px;
-
-      :deep(h3) {
-        font-size: 1.2em;
-      }
-    }
-  }
 }
 
-:deep(.el-tabs__nav-scroll) {
-  overflow-x: auto !important;
+.category-bar {
+  display: flex;
+  gap: 10px;
+  padding: $spacing-base 2px;
+  margin-bottom: $spacing-lg;
+  overflow-x: auto;
+  scrollbar-width: none;
 
   &::-webkit-scrollbar {
     display: none;
   }
 }
 
-:deep(.el-tabs__nav-wrap::after) {
-  display: none;
-}
-
-.label-info {
-  display: flex;
+.category-pill {
+  display: inline-flex;
   align-items: center;
-  gap: $spacing-base;
-  color: var(--text-primary);
+  gap: $spacing-sm;
+  padding: 8px 18px;
+  border: none;
+  border-radius: 999px;
+  background: var(--hover-bg);
+  color: var(--text-secondary);
+  font-size: 0.95em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    color: var(--accent-color);
+  }
+
+  &.active,
+  &.active:hover {
+    background: var(--primary-color);
+    color: #fff;
+  }
 }
 </style>

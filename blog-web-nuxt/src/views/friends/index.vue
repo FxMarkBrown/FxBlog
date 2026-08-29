@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import type { FormInstance, FormRules } from 'element-plus'
-import { ElMessage } from 'element-plus'
+import type { FormInst, FormRules } from 'naive-ui'
 import { applyFriendApi, getFriendsApi } from '@/api/friends'
 import { usePageSeo } from '@/composables/useSeo'
 import type { FriendApplyPayload, FriendItem } from '@/types/article'
+import { message } from '@/utils/feedback'
 import { IMAGE_ERROR_PLACEHOLDER } from '@/utils/placeholders'
 import { unwrapResponseData } from '@/utils/response'
 
 const runtimeConfig = useRuntimeConfig()
 const siteStore = useSiteStore()
-const formRef = ref<FormInstance>()
+const formRef = ref<FormInst>()
 const showApplyForm = ref(false)
 
 const form = reactive<FriendApplyPayload>({
@@ -20,7 +20,7 @@ const form = reactive<FriendApplyPayload>({
   email: ''
 })
 
-const rules: FormRules<typeof form> = {
+const rules: FormRules = {
   name: [{ required: true, message: '请输入网站名称', trigger: 'blur' }],
   url: [
     { required: true, message: '请输入网站链接', trigger: 'blur' },
@@ -78,18 +78,18 @@ function resetForm() {
 /**
  * 统一弹出错误提示。
  */
-function showError(message: string) {
+function showError(text: string) {
   if (import.meta.client) {
-    ElMessage.error(message)
+    message.error(text)
   }
 }
 
 /**
  * 统一弹出成功提示。
  */
-function showSuccess(message: string) {
+function showSuccess(text: string) {
   if (import.meta.client) {
-    ElMessage.success(message)
+    message.success(text)
   }
 }
 
@@ -138,7 +138,7 @@ function handleApply() {
   resetForm()
   showApplyForm.value = true
   nextTick(() => {
-    formRef.value?.clearValidate()
+    formRef.value?.restoreValidation()
   })
 }
 
@@ -150,7 +150,10 @@ async function submitApplication() {
     return
   }
 
-  const valid = await formRef.value.validate().catch(() => false)
+  const valid = await formRef.value
+    .validate()
+    .then(() => true)
+    .catch(() => false)
   if (!valid) {
     return
   }
@@ -160,7 +163,7 @@ async function submitApplication() {
     showApplyForm.value = false
     showSuccess('申请已提交，请等待审核')
     resetForm()
-    formRef.value?.resetFields()
+    formRef.value?.restoreValidation()
   } catch (error) {
     showError((error as Error)?.message || '申请提交失败')
   }
@@ -213,7 +216,7 @@ onMounted(() => {
 
 <template>
   <div class="friends-page">
-    <ElCard class="content-card">
+    <div class="poetize-card">
       <div class="page-header">
         <h1>友情链接</h1>
         <div class="header-divider">
@@ -226,7 +229,7 @@ onMounted(() => {
         <div class="site-info">
           <div class="site-avatar">
             <div class="avatar-wrapper">
-              <ElAvatar class="avatar" :src="siteLogo" />
+              <img class="avatar" :src="siteLogo" :alt="siteName" />
               <div class="copy-overlay" @click="copyLogoUrl">
                 <i class="fas fa-copy"></i>
                 <span>复制图片链接</span>
@@ -284,94 +287,60 @@ onMounted(() => {
         </div>
       </div>
 
-      <ElDialog
-        v-model="showApplyForm"
+      <NModal
+        v-model:show="showApplyForm"
         class="friend-apply-dialog"
+        preset="card"
         title="申请友链"
-        width="560px"
-        top="3vh"
-        :append-to-body="true"
+        style="width: 560px; max-width: 92vw"
+        :bordered="false"
       >
         <div class="apply-form">
-          <ElForm ref="formRef" size="small" :model="form" :rules="rules" label-width="100px">
+          <NForm ref="formRef" :model="form" :rules="rules" label-placement="top">
             <div class="form-group">
-              <ElFormItem prop="name">
-                <template #label>
-                  <span class="form-label">
-                    <i class="fas fa-signature"></i>
-                    <span>网站名称</span>
-                  </span>
-                </template>
-                <ElInput v-model="form.name" type="text" placeholder="请输入您的网站名称" />
-              </ElFormItem>
+              <NFormItem label="网站名称" path="name">
+                <NInput v-model:value="form.name" placeholder="请输入您的网站名称" />
+              </NFormItem>
             </div>
 
             <div class="form-group">
-              <ElFormItem prop="url">
-                <template #label>
-                  <span class="form-label">
-                    <i class="fas fa-link"></i>
-                    <span>网站链接</span>
-                  </span>
-                </template>
-                <ElInput v-model="form.url" type="url" placeholder="请输入您的网站链接" />
-              </ElFormItem>
+              <NFormItem label="网站链接" path="url">
+                <NInput v-model:value="form.url" placeholder="请输入您的网站链接" />
+              </NFormItem>
             </div>
 
             <div class="form-group">
-              <ElFormItem prop="info">
-                <template #label>
-                  <span class="form-label">
-                    <i class="fas fa-quote-left"></i>
-                    <span>网站描述</span>
-                  </span>
-                </template>
-                <ElInput v-model="form.info" placeholder="一句话描述您的网站" />
-              </ElFormItem>
+              <NFormItem label="网站描述" path="info">
+                <NInput v-model:value="form.info" placeholder="一句话描述您的网站" />
+              </NFormItem>
             </div>
 
             <div class="form-group">
-              <ElFormItem prop="avatar">
-                <template #label>
-                  <span class="form-label">
-                    <i class="fas fa-image"></i>
-                    <span>头像链接</span>
-                  </span>
-                </template>
-                <ElInput v-model="form.avatar" type="url" placeholder="请输入您的头像链接" />
-              </ElFormItem>
+              <NFormItem label="头像链接" path="avatar">
+                <NInput v-model:value="form.avatar" placeholder="请输入您的头像链接" />
+              </NFormItem>
             </div>
 
             <div class="form-group">
-              <ElFormItem prop="email">
-                <template #label>
-                  <span class="form-label">
-                    <i class="fas fa-envelope"></i>
-                    <span>联系邮箱</span>
-                  </span>
-                </template>
-                <ElInput v-model="form.email" type="email" placeholder="邮箱用于联系" />
-              </ElFormItem>
+              <NFormItem label="联系邮箱" path="email">
+                <NInput v-model:value="form.email" placeholder="邮箱用于联系" />
+              </NFormItem>
             </div>
 
             <div class="form-footer">
-              <ElButton class="submit-btn" type="primary" @click="submitApplication">
+              <NButton class="submit-btn" type="primary" round @click="submitApplication">
                 <i class="fas fa-paper-plane"></i>
                 提交申请
-              </ElButton>
+              </NButton>
             </div>
-          </ElForm>
+          </NForm>
         </div>
-      </ElDialog>
-    </ElCard>
+      </NModal>
+    </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
-:deep(.el-form-item__content) {
-  margin-left: 0 !important;
-}
-
 .friends-page {
   max-width: 1320px;
   margin: 0 auto;
@@ -380,15 +349,11 @@ onMounted(() => {
   animation: fade-in 0.8s ease-out;
 }
 
-.content-card {
-  border: 1px solid var(--border-color);
-  background: color-mix(in srgb, var(--card-bg) 92%, transparent);
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
-  overflow: hidden;
-}
-
-:deep(.content-card > .el-card__body) {
-  padding: 32px;
+.poetize-card {
+  background: var(--card-bg);
+  border-radius: 10px;
+  box-shadow: var(--shadow-card);
+  padding: 20px;
 }
 
 .page-header {
@@ -400,7 +365,7 @@ onMounted(() => {
     font-size: 2em;
     margin-bottom: 16px;
     font-weight: 800;
-    background: linear-gradient(135deg, #409eff, #7c3aed);
+    background: linear-gradient(135deg, $primary, $secondary);
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -432,7 +397,7 @@ onMounted(() => {
   }
 
   i {
-    color: #409eff;
+    color: $primary;
     font-size: 1.4em;
     transform: rotate(45deg);
     animation: pulse 2s infinite;
@@ -466,7 +431,7 @@ onMounted(() => {
     left: 0;
     width: 100%;
     height: 4px;
-    background: linear-gradient(90deg, #409eff, #7c3aed);
+    background: linear-gradient(90deg, $primary, $secondary);
     opacity: 0;
     transition: opacity 0.3s ease;
   }
@@ -474,7 +439,7 @@ onMounted(() => {
   &:hover {
     transform: translateY(-5px) scale(1.02);
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-    border-color: #409eff;
+    border-color: $primary;
 
     &::before {
       opacity: 1;
@@ -578,7 +543,7 @@ onMounted(() => {
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, #409eff, #7c3aed);
+    background: linear-gradient(90deg, $primary, $secondary);
   }
 }
 
@@ -603,6 +568,7 @@ onMounted(() => {
     border-radius: 50%;
     border: 3px solid var(--border-color);
     background: var(--card-bg);
+    object-fit: cover;
     transition: transform 0.5s ease;
   }
 
@@ -649,7 +615,7 @@ onMounted(() => {
     font-size: 1.5em;
     margin-bottom: 6px;
     font-weight: 700;
-    background: linear-gradient(135deg, #409eff, #7c3aed);
+    background: linear-gradient(135deg, $primary, $secondary);
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -674,13 +640,13 @@ onMounted(() => {
   transition: all 0.3s ease;
 
   &:hover {
-    border-color: #409eff;
-    box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
+    border-color: $primary;
+    box-shadow: 0 0 0 2px rgba($primary, 0.1);
   }
 
   i {
     font-size: 1em;
-    color: #409eff;
+    color: $primary;
   }
 
   input {
@@ -708,8 +674,8 @@ onMounted(() => {
     border-radius: 10px;
 
     &:hover {
-      color: #409eff;
-      background: rgba(64, 158, 255, 0.1);
+      color: $primary;
+      background: rgba($primary, 0.1);
     }
   }
 }
@@ -723,16 +689,16 @@ onMounted(() => {
   margin: 24px 0;
   font-size: 1em;
   padding: 12px;
-  background: rgba(64, 158, 255, 0.05);
+  background: rgba($primary, 0.05);
   border-radius: 18px;
 
   i {
-    color: #409eff;
+    color: $primary;
     animation: bounce 2s infinite;
   }
 
   .tip-highlight {
-    color: #409eff;
+    color: $primary;
     margin-left: 12px;
     font-weight: 500;
   }
@@ -754,7 +720,7 @@ onMounted(() => {
     left: 0;
     width: 100px;
     height: 2px;
-    background: linear-gradient(90deg, #409eff, #7c3aed);
+    background: linear-gradient(90deg, $primary, $secondary);
   }
 
   h2 {
@@ -767,7 +733,7 @@ onMounted(() => {
     color: var(--text-secondary);
     font-size: 1.2em;
     padding: 4px 12px;
-    background: rgba(64, 158, 255, 0.1);
+    background: rgba($primary, 0.1);
     border-radius: 18px;
     font-weight: 500;
   }
@@ -775,7 +741,7 @@ onMounted(() => {
 
 .apply-btn {
   padding: 12px 24px;
-  background: linear-gradient(135deg, #409eff, #7c3aed);
+  background: linear-gradient(135deg, $primary, $secondary);
   color: white;
   border: none;
   border-radius: 30px;
@@ -786,7 +752,7 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  box-shadow: 0 4px 15px rgba(64, 158, 255, 0.3);
+  box-shadow: 0 4px 15px rgba($primary, 0.3);
 
   i {
     font-size: 1.1em;
@@ -795,7 +761,7 @@ onMounted(() => {
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(64, 158, 255, 0.4);
+    box-shadow: 0 6px 20px rgba($primary, 0.4);
 
     i {
       transform: rotate(180deg);
@@ -807,60 +773,8 @@ onMounted(() => {
   }
 }
 
-.apply-form {
-  :deep(.el-form-item) {
-    margin-bottom: 0;
-    opacity: 1;
-    transform: none;
-  }
-
-  :deep(.el-form-item__label) {
-    font-weight: 500;
-    color: var(--text-primary);
-    display: flex;
-    align-items: center;
-  }
-
-  :deep(.el-form-item__content) {
-    min-height: 0;
-  }
-
-  :deep(.el-input__wrapper) {
-    border-radius: 14px;
-    border: 1px solid var(--border-color);
-    background: var(--input-bg);
-    color: var(--text-primary);
-    box-shadow: none;
-  }
-
-  :deep(.el-input__wrapper.is-focus) {
-    border-color: #409eff;
-    box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
-  }
-
-  :deep(.el-input__inner) {
-    color: var(--text-primary);
-
-    &::placeholder {
-      color: var(--text-secondary);
-    }
-  }
-}
-
 .form-group {
   margin-bottom: 18px;
-}
-
-.form-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  line-height: 1;
-
-  i {
-    color: #409eff;
-    font-size: 0.95rem;
-  }
 }
 
 .form-footer {
@@ -869,7 +783,7 @@ onMounted(() => {
   margin-top: 24px;
 
   .submit-btn {
-    background: linear-gradient(135deg, #409eff, #7c3aed);
+    background: linear-gradient(135deg, $primary, $secondary);
     border: none;
     padding: 12px 28px;
     font-size: 1em;
@@ -881,7 +795,7 @@ onMounted(() => {
 
     &:hover {
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+      box-shadow: 0 4px 12px rgba($primary, 0.3);
     }
 
     &:active {
@@ -904,15 +818,15 @@ onMounted(() => {
 
 @keyframes pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(64, 158, 255, 0.4);
+    box-shadow: 0 0 0 0 rgba($primary, 0.4);
   }
 
   70% {
-    box-shadow: 0 0 0 10px rgba(64, 158, 255, 0);
+    box-shadow: 0 0 0 10px rgba($primary, 0);
   }
 
   100% {
-    box-shadow: 0 0 0 0 rgba(64, 158, 255, 0);
+    box-shadow: 0 0 0 0 rgba($primary, 0);
   }
 }
 
@@ -939,7 +853,7 @@ onMounted(() => {
     padding: 12px;
   }
 
-  :deep(.content-card > .el-card__body) {
+  .poetize-card {
     padding: 20px 16px;
   }
 

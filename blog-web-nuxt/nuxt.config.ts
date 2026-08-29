@@ -1,8 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import AutoImport from 'unplugin-auto-import/vite'
-import Components from 'unplugin-vue-components/vite'
-import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 
 type LocalEnvMap = Record<string, string>
 
@@ -94,14 +91,6 @@ export default defineNuxtConfig({
     server: {
       proxy: devProxyEntries
     },
-    plugins: [
-      AutoImport({
-        resolvers: [ElementPlusResolver({ importStyle: false })]
-      }),
-      Components({
-        resolvers: [ElementPlusResolver({ importStyle: false })]
-      })
-    ],
     optimizeDeps: {
       include: [
         '@vue-flow/core',
@@ -112,8 +101,6 @@ export default defineNuxtConfig({
         'qrcode',
         'vue-danmaku',
         'vue-cropper',
-        'element-plus',
-        'element-plus/es',
         'ogl',
         'elkjs/lib/elk.bundled.js'
       ]
@@ -154,6 +141,14 @@ export default defineNuxtConfig({
         {
           rel: 'icon',
           href: '/favicon.ico'
+        },
+        {
+          rel: 'preconnect',
+          href: 'https://cdn.jsdelivr.net'
+        },
+        {
+          rel: 'stylesheet',
+          href: 'https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css'
         }
       ],
       meta: [

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   deleteNotificationApi,
   getNotificationsApi,
@@ -9,6 +8,7 @@ import {
 } from '@/api/message'
 import { useNoIndexSeo } from '@/composables/useSeo'
 import type { NotificationItem } from '@/types/article'
+import { dialog, message } from '@/utils/feedback'
 import { formatTime } from '@/utils/time'
 import { unwrapResponseData } from '@/utils/response'
 
@@ -76,18 +76,18 @@ function createDefaultCategories(): NotificationCategory[] {
 /**
  * 统一弹出错误提示。
  */
-function showError(message: string) {
+function showError(text: string) {
   if (import.meta.client) {
-    ElMessage.error(message)
+    message.error(text)
   }
 }
 
 /**
  * 统一弹出成功提示。
  */
-function showSuccess(message: string) {
+function showSuccess(text: string) {
   if (import.meta.client) {
-    ElMessage.success(message)
+    message.success(text)
   }
 }
 
@@ -192,10 +192,16 @@ async function deleteNotification(id?: number | string) {
   }
 
   try {
-    await ElMessageBox.confirm('确定要删除这条消息吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+    await new Promise<void>((resolve, reject) => {
+      dialog.warning({
+        title: '提示',
+        content: '确定要删除这条消息吗？',
+        positiveText: '确定',
+        negativeText: '取消',
+        onPositiveClick: () => resolve(),
+        onNegativeClick: () => reject(new Error('cancel')),
+        onClose: () => reject(new Error('close'))
+      })
     })
 
     await deleteNotificationApi(id)
@@ -213,7 +219,7 @@ async function deleteNotification(id?: number | string) {
     ])
     showSuccess('删除成功')
   } catch (error) {
-    if (error === 'cancel' || error === 'close') {
+    if (error instanceof Error && (error.message === 'cancel' || error.message === 'close')) {
       return
     }
     showError('删除失败')
@@ -272,7 +278,7 @@ function renderTime(time?: string | number) {
         >
           <i :class="category.icon"></i>
           <span>{{ category.name }}</span>
-          <ElBadge v-if="category.unread" :value="category.unread" class="category-badge" />
+          <NBadge v-if="category.unread" :value="category.unread" class="category-badge" />
         </button>
       </div>
     </aside>
@@ -281,10 +287,10 @@ function renderTime(time?: string | number) {
       <div class="notifications-header">
         <h1>{{ currentCategoryName }}</h1>
         <div class="header-actions">
-          <ElButton v-if="hasUnread" text @click="markAllAsRead">
+          <NButton v-if="hasUnread" text @click="markAllAsRead">
             <i class="fas fa-check-double"></i>
             全部已读
-          </ElButton>
+          </NButton>
         </div>
       </div>
 
@@ -354,21 +360,19 @@ function renderTime(time?: string | number) {
             </div>
 
             <div class="notification-actions">
-              <ElButton text size="small" @click.stop="deleteNotification(notification.id)">
+              <NButton text size="small" @click.stop="deleteNotification(notification.id)">
                 <i class="fas fa-trash-alt"></i>
-              </ElButton>
+              </NButton>
             </div>
           </article>
 
           <div class="pagination-box">
-            <ElPagination
+            <NPagination
               v-if="total > 0"
-              background
-              :current-page="params.pageNum"
+              :page="params.pageNum"
               :page-size="params.pageSize"
-              layout="prev, pager, next"
-              :total="total"
-              @current-change="handlePageChange"
+              :item-count="total"
+              @update:page="handlePageChange"
             />
           </div>
         </template>
@@ -399,8 +403,8 @@ function renderTime(time?: string | number) {
   width: 240px;
   flex-shrink: 0;
   background: var(--card-bg);
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+  box-shadow: var(--shadow-card);
 }
 
 .sidebar-header {
@@ -485,7 +489,7 @@ function renderTime(time?: string | number) {
   margin-left: auto;
 }
 
-.category-badge :deep(.el-badge__content) {
+.category-badge :deep(.n-badge-sup) {
   height: 16px;
   padding: 0 6px;
   border: none;
@@ -515,7 +519,7 @@ function renderTime(time?: string | number) {
   font-weight: 500;
 }
 
-.header-actions :deep(.el-button) {
+.header-actions :deep(.n-button) {
   color: $primary;
 }
 
@@ -525,11 +529,10 @@ function renderTime(time?: string | number) {
 
 .notifications-content {
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
   background: var(--card-bg);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-card);
 }
 
 .notification-item {
@@ -621,6 +624,7 @@ function renderTime(time?: string | number) {
 }
 
 .article-title:hover {
+  color: var(--accent-color);
   text-decoration: underline;
 }
 
@@ -635,7 +639,7 @@ function renderTime(time?: string | number) {
   visibility: hidden;
 }
 
-.notification-actions :deep(.el-button) {
+.notification-actions :deep(.n-button) {
   padding: 4px;
 }
 
@@ -644,7 +648,7 @@ function renderTime(time?: string | number) {
   font-size: 0.9em;
 }
 
-.notification-actions :deep(.el-button:hover) i {
+.notification-actions :deep(.n-button:hover) i {
   color: #ff4d4f;
 }
 
@@ -656,11 +660,44 @@ function renderTime(time?: string | number) {
   display: flex;
   justify-content: center;
   padding: 20px;
+
+  :deep(.n-pagination-item) {
+    color: var(--text-secondary);
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    transition: all 0.3s ease;
+
+    &:hover {
+      color: $primary;
+      border-color: $primary;
+    }
+
+    &.n-pagination-item--active {
+      background: $primary;
+      color: #fff;
+      border-color: $primary;
+      font-weight: bold;
+
+      &:hover {
+        color: #fff;
+      }
+    }
+
+    &.n-pagination-item--disabled {
+      cursor: not-allowed;
+
+      &:hover {
+        color: var(--text-secondary);
+        border-color: var(--border-color);
+      }
+    }
+  }
 }
 
 .empty-state {
   padding: 40px;
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--card-bg);
   color: var(--text-secondary);
   text-align: center;

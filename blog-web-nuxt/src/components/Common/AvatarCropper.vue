@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
 import 'vue-cropper/dist/index.css'
 import { VueCropper } from 'vue-cropper'
 import { uploadFileApi } from '@/api/file'
+import type { UploadedFileDetail } from '@/api/file'
 import { updateProfileApi } from '@/api/user'
+import { message } from '@/utils/feedback'
 import { unwrapResponseData } from '@/utils/response'
 
 interface CropperPreview {
@@ -35,6 +36,7 @@ const emit = defineEmits<{
 }>()
 
 const cropperRef = ref<CropperExpose | null>(null)
+const fileInputRef = ref<HTMLInputElement | null>(null)
 const dialogVisible = ref(Boolean(props.visible))
 const previews = ref<CropperPreview>({})
 const previewImageUrl = ref('')
@@ -67,6 +69,9 @@ watch(dialogVisible, (value) => {
   if (value !== Boolean(props.visible)) {
     emit('update:visible', value)
   }
+  if (!value) {
+    closeDialog()
+  }
 })
 
 onBeforeUnmount(() => {
@@ -81,18 +86,18 @@ onBeforeUnmount(() => {
 /**
  * 统一弹出错误提示。
  */
-function showError(message: string) {
+function showError(text: string) {
   if (import.meta.client) {
-    ElMessage.error(message)
+    message.error(text)
   }
 }
 
 /**
  * 统一弹出成功提示。
  */
-function showSuccess(message: string) {
+function showSuccess(text: string) {
   if (import.meta.client) {
-    ElMessage.success(message)
+    message.success(text)
   }
 }
 
@@ -117,11 +122,6 @@ function refresh() {
 }
 
 /**
- * 兼容 Element Plus 上传入口，不实际走默认上传。
- */
-function requestUpload() {}
-
-/**
  * 左旋裁剪图像。
  */
 function rotateLeft() {
@@ -143,20 +143,35 @@ function changeScale(value: number) {
 }
 
 /**
- * 选择本地图片并加载到裁剪器。
+ * 触发本地图片选择。
  */
-function beforeUpload(file: File) {
-  if (!file.type.startsWith('image/')) {
-    showError('文件格式错误，请上传图片类型，如 JPG、PNG。')
-    return false
+function triggerFileSelect() {
+  fileInputRef.value?.click()
+}
+
+/**
+ * 读取选择的本地图片并加载到裁剪器。
+ */
+function handleFileChange(event: Event) {
+  const input = event.target as HTMLInputElement | null
+  const file = input?.files?.[0]
+  if (!file) {
+    return
   }
 
-  const reader = new FileReader()
-  reader.readAsDataURL(file)
-  reader.onload = () => {
-    options.img = reader.result
+  if (!file.type.startsWith('image/')) {
+    showError('文件格式错误，请上传图片类型，如 JPG、PNG。')
+  } else {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = () => {
+      options.img = reader.result
+    }
   }
-  return false
+
+  if (input) {
+    input.value = ''
+  }
 }
 
 /**
@@ -174,7 +189,8 @@ function uploadImg() {
 
     try {
       const uploadResponse = await uploadFileApi(formData, 'userAvatar')
-      const avatarUrl = unwrapResponseData<string | null>(uploadResponse)
+      const uploadedFile = unwrapResponseData<UploadedFileDetail | null>(uploadResponse)
+      const avatarUrl = String(uploadedFile?.url || '')
       if (!avatarUrl) {
         showError(String(uploadResponse.message || uploadResponse.msg || '头像上传失败'))
         return
@@ -220,12 +236,11 @@ function syncPreview() {
 }
 
 /**
- * 关闭裁剪弹窗并清理状态。
+ * 弹窗关闭后清理裁剪状态。
  */
 function closeDialog() {
   options.img = null
   previewImageUrl.value = ''
-  emit('update:visible', false)
   if (resizeHandler) {
     window.removeEventListener('resize', resizeHandler)
   }
@@ -237,14 +252,12 @@ function closeDialog() {
 </script>
 
 <template>
-  <ElDialog
-    v-model="dialogVisible"
+  <NModal
+    v-model:show="dialogVisible"
+    preset="card"
     :title="title"
-    width="min(92vw, 860px)"
-    append-to-body
-    class="avatar-cropper-dialog"
-    @opened="modalOpened"
-    @close="closeDialog"
+    style="width: min(92vw, 860px)"
+    @after-enter="modalOpened"
   >
     <div class="avatar-cropper-layout">
       <div class="avatar-cropper-stage">
@@ -280,39 +293,39 @@ function closeDialog() {
 
     <div class="avatar-cropper-toolbar">
       <div class="avatar-cropper-toolbar__group">
-        <ElUpload
-          action="#"
-          :http-request="requestUpload"
-          :show-file-list="false"
-          :before-upload="beforeUpload"
-        >
-          <ElButton size="small">
-            选择
-            <i class="fas fa-upload upload-icon"></i>
-          </ElButton>
-        </ElUpload>
+        <input
+          ref="fileInputRef"
+          type="file"
+          accept="image/*"
+          class="avatar-file-input"
+          @change="handleFileChange"
+        />
+        <NButton size="small" @click="triggerFileSelect">
+          选择
+          <i class="fas fa-upload upload-icon"></i>
+        </NButton>
       </div>
 
       <div class="avatar-cropper-toolbar__group">
-        <ElButton size="small" @click="changeScale(1)">
+        <NButton size="small" @click="changeScale(1)">
           <i class="fas fa-plus"></i>
-        </ElButton>
-        <ElButton size="small" @click="changeScale(-1)">
+        </NButton>
+        <NButton size="small" @click="changeScale(-1)">
           <i class="fas fa-minus"></i>
-        </ElButton>
-        <ElButton size="small" @click="rotateLeft">
+        </NButton>
+        <NButton size="small" @click="rotateLeft">
           <i class="fas fa-undo"></i>
-        </ElButton>
-        <ElButton size="small" @click="rotateRight">
+        </NButton>
+        <NButton size="small" @click="rotateRight">
           <i class="fas fa-redo"></i>
-        </ElButton>
+        </NButton>
       </div>
 
       <div class="avatar-cropper-toolbar__submit">
-        <ElButton type="primary" size="small" @click="uploadImg">提 交</ElButton>
+        <NButton type="primary" size="small" @click="uploadImg">提 交</NButton>
       </div>
     </div>
-  </ElDialog>
+  </NModal>
 </template>
 
 <style scoped lang="scss">
@@ -487,6 +500,10 @@ function closeDialog() {
   margin-left: 6px;
 }
 
+.avatar-file-input {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .avatar-cropper-layout {
     flex-direction: column;
@@ -520,7 +537,7 @@ function closeDialog() {
     margin-left: 0;
   }
 
-  .avatar-cropper-toolbar__submit :deep(.el-button) {
+  .avatar-cropper-toolbar__submit :deep(.n-button) {
     width: 100%;
   }
 }

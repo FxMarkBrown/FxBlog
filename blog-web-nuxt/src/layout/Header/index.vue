@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
+import { message } from '@/utils/feedback'
 
 const route = useRoute()
 const router = useRouter()
@@ -12,6 +12,8 @@ const isHeaderVisible = ref(true)
 const lastScrollTop = ref(0)
 const activeDropdown = ref<string | null>(null)
 const showDropdown = ref(false)
+// SSR 与首帧始终按实底渲染，onMounted 后再依据 Hero 与滚动位置切换透明态
+const isTransparent = ref(false)
 let scrollFrame = 0
 const siteTitle = computed(() =>
   String(
@@ -93,12 +95,25 @@ const filteredMenuItems = computed(() => {
 })
 
 /**
+ * 根据 Hero 与滚动位置更新顶栏透明状态
+ */
+function updateTransparency() {
+  if (!import.meta.client) {
+    return
+  }
+
+  isTransparent.value = uiStore.hasHero && window.scrollY < window.innerHeight * 0.5
+}
+
+/**
  * 处理滚动
  */
 function handleScroll() {
   if (!import.meta.client) {
     return
   }
+
+  updateTransparency()
 
   const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop
   if (currentScrollTop < 100) {
@@ -186,7 +201,7 @@ async function handleAvatarMouseEnter() {
  */
 async function handleLogout() {
   await authStore.logout()
-  ElMessage.success('已退出登录')
+  message.success('已退出登录')
   showDropdown.value = false
   siteStore.isUnread = false
   if (route.path !== '/') {
@@ -258,7 +273,15 @@ function handleDocumentClick(event: MouseEvent) {
   }
 }
 
+watch(
+  () => uiStore.hasHero,
+  () => {
+    updateTransparency()
+  }
+)
+
 onMounted(() => {
+  updateTransparency()
   window.addEventListener('scroll', queueScrollUpdate, { passive: true })
   document.addEventListener('click', handleDocumentClick)
 })
@@ -274,7 +297,11 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <header ref="headerRef" class="site-header" :class="{ 'header-hidden': !isHeaderVisible }">
+  <header
+    ref="headerRef"
+    class="site-header"
+    :class="{ 'header-hidden': !isHeaderVisible, 'header-transparent': isTransparent }"
+  >
     <nav class="navbar">
       <button class="menu-btn" @click="handleOpenMobileMenu">
         <i class="fas fa-bars"></i>
@@ -363,7 +390,7 @@ onBeforeUnmount(() => {
         <div class="user-info">
           <div v-if="showUserSection" class="user-section" @mouseleave="showDropdown = false">
             <div class="avatar" @mouseenter="handleAvatarMouseEnter">
-              <ElAvatar :src="headerUserAvatar" />
+              <NAvatar :src="headerUserAvatar" :size="40" round />
             </div>
             <div v-show="showDropdown" class="user-dropdown">
               <div class="dropdown-header">
@@ -385,9 +412,11 @@ onBeforeUnmount(() => {
             </div>
           </div>
           <div v-else class="avatar" @click="handleLogin">
-            <ElAvatar
+            <NAvatar
               class="avatar-icon"
               :src="String(siteStore.websiteInfo.touristAvatar || '')"
+              :size="40"
+              round
             />
           </div>
         </div>
@@ -406,11 +435,13 @@ onBeforeUnmount(() => {
   left: 0;
   right: 0;
   z-index: 1000;
-  background: rgba(var(--surface-rgb), 0.65);
-  backdrop-filter: blur(10px) saturate(180%);
-  -webkit-backdrop-filter: blur(10px) saturate(180%);
-  border-bottom: 1px solid rgba(var(--border-color-rgb), 0.08);
-  transition: all 0.3s ease;
+  background: var(--card-bg);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  transition:
+    background 0.3s,
+    color 0.3s,
+    box-shadow 0.3s,
+    transform 0.3s ease;
   transform: translateY(0);
 
   &.header-hidden {
@@ -418,16 +449,44 @@ onBeforeUnmount(() => {
     box-shadow: none;
   }
 
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      to bottom,
-      rgba(var(--surface-rgb), 0.05),
-      rgba(var(--surface-rgb), 0)
-    );
-    pointer-events: none;
+  &.header-transparent {
+    background: transparent;
+    box-shadow: none;
+
+    .nav-left .logo .logo-text {
+      color: #fff;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    }
+
+    .navbar .nav-center .nav-link {
+      color: #fff;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+
+      i {
+        color: #fff;
+      }
+
+      &:hover,
+      &.active {
+        color: var(--accent-color);
+      }
+    }
+
+    .search-btn,
+    .message-btn,
+    .menu-btn,
+    .mobile-search-btn {
+      color: #fff;
+      background: transparent;
+      border-color: transparent;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+
+      &:hover {
+        color: var(--accent-color);
+        background: transparent;
+        border-color: transparent;
+      }
+    }
   }
 }
 
@@ -452,10 +511,8 @@ onBeforeUnmount(() => {
     .logo-text {
       font-size: 1.2em;
       font-weight: 700;
-      background: linear-gradient(135deg, $primary, $secondary);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      color: var(--text-primary);
+      transition: color 0.3s;
       max-width: 200px;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -530,9 +587,26 @@ onBeforeUnmount(() => {
     font-family: 'Poppins', sans-serif;
     letter-spacing: 0.2px;
 
+    &::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: 2px;
+      width: 100%;
+      max-width: 0;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--accent-color);
+      transition: max-width 0.3s ease;
+    }
+
     &:hover,
     &.active {
-      color: $primary;
+      color: var(--accent-color);
+
+      &::after {
+        max-width: 100%;
+      }
     }
 
     &.has-dropdown {
@@ -1047,13 +1121,6 @@ onBeforeUnmount(() => {
 }
 
 :root[data-theme='dark'] {
-  .site-header {
-    background: rgba(var(--surface-rgb), 0.75);
-    backdrop-filter: blur(10px) saturate(160%);
-    -webkit-backdrop-filter: blur(10px) saturate(160%);
-    border-bottom-color: rgba(var(--border-color-rgb), 0.15);
-  }
-
   .user-dropdown {
     background: var(--surface);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);

@@ -76,9 +76,9 @@ function cleanupImagePreview() {
 
 <template>
   <div class="about-page">
-    <ElCard class="about-card">
+    <div class="poetize-card">
       <div ref="contentRef" class="about-content" v-html="aboutContent"></div>
-    </ElCard>
+    </div>
     <ImagePreview ref="imagePreview" />
   </div>
 </template>
@@ -96,8 +96,11 @@ function cleanupImagePreview() {
   }
 }
 
-.about-card {
-  border-radius: 20px;
+.poetize-card {
+  background: var(--card-bg);
+  border-radius: 10px;
+  box-shadow: var(--shadow-card);
+  padding: 20px;
 }
 
 .about-content {

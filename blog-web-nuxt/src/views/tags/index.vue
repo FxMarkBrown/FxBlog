@@ -145,7 +145,7 @@ onMounted(() => {
   <div class="tags-page">
     <div class="content-layout">
       <main class="main-content">
-        <ElCard class="content-card">
+        <div class="content-card poetize-card">
           <div class="page-header">
             <h3>标签云</h3>
             <p class="subtitle">共 {{ tags.length }} 个标签</p>
@@ -169,7 +169,7 @@ onMounted(() => {
               <span class="tag-count">{{ tag.articleNum }}</span>
             </div>
           </div>
-        </ElCard>
+        </div>
 
         <div v-if="activeTag" ref="postsSection" class="tag-posts">
           <div class="tag-header">
@@ -249,6 +249,13 @@ onMounted(() => {
   min-width: 0;
 }
 
+.poetize-card {
+  background: var(--card-bg);
+  border-radius: 10px;
+  box-shadow: var(--shadow-card);
+  padding: 20px;
+}
+
 .page-header {
   margin-bottom: $spacing-sm;
   text-align: center;
@@ -288,8 +295,8 @@ onMounted(() => {
   justify-content: center;
 
   .tag-item {
-    padding: $spacing-sm $spacing-sm;
-    border-radius: $border-radius-md;
+    padding: $spacing-sm $spacing-md;
+    border-radius: 999px;
     color: var(--text-primary);
     cursor: pointer;
     transition: all 0.3s ease;
@@ -297,17 +304,18 @@ onMounted(() => {
     align-items: center;
     gap: $spacing-sm;
     font-size: 1em;
-    border: 2px solid transparent;
     position: relative;
     overflow: hidden;
     animation: tagAppear 0.4s ease-out backwards;
     animation-delay: var(--animation-delay);
-    background: var(--card-bg);
+    background: var(--hover-bg);
 
     i {
       font-size: 0.9em;
       color: var(--tag-color);
-      transition: transform 0.3s ease;
+      transition:
+        color 0.3s ease,
+        transform 0.3s ease;
     }
 
     .tag-name {
@@ -320,32 +328,38 @@ onMounted(() => {
       color: var(--text-secondary);
       background: color-mix(in srgb, var(--tag-color) 14%, transparent);
       padding: 3px 12px;
-      border-radius: $border-radius-lg;
+      border-radius: 999px;
       transition: all 0.3s ease;
     }
 
     &:hover {
       transform: translateY(-2px);
-      border-color: var(--tag-color);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      background: var(--accent-color);
+      color: #fff;
 
       i {
+        color: #fff;
         transform: rotate(-10deg);
-      }
-    }
-
-    &.active {
-      background: var(--tag-color);
-      color: white;
-      box-shadow: 0 4px 12px color-mix(in srgb, var(--tag-color) 20%, transparent);
-
-      i {
-        color: white;
       }
 
       .tag-count {
         background: rgba(255, 255, 255, 0.25);
-        color: white;
+        color: #fff;
+      }
+    }
+
+    &.active {
+      background: var(--accent-color);
+      color: #fff;
+      box-shadow: 0 4px 12px color-mix(in srgb, var(--accent-color) 40%, transparent);
+
+      i {
+        color: #fff;
+      }
+
+      .tag-count {
+        background: rgba(255, 255, 255, 0.25);
+        color: #fff;
       }
     }
   }

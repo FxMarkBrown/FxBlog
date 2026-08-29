@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { defineAsyncComponent } from 'vue'
-import { ElMessage } from 'element-plus'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/atom-one-dark.css'
 import 'md-editor-v3/lib/style.css'
@@ -15,6 +14,7 @@ import Comment from '@/components/Comment/index.vue'
 import ImagePreview from '@/components/Common/ImagePreview.vue'
 import { usePageSeo } from '@/composables/useSeo'
 import type { ArticleDetail } from '@/types/article'
+import { message } from '@/utils/feedback'
 import { unwrapResponseData } from '@/utils/response'
 
 interface TocItem {
@@ -345,9 +345,9 @@ function addCopyButtons() {
           copyButton.innerHTML = '<i class="fas fa-copy"></i> 复制'
           copyButton.classList.remove('copied')
         }, 2000)
-        ElMessage.success('复制成功')
+        message.success('复制成功')
       } catch {
-        ElMessage.error('复制失败，请手动复制')
+        message.error('复制失败，请手动复制')
       }
     })
 
@@ -505,7 +505,7 @@ async function toggleLike() {
   }
 
   if (likeDebounce.value) {
-    ElMessage.warning('请于 5 秒后再试')
+    message.warning('请于 5 秒后再试')
     return
   }
 
@@ -514,12 +514,12 @@ async function toggleLike() {
       await unlikeArticleApi(articleId.value)
       article.value.likeNum = Math.max(Number(article.value.likeNum || 0) - 1, 0)
       article.value.isLike = false
-      ElMessage.success('已取消点赞')
+      message.success('已取消点赞')
     } else {
       await likeArticleApi(articleId.value)
       article.value.likeNum = Number(article.value.likeNum || 0) + 1
       article.value.isLike = true
-      ElMessage.success('点赞成功')
+      message.success('点赞成功')
     }
 
     likeDebounce.value = true
@@ -527,7 +527,7 @@ async function toggleLike() {
       likeDebounce.value = false
     }, 5000)
   } catch {
-    ElMessage.error('操作失败，请稍后重试')
+    message.error('操作失败，请稍后重试')
   }
 }
 
@@ -540,7 +540,7 @@ async function toggleFavorite() {
   }
 
   if (favoriteDebounce.value) {
-    ElMessage.warning('请于 5 秒后再试')
+    message.warning('请于 5 秒后再试')
     return
   }
 
@@ -549,11 +549,11 @@ async function toggleFavorite() {
     if (article.value.isFavorite) {
       article.value.favoriteNum = Math.max(Number(article.value.favoriteNum || 0) - 1, 0)
       article.value.isFavorite = false
-      ElMessage.success('取消收藏成功')
+      message.success('取消收藏成功')
     } else {
       article.value.favoriteNum = Number(article.value.favoriteNum || 0) + 1
       article.value.isFavorite = true
-      ElMessage.success('收藏成功')
+      message.success('收藏成功')
     }
 
     favoriteDebounce.value = true
@@ -561,7 +561,7 @@ async function toggleFavorite() {
       favoriteDebounce.value = false
     }, 5000)
   } catch {
-    ElMessage.error('操作失败，请稍后重试')
+    message.error('操作失败，请稍后重试')
   }
 }
 
@@ -732,40 +732,52 @@ onBeforeUnmount(() => {
     <template v-if="article">
       <ClientOnly>
         <div class="floating-action-bar" :style="{ left: actionBarLeft }">
-          <ElTooltip effect="dark" content="点赞" placement="top-start">
-            <div class="action-item" @click="toggleLike">
-              <ElBadge :value="article.likeNum || 0" class="item">
-                <div class="action-button">
-                  <i class="fas fa-thumbs-up" :class="{ active: article.isLike }"></i>
-                </div>
-              </ElBadge>
-            </div>
-          </ElTooltip>
-          <ElTooltip effect="dark" content="收藏" placement="top-start">
-            <div class="action-item" @click="toggleFavorite">
-              <ElBadge :value="article.favoriteNum || 0" class="item">
-                <div class="action-button">
-                  <i class="fas fa-star" :class="{ active: article.isFavorite }"></i>
-                </div>
-              </ElBadge>
-            </div>
-          </ElTooltip>
-          <ElTooltip effect="dark" content="评论" placement="top-start">
-            <div class="action-item" @click="scrollToComments">
-              <ElBadge :value="article.commentNum || 0" class="item">
-                <div class="action-button">
-                  <i class="fas fa-comment"></i>
-                </div>
-              </ElBadge>
-            </div>
-          </ElTooltip>
-          <ElTooltip effect="dark" content="沉浸式浏览" placement="top-start">
-            <div class="action-item" @click="toggleSidebar">
-              <div class="action-button">
-                <i class="fas fa-expand"></i>
+          <NTooltip placement="top-start">
+            <template #trigger>
+              <div class="action-item" @click="toggleLike">
+                <NBadge :value="article.likeNum || 0" :max="99" show-zero class="item">
+                  <div class="action-button">
+                    <i class="fas fa-thumbs-up" :class="{ active: article.isLike }"></i>
+                  </div>
+                </NBadge>
               </div>
-            </div>
-          </ElTooltip>
+            </template>
+            点赞
+          </NTooltip>
+          <NTooltip placement="top-start">
+            <template #trigger>
+              <div class="action-item" @click="toggleFavorite">
+                <NBadge :value="article.favoriteNum || 0" :max="99" show-zero class="item">
+                  <div class="action-button">
+                    <i class="fas fa-star" :class="{ active: article.isFavorite }"></i>
+                  </div>
+                </NBadge>
+              </div>
+            </template>
+            收藏
+          </NTooltip>
+          <NTooltip placement="top-start">
+            <template #trigger>
+              <div class="action-item" @click="scrollToComments">
+                <NBadge :value="article.commentNum || 0" :max="99" show-zero class="item">
+                  <div class="action-button">
+                    <i class="fas fa-comment"></i>
+                  </div>
+                </NBadge>
+              </div>
+            </template>
+            评论
+          </NTooltip>
+          <NTooltip placement="top-start">
+            <template #trigger>
+              <div class="action-item" @click="toggleSidebar">
+                <div class="action-button">
+                  <i class="fas fa-expand"></i>
+                </div>
+              </div>
+            </template>
+            沉浸式浏览
+          </NTooltip>
         </div>
       </ClientOnly>
 
@@ -991,7 +1003,7 @@ onBeforeUnmount(() => {
 .article-main {
   background: var(--card-bg);
   border-radius: $border-radius-lg;
-  box-shadow: $shadow-md;
+  box-shadow: var(--shadow-card);
   overflow: hidden;
 }
 
@@ -1036,7 +1048,7 @@ onBeforeUnmount(() => {
 
   &:hover {
     transform: rotate(360deg);
-    border-color: $primary;
+    border-color: var(--accent-color);
   }
 }
 
@@ -1222,6 +1234,8 @@ onBeforeUnmount(() => {
     transition: all 0.3s ease;
 
     &:hover {
+      color: var(--accent-color);
+      border-bottom-color: var(--accent-color);
       border-bottom-style: solid;
     }
   }
@@ -1567,6 +1581,8 @@ onBeforeUnmount(() => {
     transition: all 0.2s ease;
 
     &:hover {
+      color: var(--accent-color);
+      border-bottom-color: var(--accent-color);
       border-bottom-style: solid;
     }
   }
@@ -1604,15 +1620,14 @@ onBeforeUnmount(() => {
   padding: $spacing-xs $spacing-md;
   background: var(--hover-bg);
   color: var(--text-secondary);
-  border-radius: $border-radius-lg;
+  border-radius: $border-radius-pill;
   font-size: 0.9em;
   text-decoration: none;
   transition: all 0.3s ease;
 
   &:hover {
-    background: $primary;
-    color: white;
-    transform: translateY(-2px);
+    background: var(--accent-color);
+    color: #fff;
   }
 }
 
@@ -1631,7 +1646,7 @@ onBeforeUnmount(() => {
   gap: $spacing-sm;
   padding: $spacing-sm $spacing-xl;
   border: none;
-  border-radius: 20px;
+  border-radius: $border-radius-pill;
   font-size: 1em;
   transition: all 0.3s ease;
   cursor: pointer;
@@ -1672,7 +1687,7 @@ onBeforeUnmount(() => {
     &:hover {
       transform: translateY(-2px);
       background: rgba($primary, 0.14);
-      color: $primary;
+      color: var(--accent-color);
     }
   }
 }
@@ -1730,7 +1745,7 @@ onBeforeUnmount(() => {
       transform: translateY(-2px);
 
       i {
-        color: $primary;
+        color: var(--accent-color);
         transform: scale(1.1);
       }
     }
@@ -1743,7 +1758,7 @@ onBeforeUnmount(() => {
     top: 90px;
     background: var(--card-bg);
     border-radius: $border-radius-lg;
-    box-shadow: $shadow-md;
+    box-shadow: var(--shadow-card);
     overflow: hidden;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border: 1px solid var(--border-color);
@@ -1873,7 +1888,7 @@ onBeforeUnmount(() => {
       }
 
       &:hover {
-        color: $primary;
+        color: var(--accent-color);
         background: linear-gradient(90deg, rgba($primary, 0.05), rgba($primary, 0.02));
         padding-left: calc(20px + var(--toc-indent));
 

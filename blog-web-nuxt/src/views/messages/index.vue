@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
 import VueDanmaku from 'vue-danmaku'
 import 'vue-danmaku/style.css'
 import { addMessageApi, getMessagesApi } from '@/api/message'
 import { usePageSeo } from '@/composables/useSeo'
 import type { MessageItem } from '@/types/article'
+import { message } from '@/utils/feedback'
 import { unwrapResponseData } from '@/utils/response'
 
 const authStore = useAuthStore()
@@ -51,18 +51,18 @@ onBeforeUnmount(() => {
 /**
  * 统一弹出错误提示。
  */
-function showError(message: string) {
+function showError(text: string) {
   if (import.meta.client) {
-    ElMessage.error(message)
+    message.error(text)
   }
 }
 
 /**
  * 统一弹出成功提示。
  */
-function showSuccess(message: string) {
+function showSuccess(text: string) {
   if (import.meta.client) {
-    ElMessage.success(message)
+    message.success(text)
   }
 }
 
@@ -115,7 +115,7 @@ async function addToList() {
     return
   }
 
-  const message: MessageItem = {
+  const newMessage: MessageItem = {
     avatar: String(currentUser.value?.avatar || touristAvatar.value || ''),
     status: 1,
     nickname: String(currentUser.value?.nickname || '游客'),
@@ -123,8 +123,8 @@ async function addToList() {
   }
 
   try {
-    await addMessageApi(message)
-    barrageList.value.push(message)
+    await addMessageApi(newMessage)
+    barrageList.value.push(newMessage)
     content.value = ''
     show.value = false
     startCooldown()
@@ -156,14 +156,15 @@ async function listMessage() {
       <div class="message-container">
         <h1 class="message-title">留言板</h1>
         <div class="message-input-wrapper">
-          <ElInput
-            v-model="content"
+          <NInput
+            v-model:value="content"
             class="input"
+            round
             placeholder="说点什么吧"
             @keyup.enter="addToList"
             @focus="show = true"
           />
-          <ElButton v-show="show" class="send-btn ml-3" round @click="addToList"> 发送 </ElButton>
+          <NButton v-show="show" class="send-btn ml-3" round @click="addToList"> 发送 </NButton>
         </div>
       </div>
 
@@ -203,16 +204,20 @@ async function listMessage() {
   margin-top: -70px;
 }
 
-.message-input-wrapper :deep(.el-input__wrapper) {
+.message-input-wrapper :deep(.n-input) {
   border-radius: 50px;
   background: rgba(255, 255, 255, 0.82) !important;
   box-shadow:
     0 18px 34px rgba(15, 23, 42, 0.14),
     inset 0 0 0 1px rgba(255, 255, 255, 0.2) !important;
+  --n-border: none !important;
+  --n-border-hover: none !important;
+  --n-border-focus: none !important;
+  --n-box-shadow-focus: none !important;
   padding: 0 18px;
 }
 
-.message-input-wrapper :deep(.el-input__inner) {
+.message-input-wrapper :deep(.n-input__input-el) {
   height: 48px;
   background: transparent !important;
   color: #1f2937 !important;
@@ -222,7 +227,7 @@ async function listMessage() {
   }
 }
 
-:deep(.el-button.send-btn) {
+:deep(.n-button.send-btn) {
   min-width: 104px;
   height: 48px;
   border: 1px solid rgba(255, 255, 255, 0.28);
@@ -239,14 +244,14 @@ async function listMessage() {
   }
 }
 
-:global(:root[data-theme='dark'] .message-banner .message-input-wrapper .el-input__wrapper) {
+:global(:root[data-theme='dark'] .message-banner .message-input-wrapper .n-input) {
   background: rgba(15, 23, 42, 0.72) !important;
   box-shadow:
     0 18px 34px rgba(2, 6, 23, 0.24),
     inset 0 0 0 1px rgba(148, 163, 184, 0.14) !important;
 }
 
-:global(:root[data-theme='dark'] .message-banner .message-input-wrapper .el-input__inner) {
+:global(:root[data-theme='dark'] .message-banner .message-input-wrapper .n-input__input-el) {
   color: #e2e8f0 !important;
 
   &::placeholder {
@@ -254,7 +259,7 @@ async function listMessage() {
   }
 }
 
-:global(:root[data-theme='dark'] .message-banner .el-button.send-btn) {
+:global(:root[data-theme='dark'] .message-banner .n-button.send-btn) {
   background: rgba(148, 163, 184, 0.18);
   border-color: rgba(148, 163, 184, 0.24);
   color: #e2e8f0;
@@ -269,7 +274,7 @@ async function listMessage() {
 .message-banner {
   position: relative;
   min-height: 100vh;
-  background: linear-gradient(180deg, rgba(59, 130, 246, 0.92), rgba(14, 116, 144, 0.9));
+  background: linear-gradient(180deg, rgba($primary, 0.92), rgba($secondary, 0.9));
   animation: header-effect 1s;
   overflow: hidden;
 
@@ -335,7 +340,7 @@ async function listMessage() {
     width: 100%;
 
     .barrage-items {
-      background: #000;
+      background: var(--mask-max);
       border-radius: 100px;
       color: #fff;
       padding: 5px 10px 5px 5px;

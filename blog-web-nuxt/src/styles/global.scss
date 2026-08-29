@@ -1,6 +1,5 @@
 @use 'variables.scss' as *;
 @use 'mixins.scss' as *;
-@use 'element-plus.scss';
 
 * {
   margin: 0;
@@ -86,12 +85,12 @@ a {
 }
 
 ::selection {
-  background-color: #45bcd1;
+  background-color: $primary;
   color: #fff;
 }
 
 ::-moz-selection {
-  background-color: #45bcd1;
+  background-color: $primary;
   color: #fff;
 }
 
@@ -165,9 +164,11 @@ img {
 
 :root {
   --primary-color: #{$primary};
+  --accent-color: #{$accent};
+  --info-color: #{$secondary};
   --text-primary: #{$text-primary};
   --text-secondary: #{$text-secondary};
-  --text-tertiary: #7b8798;
+  --text-tertiary: #595a5a;
   --background: #{$background};
   --surface: #{$surface};
   --border-color: #{$border-color};
@@ -177,36 +178,39 @@ img {
   --input-bg: #{$surface};
   --surface-rgb: 255, 255, 255;
   --border-color-rgb: 0, 0, 0;
-  --about-me: linear-gradient(135deg, #409efff2, #a855f7f2);
+  --about-me: linear-gradient(135deg, #39c5bbf2, #03a9f4f2);
   --reply-message-bg: #f9f6f6;
+  --gradient-rainbow: linear-gradient(-90deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+  --gradient-soft: linear-gradient(-45deg, #e8d8b9, #eccec5, #a3e9eb, #bdbdf0, #eec1ea);
+  --gradient-red: linear-gradient(to right, #ff4b2b, #ff416c);
+  --mask-mini: rgba(0, 0, 0, 0.15);
+  --mask: rgba(0, 0, 0, 0.3);
+  --mask-strong: rgba(0, 0, 0, 0.5);
+  --mask-max: rgba(0, 0, 0, 0.7);
+  --shadow-card: 0 1px 20px -6px rgba(0, 0, 0, 0.5);
+  --shadow-card-hover: 0 5px 10px 5px rgba(110, 110, 110, 0.4);
 }
 
 :root[data-theme='dark'] {
   --primary-color: #{$primary};
-  --text-primary: #e2e8f0;
-  --text-secondary: #94a3b8;
-  --text-tertiary: #7f8ea3;
-  --background: linear-gradient(
-    90deg,
-    rgba(47, 49, 51, 0.9),
-    rgba(43, 42, 85, 0.9) 15%,
-    rgba(39, 38, 123, 0.9) 30%,
-    rgba(31, 32, 71, 0.9) 44%,
-    rgba(30, 35, 84, 0.9) 58%,
-    rgba(16, 52, 73, 0.9) 72%,
-    rgba(7, 49, 55, 0.9) 86%,
-    rgba(29, 46, 30, 0.9)
-  );
-  --surface: rgba(0, 0, 0, 0.8);
-  --border-color: rgba(255, 255, 255, 0.1);
-  --card-bg: #1a1e24;
-  --hover-bg: rgba(255, 255, 255, 0.05);
-  --loading-bg: rgba(18, 17, 17, 0.55);
-  --input-bg: rgba(255, 255, 255, 0.05);
-  --surface-rgb: 17, 25, 39;
+  --accent-color: #{$accent};
+  --info-color: #{$secondary};
+  --text-primary: #e8e8e8;
+  --text-secondary: #8a8a8a;
+  --text-tertiary: #6a6a6a;
+  --background: #1e1e1e;
+  --surface: #272727;
+  --border-color: #4f4f4f;
+  --card-bg: #272727;
+  --hover-bg: rgba(255, 255, 255, 0.06);
+  --loading-bg: rgba(30, 30, 30, 0.9);
+  --input-bg: rgba(255, 255, 255, 0.06);
+  --surface-rgb: 39, 39, 39;
   --border-color-rgb: 255, 255, 255;
   --about-me: linear-gradient(135deg, #1f2937, #000000);
   --reply-message-bg: #333;
+  --shadow-card: 0 1px 20px -6px rgba(0, 0, 0, 0.7);
+  --shadow-card-hover: 0 5px 10px 5px rgba(0, 0, 0, 0.5);
 }
 
 :root[data-theme='dark'] {
@@ -232,19 +236,19 @@ img {
   margin: 2rem 0;
   padding: 3rem 3.5rem;
   overflow: hidden;
-  border: 1px solid rgba(64, 158, 255, 0.2);
+  border: 1px solid rgba($primary, 0.2);
   border-radius: 28px;
   background:
-    radial-gradient(circle at top left, rgba(64, 158, 255, 0.12), transparent 40%),
-    linear-gradient(180deg, rgba(64, 158, 255, 0.08), rgba(64, 158, 255, 0.03));
+    radial-gradient(circle at top left, rgba($primary, 0.12), transparent 40%),
+    linear-gradient(180deg, rgba($primary, 0.08), rgba($primary, 0.03));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    0 14px 32px rgba(64, 158, 255, 0.08);
+    0 14px 32px rgba($primary, 0.08);
 
   &::before,
   &::after {
     position: absolute;
-    color: rgba(64, 158, 255, 0.92);
+    color: rgba($primary, 0.92);
     font-family: Georgia, 'Times New Roman', serif;
     font-size: 5rem;
     font-weight: 700;
@@ -274,7 +278,7 @@ img {
     overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
-    scrollbar-color: rgba(64, 158, 255, 0.4) transparent;
+    scrollbar-color: rgba($primary, 0.4) transparent;
   }
 
   .blog-align-scroll::-webkit-scrollbar {
@@ -287,7 +291,7 @@ img {
 
   .blog-align-scroll::-webkit-scrollbar-thumb {
     border-radius: 999px;
-    background: rgba(64, 158, 255, 0.32);
+    background: rgba($primary, 0.32);
   }
 
   .blog-align-scroll-content {
@@ -372,5 +376,32 @@ img {
 
   .blog-align-scroll::-webkit-scrollbar-thumb {
     background: rgba(96, 165, 250, 0.36);
+  }
+}
+
+// 自研 v-loading 指令（src/directives/loading.ts）的遮罩与 spinner
+.v-loading-mask {
+  position: absolute;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--loading-bg);
+  border-radius: inherit;
+}
+
+.v-loading-spinner {
+  width: 34px;
+  height: 34px;
+  border: 3px solid rgba($primary, 0.25);
+  border-top-color: $primary;
+  border-radius: 50%;
+  animation: v-loading-rotate 0.8s linear infinite;
+}
+
+@keyframes v-loading-rotate {
+  to {
+    transform: rotate(360deg);
   }
 }

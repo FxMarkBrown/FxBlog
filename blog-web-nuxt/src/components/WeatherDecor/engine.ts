@@ -478,13 +478,14 @@ class WeatherDecorEngine {
       return
     }
 
+    const program = this.program
     const loop = (now: number) => {
       if (this.isPaused) {
         this.frameHandle = 0
         return
       }
 
-      this.program.uniforms.uTime.value = (now - this.startTime) / 1000
+      program.uniforms.uTime.value = (now - this.startTime) / 1000
       this.renderFrame()
       this.frameHandle = requestAnimationFrame(loop)
     }

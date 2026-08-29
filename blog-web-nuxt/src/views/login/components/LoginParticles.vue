@@ -88,21 +88,21 @@ float softCircle(vec2 uv, vec2 center, float radius, float blur) {
 
 vec3 lightPalette(float t) {
   vec3 milk = vec3(0.97, 0.97, 0.995);
-  vec3 sky = vec3(0.86, 0.9, 0.98);
-  vec3 lavender = vec3(0.89, 0.87, 0.98);
-  vec3 lilac = vec3(0.82, 0.84, 0.98);
+  vec3 sky = vec3(0.87, 0.96, 0.95);
+  vec3 mint = vec3(0.84, 0.95, 0.93);
+  vec3 aqua = vec3(0.78, 0.93, 0.91);
   vec3 base = mix(milk, sky, smoothstep(0.12, 0.58, t));
-  base = mix(base, lavender, smoothstep(0.4, 0.82, t));
-  return mix(base, lilac, smoothstep(0.72, 1.0, t));
+  base = mix(base, mint, smoothstep(0.4, 0.82, t));
+  return mix(base, aqua, smoothstep(0.72, 1.0, t));
 }
 
 vec3 darkPalette(float t) {
-  vec3 ink = vec3(0.05, 0.07, 0.14);
-  vec3 indigo = vec3(0.12, 0.18, 0.34);
-  vec3 violet = vec3(0.22, 0.24, 0.46);
-  vec3 glow = vec3(0.38, 0.46, 0.82);
-  vec3 base = mix(ink, indigo, smoothstep(0.08, 0.58, t));
-  base = mix(base, violet, smoothstep(0.36, 0.82, t));
+  vec3 ink = vec3(0.04, 0.09, 0.09);
+  vec3 deepTeal = vec3(0.07, 0.2, 0.2);
+  vec3 teal = vec3(0.1, 0.32, 0.31);
+  vec3 glow = vec3(0.22, 0.77, 0.73);
+  vec3 base = mix(ink, deepTeal, smoothstep(0.08, 0.58, t));
+  base = mix(base, teal, smoothstep(0.36, 0.82, t));
   return mix(base, glow, smoothstep(0.76, 1.0, t));
 }
 
@@ -126,17 +126,17 @@ void main() {
   float ribbonA = ribbon(uv, 0.24, 0.26, 0.024);
   float ribbonB = ribbon(uv, 0.58, 0.22, 0.03);
   float ribbonC = ribbon(uv, 0.88, 0.18, 0.034);
-  vec3 ribbonColorA = mix(vec3(0.92, 0.93, 0.99), vec3(0.24, 0.34, 0.68), uDark);
-  vec3 ribbonColorB = mix(vec3(0.85, 0.9, 0.99), vec3(0.2, 0.28, 0.56), uDark);
-  vec3 ribbonColorC = mix(vec3(0.91, 0.88, 0.99), vec3(0.28, 0.26, 0.58), uDark);
+  vec3 ribbonColorA = mix(vec3(0.9, 0.97, 0.96), vec3(0.16, 0.55, 0.52), uDark);
+  vec3 ribbonColorB = mix(vec3(0.84, 0.95, 0.94), vec3(0.12, 0.45, 0.43), uDark);
+  vec3 ribbonColorC = mix(vec3(0.89, 0.96, 0.94), vec3(0.18, 0.5, 0.47), uDark);
   color = mix(color, ribbonColorA, ribbonA * 0.08);
   color = mix(color, ribbonColorB, ribbonB * 0.07);
   color = mix(color, ribbonColorC, ribbonC * 0.05);
 
   float washA = softCircle(uv, vec2(0.78, 0.18), mix(0.3, 0.24, uMobile), 0.52);
   float washB = softCircle(uv, vec2(0.14, 0.82), mix(0.22, 0.18, uMobile), 0.44);
-  color += mix(vec3(0.94, 0.92, 1.0), vec3(0.14, 0.18, 0.36), uDark) * washA * 0.05;
-  color += mix(vec3(0.88, 0.91, 1.0), vec3(0.1, 0.14, 0.3), uDark) * washB * 0.04;
+  color += mix(vec3(0.9, 0.98, 0.96), vec3(0.1, 0.28, 0.27), uDark) * washA * 0.05;
+  color += mix(vec3(0.86, 0.96, 0.94), vec3(0.08, 0.24, 0.23), uDark) * washB * 0.04;
 
   float vignette = smoothstep(1.18, 0.12, length(p));
   color *= mix(0.94, 1.0, vignette);

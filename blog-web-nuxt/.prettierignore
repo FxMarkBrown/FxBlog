@@ -1,0 +1,7 @@
+node_modules
+.nuxt
+.output
+dist
+bun.lock
+*.d.ts
+src/assets/font/**

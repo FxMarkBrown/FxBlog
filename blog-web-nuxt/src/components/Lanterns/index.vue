@@ -76,7 +76,7 @@ const siteStore = useSiteStore()
   background: rgba(216, 0, 15, 0.1);
   margin: 0 8px 8px 8px;
   border-radius: 50% 50%;
-  border: 2px solid #dc8f03;
+  border: 2px solid var(--accent-color);
 }
 
 .lantern-b {
@@ -85,7 +85,7 @@ const siteStore = useSiteStore()
   background: rgba(216, 0, 15, 0.1);
   margin: -4px 8px 8px 26px;
   border-radius: 50% 50%;
-  border: 2px solid #dc8f03;
+  border: 2px solid var(--accent-color);
 }
 
 .lines {
@@ -94,7 +94,7 @@ const siteStore = useSiteStore()
   left: 60px;
   width: 3px;
   height: 20px;
-  background: #dc8f03;
+  background: var(--accent-color);
 }
 
 .spike-a {
@@ -103,7 +103,7 @@ const siteStore = useSiteStore()
   height: 20px;
   margin: -5px 0 0 59px;
   animation: swing 4s infinite ease-in-out;
-  background: #ffa500;
+  background: var(--accent-color);
   border-radius: 0 0 5px 5px;
 }
 
@@ -113,7 +113,7 @@ const siteStore = useSiteStore()
   left: -2px;
   width: 10px;
   height: 10px;
-  background: #dc8f03;
+  background: var(--accent-color);
   border-radius: 50%;
 }
 
@@ -123,12 +123,12 @@ const siteStore = useSiteStore()
   left: -2px;
   width: 10px;
   height: 35px;
-  background: #ffa500;
+  background: var(--accent-color);
 }
 
 .lantern-t {
   font-size: 3.2rem;
-  color: #dc8f03;
+  color: var(--accent-color);
   font-weight: bold;
   line-height: 85px;
   text-align: center;

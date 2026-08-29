@@ -23,7 +23,7 @@
 
 - 后端基于 Spring Boot 4、Java 25、MyBatis-Plus、Spring Cache、Sa-Token
 - 数据库使用 PostgreSQL，缓存使用 Redis
-- 前台新门户基于 Nuxt 4、Vue 3、Pinia、TypeScript、SCSS，优先支持 SSR 与 SEO
+- 前台新门户基于 Nuxt 4、Vue 3、NaiveUI、Pinia、TypeScript、SCSS，优先支持 SSR 与 SEO
 - 后台管理端基于 Vue 3、Vite、Pinia、Element Plus
 - 已集成 Spring AI，提供基于 Qdrant 的全站文章 RAG
 - 异步事件链路已事件化并走 Java 虚拟线程

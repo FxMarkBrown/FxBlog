@@ -117,98 +117,99 @@ async function handleLogout() {
 
 <template>
   <ClientOnly>
-    <ElDrawer
-      :model-value="uiStore.mobileMenuVisible"
+    <NDrawer
+      :show="uiStore.mobileMenuVisible"
       class="mobile-menu-drawer"
-      direction="ltr"
-      :with-header="false"
-      size="clamp(224px, 72vw, 304px)"
-      @update:model-value="uiStore.setMobileMenuVisible"
+      placement="left"
+      width="clamp(224px, 72vw, 304px)"
+      @update:show="uiStore.setMobileMenuVisible"
     >
-      <div class="mobile-menu">
-        <div class="menu-header">
-          <h2 class="site-name">{{ siteTitle }}</h2>
+      <NDrawerContent :body-content-style="{ padding: '0' }">
+        <div class="mobile-menu">
+          <div class="menu-header">
+            <h2 class="site-name">{{ siteTitle }}</h2>
+          </div>
+          <div class="menu-content">
+            <TransitionGroup name="menu-item">
+              <NuxtLink
+                v-for="menu in routes"
+                :key="menu.path"
+                :to="menu.path"
+                class="menu-item"
+                :class="{ active: isRouteActive(menu.path) }"
+                @click="closeMenu"
+              >
+                <i :class="menu.icon"></i>
+                <span>{{ menu.title }}</span>
+              </NuxtLink>
+
+              <NuxtLink
+                v-for="entry in shortcutEntries"
+                :key="entry.path"
+                :to="entry.path"
+                class="menu-item shortcut-item"
+                :class="{ active: isRouteActive(entry.path) }"
+                @click="closeMenu"
+              >
+                <i :class="entry.icon"></i>
+                <span>{{ entry.title }}</span>
+                <span v-if="entry.badge" class="menu-badge"></span>
+              </NuxtLink>
+
+              <NuxtLink
+                v-if="authEntry"
+                :key="authEntry.path"
+                :to="authEntry.path"
+                class="menu-item shortcut-item"
+                :class="{ active: isRouteActive(authEntry.path) }"
+                @click="closeMenu"
+              >
+                <i :class="authEntry.icon"></i>
+                <span>{{ authEntry.title }}</span>
+              </NuxtLink>
+
+              <a
+                v-if="aboutEntry.external"
+                :key="`about-${aboutEntry.title}`"
+                :href="aboutEntry.path"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="menu-item shortcut-item"
+                @click="closeMenu"
+              >
+                <i :class="aboutEntry.icon"></i>
+                <span>{{ aboutEntry.title }}</span>
+              </a>
+              <NuxtLink
+                v-else
+                :key="`about-${aboutEntry.title}`"
+                :to="aboutEntry.path"
+                class="menu-item shortcut-item"
+                :class="{ active: isRouteActive(aboutEntry.path) }"
+                @click="closeMenu"
+              >
+                <i :class="aboutEntry.icon"></i>
+                <span>{{ aboutEntry.title }}</span>
+              </NuxtLink>
+
+              <button
+                v-if="authStore.isLoggedIn"
+                key="logout"
+                type="button"
+                class="menu-item menu-action"
+                @click="handleLogout"
+              >
+                <i class="fas fa-sign-out-alt"></i>
+                <span>退出登录</span>
+              </button>
+            </TransitionGroup>
+          </div>
+          <div class="menu-footer">
+            <p>© {{ new Date().getFullYear() }} {{ siteTitle }}</p>
+          </div>
         </div>
-        <div class="menu-content">
-          <TransitionGroup name="menu-item">
-            <NuxtLink
-              v-for="menu in routes"
-              :key="menu.path"
-              :to="menu.path"
-              class="menu-item"
-              :class="{ active: isRouteActive(menu.path) }"
-              @click="closeMenu"
-            >
-              <i :class="menu.icon"></i>
-              <span>{{ menu.title }}</span>
-            </NuxtLink>
-
-            <NuxtLink
-              v-for="entry in shortcutEntries"
-              :key="entry.path"
-              :to="entry.path"
-              class="menu-item shortcut-item"
-              :class="{ active: isRouteActive(entry.path) }"
-              @click="closeMenu"
-            >
-              <i :class="entry.icon"></i>
-              <span>{{ entry.title }}</span>
-              <span v-if="entry.badge" class="menu-badge"></span>
-            </NuxtLink>
-
-            <NuxtLink
-              v-if="authEntry"
-              :key="authEntry.path"
-              :to="authEntry.path"
-              class="menu-item shortcut-item"
-              :class="{ active: isRouteActive(authEntry.path) }"
-              @click="closeMenu"
-            >
-              <i :class="authEntry.icon"></i>
-              <span>{{ authEntry.title }}</span>
-            </NuxtLink>
-
-            <a
-              v-if="aboutEntry.external"
-              :key="`about-${aboutEntry.title}`"
-              :href="aboutEntry.path"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="menu-item shortcut-item"
-              @click="closeMenu"
-            >
-              <i :class="aboutEntry.icon"></i>
-              <span>{{ aboutEntry.title }}</span>
-            </a>
-            <NuxtLink
-              v-else
-              :key="`about-${aboutEntry.title}`"
-              :to="aboutEntry.path"
-              class="menu-item shortcut-item"
-              :class="{ active: isRouteActive(aboutEntry.path) }"
-              @click="closeMenu"
-            >
-              <i :class="aboutEntry.icon"></i>
-              <span>{{ aboutEntry.title }}</span>
-            </NuxtLink>
-
-            <button
-              v-if="authStore.isLoggedIn"
-              key="logout"
-              type="button"
-              class="menu-item menu-action"
-              @click="handleLogout"
-            >
-              <i class="fas fa-sign-out-alt"></i>
-              <span>退出登录</span>
-            </button>
-          </TransitionGroup>
-        </div>
-        <div class="menu-footer">
-          <p>© {{ new Date().getFullYear() }} {{ siteTitle }}</p>
-        </div>
-      </div>
-    </ElDrawer>
+      </NDrawerContent>
+    </NDrawer>
   </ClientOnly>
 </template>
 
@@ -216,22 +217,12 @@ async function handleLogout() {
 @use '@/styles/variables.scss' as *;
 @use '@/styles/mixins.scss' as *;
 
-:deep(.mobile-menu-drawer .el-drawer__body) {
-  padding: 0;
-  background: var(--card-bg);
-}
-
-:deep(.mobile-menu-drawer .el-drawer) {
+:deep(.mobile-menu-drawer .n-drawer) {
   box-shadow: 12px 0 36px rgba(15, 23, 42, 0.16);
   border-right: 1px solid var(--border-color);
   border-radius: 0 22px 22px 0 !important;
   overflow: hidden !important;
   background: var(--card-bg);
-}
-
-:deep(.mobile-menu-drawer .el-drawer__body) {
-  border-radius: inherit;
-  overflow: hidden;
 }
 
 .mobile-menu {
@@ -354,11 +345,5 @@ async function handleLogout() {
 .menu-item-leave-to {
   opacity: 0;
   transform: translateX(-20px);
-}
-
-@include responsive(sm) {
-  :deep(.mobile-menu-drawer.el-drawer__container .el-drawer) {
-    width: clamp(224px, 72vw, 304px) !important;
-  }
 }
 </style>

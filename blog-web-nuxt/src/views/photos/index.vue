@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
 import { getAlbumListApi } from '@/api/album'
 import { usePageSeo } from '@/composables/useSeo'
 import type { AlbumSummary } from '@/types/article'
+import { message } from '@/utils/feedback'
 import { IMAGE_ERROR_PLACEHOLDER } from '@/utils/placeholders'
 import { unwrapResponseData } from '@/utils/response'
 
@@ -56,9 +56,9 @@ function openAlbum(album: { id: number | string }) {
   router.push(`/photos/${album.id}`)
 }
 
-function showError(message: string) {
+function showError(text: string) {
   if (import.meta.client) {
-    ElMessage.error(message)
+    message.error(text)
   }
 }
 </script>
@@ -189,20 +189,16 @@ function showError(message: string) {
 }
 
 .album-card {
-  background: var(--surface);
-  border-radius: 12px;
+  background: var(--card-bg);
+  border-radius: 10px;
   overflow: hidden;
-  box-shadow:
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-card);
   transition: all 0.3s ease;
   cursor: pointer;
 
   &:hover {
     transform: translateY(-5px);
-    box-shadow:
-      0 10px 15px -3px rgba(0, 0, 0, 0.1),
-      0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-card-hover);
 
     .album-cover img {
       transform: scale(1.05);
@@ -256,8 +252,8 @@ function showError(message: string) {
     .photo-count {
       display: inline-block;
       padding: 4px 12px;
-      background: rgba(99, 102, 241, 0.1);
-      color: #6366f1;
+      background: rgba(255, 165, 0, 0.1);
+      color: var(--accent-color);
       border-radius: 20px;
       font-size: 0.8em;
       font-weight: 500;

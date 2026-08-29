@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
+import { message } from '@/utils/feedback'
 import { getRecommendArticlesApi } from '@/api/article'
 import TagCloud from '@/components/Sidebar/components/tagCloud.vue'
 import { IMAGE_ERROR_PLACEHOLDER } from '@/utils/placeholders'
@@ -9,9 +9,6 @@ import { unwrapResponseData } from '@/utils/response'
 const router = useRouter()
 const siteStore = useSiteStore()
 const hot = ref<ArticleSummary[]>([])
-const avatarRef = ref<HTMLElement | null>(null)
-let avatarAnimationFrame = 0
-let avatarAnimationStart = 0
 
 const socialLinks = [
   { icon: 'fab fa-github', type: 'github', content: '点击跳转GitHub主页', icCopy: false },
@@ -95,16 +92,16 @@ function handleImageError(event: Event) {
  */
 async function copyToClipboard(item: { title?: string; link?: string; icCopy?: boolean }) {
   if (!item.link) {
-    ElMessage.warning('当前未配置该联系方式')
+    message.warning('当前未配置该联系方式')
     return
   }
 
   if (item.icCopy && import.meta.client) {
     try {
       await navigator.clipboard.writeText(item.link)
-      ElMessage.success(`${item.title || '联系方式'}已复制到剪贴板`)
+      message.success(`${item.title || '联系方式'}已复制到剪贴板`)
     } catch {
-      ElMessage.error('复制失败，请手动复制')
+      message.error('复制失败，请手动复制')
     }
     return
   }
@@ -115,86 +112,19 @@ async function copyToClipboard(item: { title?: string; link?: string; icCopy?: b
 }
 
 /**
- * 缓出曲线
- * @param value 进度值
- * @returns 曲线结果
- */
-function easeOutCubic(value: number) {
-  return 1 - (1 - value) ** 3
-}
-
-/**
- * 启动头像动效
- */
-function startAvatarMotion() {
-  if (!avatarRef.value || !import.meta.client) {
-    return
-  }
-
-  if (avatarAnimationFrame) {
-    cancelAnimationFrame(avatarAnimationFrame)
-    avatarAnimationFrame = 0
-  }
-
-  avatarAnimationStart = performance.now()
-  avatarRef.value.style.willChange = 'transform'
-  const duration = 450
-
-  const animate = (now: number) => {
-    if (!avatarRef.value) {
-      return
-    }
-
-    const progress = Math.min((now - avatarAnimationStart) / duration, 1)
-    const rotation = easeOutCubic(progress) * 360
-    const lift = Math.sin(progress * Math.PI) * 10 * (1 - progress * 0.18)
-    const scale = 1 + Math.sin(progress * Math.PI) * 0.035
-    avatarRef.value.style.transform = `translate3d(0, ${-lift}px, 0) rotate(${rotation}deg) scale(${scale})`
-
-    if (progress < 1) {
-      avatarAnimationFrame = requestAnimationFrame(animate)
-      return
-    }
-
-    avatarRef.value.style.transform = ''
-    avatarRef.value.style.willChange = ''
-    avatarAnimationFrame = 0
-  }
-
-  avatarAnimationFrame = requestAnimationFrame(animate)
-}
-
-/**
  * 跳转留言页
  */
 function goToMessages() {
   router.push('/messages')
 }
-
-onBeforeUnmount(() => {
-  if (avatarAnimationFrame) {
-    cancelAnimationFrame(avatarAnimationFrame)
-    avatarAnimationFrame = 0
-  }
-
-  if (avatarRef.value) {
-    avatarRef.value.style.transform = ''
-    avatarRef.value.style.willChange = ''
-  }
-})
 </script>
 
 <template>
   <aside class="sidebar">
-    <ElCard class="author-card">
+    <div class="poetize-card author-card">
       <div class="author-avatar-wrap">
-        <div
-          ref="avatarRef"
-          class="avatar-hitbox"
-          @mouseenter="startAvatarMotion"
-          @click="goToMessages"
-        >
-          <ElAvatar class="avatar" :src="profileAvatar" alt="管理员头像" />
+        <div class="avatar-hitbox" @click="goToMessages">
+          <NAvatar class="avatar" round :size="88" :src="profileAvatar" alt="管理员头像" />
         </div>
       </div>
       <div class="author-info">
@@ -225,26 +155,23 @@ onBeforeUnmount(() => {
         </div>
       </div>
       <div v-if="visibleSocialLinks.length" class="social-links">
-        <ElTooltip
-          v-for="item in visibleSocialLinks"
-          :key="item.type"
-          placement="top"
-          :content="item.content"
-          :teleported="false"
-        >
-          <a
-            href="javascript:void(0)"
-            :title="item.title"
-            :class="`social-btn ${item.type}`"
-            @click="copyToClipboard(item)"
-          >
-            <i :class="item.icon"></i>
-          </a>
-        </ElTooltip>
+        <NTooltip v-for="item in visibleSocialLinks" :key="item.type" placement="top" :to="false">
+          <template #trigger>
+            <a
+              href="javascript:void(0)"
+              :title="item.title"
+              :class="`social-btn ${item.type}`"
+              @click="copyToClipboard(item)"
+            >
+              <i :class="item.icon"></i>
+            </a>
+          </template>
+          {{ item.content }}
+        </NTooltip>
       </div>
-    </ElCard>
+    </div>
 
-    <ElCard v-if="announcements.length" class="section announcement">
+    <div v-if="announcements.length" class="poetize-card section announcement">
       <h3>
         <i class="fas fa-bullhorn"></i>
         公告
@@ -254,9 +181,9 @@ onBeforeUnmount(() => {
           <span v-html="String(item.content || '')"></span>
         </div>
       </div>
-    </ElCard>
+    </div>
 
-    <ElCard v-if="hot.length > 0" class="section">
+    <div v-if="hot.length > 0" class="poetize-card section">
       <h3>
         <i class="fas fa-star"></i>
         推荐文章
@@ -274,15 +201,15 @@ onBeforeUnmount(() => {
           </div>
         </NuxtLink>
       </div>
-    </ElCard>
+    </div>
 
-    <ElCard class="section">
+    <div class="poetize-card section">
       <h3>
         <i class="fas fa-tags"></i>
         标签云
       </h3>
       <TagCloud />
-    </ElCard>
+    </div>
   </aside>
 </template>
 
@@ -290,42 +217,31 @@ onBeforeUnmount(() => {
 @use '@/styles/variables.scss' as *;
 @use '@/styles/mixins.scss' as *;
 
+.poetize-card {
+  background: var(--card-bg);
+  border-radius: 10px;
+  box-shadow: var(--shadow-card);
+  transition: all 0.3s ease;
+  padding: 20px;
+  margin-bottom: 30px;
+
+  &:hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+}
+
 .sidebar {
   position: sticky;
   top: 80px;
   width: 100%;
   max-width: 320px;
-  --sidebar-author-bg: linear-gradient(
-    180deg,
-    rgba(211, 236, 253, 0.92) 0%,
-    rgba(235, 247, 255, 0.96) 100%
-  );
-  --sidebar-author-border: rgba(103, 166, 220, 0.22);
-  --sidebar-author-shadow: 0 18px 36px rgba(85, 131, 173, 0.14);
-  --sidebar-avatar-border: rgba(255, 255, 255, 0.96);
-  --sidebar-avatar-bg: #fff;
-  --sidebar-avatar-shadow: 0 8px 20px rgba(78, 128, 172, 0.18);
-  --sidebar-avatar-shadow-hover: 0 14px 28px rgba(78, 128, 172, 0.24);
-  --sidebar-title-color: var(--text-primary);
-  --sidebar-bio-color: var(--text-secondary);
-  --sidebar-stat-label: var(--text-secondary);
-  --sidebar-stat-value: var(--text-primary);
-  --sidebar-social-bg: rgba(255, 255, 255, 0.72);
-  --sidebar-social-shadow: 0 8px 20px rgba(98, 144, 181, 0.12);
-  --sidebar-section-accent: #6366f1;
-  --sidebar-section-accent-strong: #8b5cf6;
-  --sidebar-section-divider: rgba(99, 102, 241, 0.1);
-  --sidebar-post-hover: #6366f1;
-  --sidebar-post-time: var(--text-secondary);
-  --sidebar-rank-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  --sidebar-image-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 
   .author-card {
-    margin-bottom: $spacing-lg;
     padding: 22px 0 0;
-    background: var(--sidebar-author-bg);
-    border: 1px solid var(--sidebar-author-border);
-    box-shadow: var(--sidebar-author-shadow);
+    color: #fff;
+    background: var(--gradient-soft);
+    background-size: 400% 400%;
+    animation: gradientFlow 12s ease infinite;
   }
 
   .author-avatar-wrap {
@@ -341,16 +257,14 @@ onBeforeUnmount(() => {
     }
 
     .avatar {
-      width: 88px;
-      height: 88px;
-      border: 4px solid var(--sidebar-avatar-border);
-      box-shadow: var(--sidebar-avatar-shadow);
-      background: var(--sidebar-avatar-bg);
-      transition: box-shadow 0.25s ease;
+      border: 4px solid rgba(255, 255, 255, 0.96);
+      box-shadow: var(--shadow-mini, 0 8px 20px rgba(0, 0, 0, 0.18));
+      background: #fff;
+      transition: transform 0.6s ease;
     }
 
     .avatar-hitbox:hover .avatar {
-      box-shadow: var(--sidebar-avatar-shadow-hover);
+      transform: rotate(360deg);
     }
   }
 
@@ -362,14 +276,15 @@ onBeforeUnmount(() => {
       margin: 0;
       font-size: 1.6rem;
       font-weight: 700;
-      color: var(--sidebar-title-color);
+      color: #fff;
       letter-spacing: 0.5px;
       line-height: 1.2;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
     }
 
     .bio {
       margin: 10px 0 0;
-      color: var(--sidebar-bio-color);
+      color: rgba(255, 255, 255, 0.85);
       font-size: 0.95rem;
       line-height: 1.7;
     }
@@ -400,7 +315,7 @@ onBeforeUnmount(() => {
       justify-content: center;
       gap: 5px;
       min-width: 0;
-      color: var(--sidebar-stat-label);
+      color: rgba(255, 255, 255, 0.85);
       font-size: 0.9rem;
       font-weight: 600;
       line-height: 1.2;
@@ -414,7 +329,7 @@ onBeforeUnmount(() => {
     strong {
       display: block;
       width: 100%;
-      color: var(--sidebar-stat-value);
+      color: #fff;
       font-size: 1.35rem;
       line-height: 1.15;
       font-variant-numeric: tabular-nums;
@@ -423,15 +338,15 @@ onBeforeUnmount(() => {
     }
 
     .fa-book-open {
-      color: #4f8fdd;
+      color: #fff;
     }
 
     .fa-heart {
-      color: #ff6b81;
+      color: #fff;
     }
 
     .fa-fire {
-      color: #ff6b57;
+      color: #fff;
     }
   }
 
@@ -450,8 +365,8 @@ onBeforeUnmount(() => {
       align-items: center;
       justify-content: center;
       border-radius: 12px;
-      background: var(--sidebar-social-bg);
-      box-shadow: var(--sidebar-social-shadow);
+      background: rgba(255, 255, 255, 0.72);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
       font-size: 1.05rem;
       transition: all 0.25s ease;
       text-decoration: none;
@@ -518,26 +433,20 @@ onBeforeUnmount(() => {
 }
 
 .section {
-  margin-bottom: $spacing-lg;
-
   h3 {
     font-size: 1.1rem;
     font-weight: 600;
-    color: var(--sidebar-section-accent);
+    color: var(--primary-color);
     margin-bottom: 16px;
     padding-bottom: 12px;
-    border-bottom: 2px solid var(--sidebar-section-divider);
+    border-bottom: 2px solid rgba(57, 197, 187, 0.12);
 
     &::before {
       content: '';
       display: inline-block;
       width: 4px;
       height: 16px;
-      background: linear-gradient(
-        to bottom,
-        var(--sidebar-section-accent),
-        var(--sidebar-section-accent-strong)
-      );
+      background: linear-gradient(to bottom, var(--primary-color), var(--accent-color));
       margin-right: 8px;
       border-radius: 2px;
       vertical-align: middle;
@@ -576,7 +485,7 @@ onBeforeUnmount(() => {
         justify-content: center;
         font-size: 13px;
         font-weight: 600;
-        box-shadow: var(--sidebar-rank-shadow);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
 
       &:nth-child(2)::before {
@@ -595,7 +504,7 @@ onBeforeUnmount(() => {
         transform: translateX(4px);
 
         h4 {
-          color: var(--sidebar-post-hover);
+          color: var(--accent-color);
         }
 
         img {
@@ -609,7 +518,7 @@ onBeforeUnmount(() => {
         border-radius: 6px;
         object-fit: cover;
         transition: transform 0.3s ease;
-        box-shadow: var(--sidebar-image-shadow);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 
         &.fallback {
           opacity: 0.7;
@@ -639,7 +548,7 @@ onBeforeUnmount(() => {
 
         time {
           font-size: 0.8rem;
-          color: var(--sidebar-post-time);
+          color: var(--text-secondary);
           display: flex;
           align-items: center;
           gap: 4px;
@@ -660,7 +569,7 @@ onBeforeUnmount(() => {
   h3 {
     i {
       margin-right: 8px;
-      color: #f59e0b;
+      color: var(--accent-color);
       animation: shake 1.5s ease-in-out infinite;
     }
   }
@@ -671,7 +580,7 @@ onBeforeUnmount(() => {
       align-items: flex-start;
       gap: 12px;
       padding: 12px 0;
-      border-bottom: 1px dashed var(--sidebar-section-divider);
+      border-bottom: 1px dashed rgba(57, 197, 187, 0.12);
 
       &:last-child {
         border-bottom: none;
@@ -692,32 +601,27 @@ onBeforeUnmount(() => {
 }
 
 :global(html[data-theme='dark']) .sidebar {
-  --sidebar-author-bg: linear-gradient(
-    180deg,
-    rgba(31, 43, 56, 0.96) 0%,
-    rgba(20, 28, 38, 0.98) 100%
-  );
-  --sidebar-author-border: rgba(113, 156, 194, 0.16);
-  --sidebar-author-shadow: 0 20px 36px rgba(0, 0, 0, 0.2);
-  --sidebar-avatar-border: rgba(255, 255, 255, 0.1);
-  --sidebar-avatar-bg: rgba(255, 255, 255, 0.04);
-  --sidebar-avatar-shadow: 0 12px 24px rgba(0, 0, 0, 0.24);
-  --sidebar-avatar-shadow-hover: 0 18px 30px rgba(0, 0, 0, 0.3);
-  --sidebar-title-color: var(--text-primary);
-  --sidebar-bio-color: var(--text-secondary);
-  --sidebar-stat-label: #bdd0e1;
-  --sidebar-stat-value: #f4f8fc;
-  --sidebar-social-bg: rgba(255, 255, 255, 0.06);
-  --sidebar-social-shadow: none;
-  --sidebar-post-hover: #a5b4fc;
-  --sidebar-post-time: #a3b2c5;
-  --sidebar-rank-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  --sidebar-image-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  .author-card {
+    background: linear-gradient(var(--mask-mini), var(--mask-mini)), var(--gradient-soft);
+    background-size: 400% 400%;
+  }
 }
 
 @include responsive(lg) {
   .sidebar {
     display: none;
+  }
+}
+
+@keyframes gradientFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
   }
 }
 

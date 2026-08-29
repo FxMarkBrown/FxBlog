@@ -94,47 +94,37 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="floating-buttons" :class="{ 'show-top': showBackToTop }">
-    <ElTooltip
-      v-if="showArticleAiEntry"
-      content="问问这篇文章"
-      placement="left"
-      effect="light"
-      popper-class="floating-tooltip"
-      :teleported="false"
-    >
-      <button class="float-btn ai-btn" title="问问这篇文章" @click="openArticleAi">
-        <i class="fas fa-robot"></i>
-      </button>
-    </ElTooltip>
+    <NTooltip v-if="showArticleAiEntry" placement="left" :to="false">
+      <template #trigger>
+        <button class="float-btn ai-btn" title="问问这篇文章" @click="openArticleAi">
+          <i class="fas fa-robot"></i>
+        </button>
+      </template>
+      问问这篇文章
+    </NTooltip>
 
-    <ElTooltip
-      content="切换主题"
-      placement="left"
-      effect="light"
-      popper-class="floating-tooltip"
-      :teleported="false"
-    >
-      <button class="float-btn theme-btn" title="切换主题" @click="toggleTheme">
-        <i :class="['fas', isDarkMode ? 'fa-sun' : 'fa-moon']"></i>
-      </button>
-    </ElTooltip>
+    <NTooltip placement="left" :to="false">
+      <template #trigger>
+        <button class="float-btn theme-btn" title="切换主题" @click="toggleTheme">
+          <i :class="['fas', isDarkMode ? 'fa-sun' : 'fa-moon']"></i>
+        </button>
+      </template>
+      切换主题
+    </NTooltip>
 
-    <ElTooltip
-      content="回到顶部"
-      placement="left"
-      effect="light"
-      popper-class="floating-tooltip"
-      :teleported="false"
-    >
-      <button
-        v-show="showBackToTop"
-        class="float-btn top-btn"
-        title="回到顶部"
-        @click="scrollToTop"
-      >
-        <i class="fas fa-arrow-up"></i>
-      </button>
-    </ElTooltip>
+    <NTooltip placement="left" :to="false">
+      <template #trigger>
+        <button
+          v-show="showBackToTop"
+          class="float-btn top-btn"
+          title="回到顶部"
+          @click="scrollToTop"
+        >
+          <i class="fas fa-arrow-up"></i>
+        </button>
+      </template>
+      回到顶部
+    </NTooltip>
   </div>
 </template>
 
@@ -163,31 +153,19 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: $shadow-lg;
+  box-shadow: var(--shadow-card);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   opacity: 0.8;
 
   &:hover {
     opacity: 1;
     transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-card-hover);
   }
 
   i {
     font-size: 1.2em;
   }
-}
-
-:deep(.floating-tooltip.el-popper) {
-  background: var(--card-bg) !important;
-  color: var(--text-primary) !important;
-  border: 1px solid var(--border-color) !important;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14) !important;
-}
-
-:deep(.floating-tooltip.el-popper .el-popper__arrow::before) {
-  background: var(--card-bg) !important;
-  border-color: var(--border-color) !important;
 }
 
 .ai-btn {

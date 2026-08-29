@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
+import type { InputInst } from 'naive-ui'
+import { message } from '@/utils/feedback'
 import { getArticlesApi } from '@/api/article'
 import { getTagsApi } from '@/api/tags'
 import type { ArticleSummary, TagSummary } from '@/types/article'
@@ -12,11 +13,23 @@ const loading = ref(false)
 const searchResults = ref<ArticleSummary[]>([])
 const tags = ref<TagSummary[]>([])
 const total = ref(0)
-const searchInput = ref<HTMLInputElement | null>(null)
+const searchInput = ref<InputInst | null>(null)
 const params = reactive({
   keyword: '',
   pageNum: 1,
   pageSize: 10
+})
+
+// NModal 显隐双向绑定：关闭时走 close() 以重置关键词与结果
+const searchVisible = computed({
+  get: () => uiStore.searchVisible,
+  set: (value) => {
+    if (value) {
+      uiStore.setSearchVisible(true)
+    } else {
+      close()
+    }
+  }
 })
 
 watch(
@@ -29,7 +42,7 @@ watch(
     const response = await getTagsApi().catch(() => null)
     if (!response) {
       tags.value = []
-      ElMessage.error('获取标签列表失败')
+      message.error('获取标签列表失败')
     } else {
       tags.value = unwrapResponseData<TagSummary[] | null>(response) || []
     }
@@ -78,7 +91,7 @@ async function handleSearch() {
   } catch (error) {
     searchResults.value = []
     total.value = 0
-    ElMessage.error((error as Error)?.message || '搜索失败')
+    message.error((error as Error)?.message || '搜索失败')
   } finally {
     loading.value = false
   }
@@ -147,13 +160,6 @@ function close() {
 }
 
 /**
- * 处理关闭
- */
-function handleClose() {
-  close()
-}
-
-/**
  * 处理键盘事件
  * @param event 键盘事件
  */
@@ -190,25 +196,29 @@ function formatDate(date?: string) {
 </script>
 
 <template>
-  <ElDialog
-    :model-value="uiStore.searchVisible"
+  <NModal
+    v-model:show="searchVisible"
+    preset="card"
     title="搜索"
-    width="650px"
-    @update:model-value="handleClose"
+    class="search-modal"
+    :style="{ width: '650px' }"
   >
-    <div class="search-input-wrapper" :class="{ loading }">
-      <i class="fas fa-search search-icon"></i>
-      <input
+    <div class="search-input-row">
+      <NInput
         ref="searchInput"
-        v-model="params.keyword"
-        type="text"
+        v-model:value="params.keyword"
         class="search-input"
+        size="large"
+        round
+        clearable
         placeholder="输入关键词搜索文章..."
         @keyup.enter="handleSearch"
-      />
-      <div v-if="params.keyword" class="clear-btn" @click="clearSearch">
-        <i class="fas fa-times"></i>
-      </div>
+        @clear="clearSearch"
+      >
+        <template #prefix>
+          <i class="fas fa-search"></i>
+        </template>
+      </NInput>
       <span class="enter-tip">
         <i class="fas fa-level-down-alt fa-rotate-90"></i>
         按回车搜索
@@ -258,75 +268,42 @@ function formatDate(date?: string) {
       </div>
 
       <div class="pagination-box">
-        <ElPagination
+        <NPagination
           v-if="total"
-          background
-          :current-page="params.pageNum"
+          :page="params.pageNum"
           :page-size="params.pageSize"
-          layout="prev, pager, next"
-          :total="total"
-          @current-change="handlePageChange"
+          :item-count="total"
+          @update:page="handlePageChange"
         />
       </div>
     </div>
 
-    <ElEmpty v-if="searchResults.length === 0" description="输入关键词搜索文章.." />
-  </ElDialog>
+    <NEmpty v-if="searchResults.length === 0" description="输入关键词搜索文章.." />
+  </NModal>
 </template>
 
 <style lang="scss" scoped>
 @use '@/styles/variables.scss' as *;
 @use '@/styles/mixins.scss' as *;
 
-.search-input-wrapper {
+.search-input-row {
   display: flex;
   align-items: center;
-  width: 100%;
-  border: 2px solid var(--border-color);
-  border-radius: 8px;
-  padding: 12px 15px;
+  gap: $spacing-md;
   margin-bottom: 20px;
-  position: relative;
-  transition: all 0.3s ease;
 
-  &:focus-within {
-    border-color: $primary;
-    box-shadow: 0 0 0 3px rgba(202, 90, 210, 0.1);
-  }
+  .search-input {
+    flex: 1;
+    min-width: 0;
 
-  .search-icon {
-    color: #909399;
-    font-size: 18px;
-    margin-right: 10px;
-  }
-
-  .clear-btn {
-    cursor: pointer;
-    padding: 4px;
-    color: #909399;
-    transition: all 0.3s ease;
-
-    &:hover {
-      color: #f56c6c;
+    :deep(.n-input__prefix) {
+      color: var(--text-secondary);
     }
   }
 
-  &.loading::after {
-    content: '';
-    position: absolute;
-    right: 15px;
-    width: 20px;
-    height: 20px;
-    border: 2px solid #dcdfe6;
-    border-top-color: var(--primary-color);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-
   .enter-tip {
-    position: absolute;
-    right: 15px;
-    color: #909399;
+    flex-shrink: 0;
+    color: var(--text-secondary);
     font-size: 12px;
     display: flex;
     align-items: center;
@@ -339,30 +316,11 @@ function formatDate(date?: string) {
     }
   }
 
-  .clear-btn + .enter-tip {
-    right: 40px;
+  @media (max-width: 600px) {
+    .enter-tip {
+      display: none;
+    }
   }
-
-  &.loading .enter-tip {
-    display: none;
-  }
-
-  &:focus-within .enter-tip {
-    opacity: 0;
-    transform: translateX(10px);
-    transition: all 0.3s ease;
-  }
-}
-
-.search-input {
-  flex: 1;
-  border: none;
-  outline: none;
-  font-size: 16px;
-  padding: 5px;
-  width: 100%;
-  background: transparent;
-  color: $text-secondary;
 }
 
 .hot-tags {
@@ -487,6 +445,40 @@ function formatDate(date?: string) {
 .pagination-box {
   display: flex;
   justify-content: center;
+
+  // 复刻原 el-pagination.is-background 观感：圆角页码、激活主色
+  :deep(.n-pagination-item) {
+    color: var(--text-secondary);
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    transition: all 0.3s ease;
+
+    &:hover {
+      color: var(--primary-color);
+      border-color: var(--primary-color);
+    }
+
+    &.n-pagination-item--active {
+      background: var(--primary-color);
+      color: #fff;
+      border-color: var(--primary-color);
+      font-weight: bold;
+
+      &:hover {
+        color: #fff;
+      }
+    }
+
+    &.n-pagination-item--disabled {
+      cursor: not-allowed;
+
+      &:hover {
+        color: var(--text-secondary);
+        border-color: var(--border-color);
+      }
+    }
+  }
 }
 
 :deep(mark) {
@@ -499,12 +491,6 @@ function formatDate(date?: string) {
 
   &:hover {
     background-color: rgba(202, 90, 210, 0.4);
-  }
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
   }
 }
 </style>

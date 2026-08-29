@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import type { FormInstance, FormRules } from 'element-plus'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import type { FormInst, FormRules, MenuOption } from 'naive-ui'
 import { marked } from 'marked'
 import AvatarCropper from '@/components/Common/AvatarCropper.vue'
 import { getConversationQuotaApi } from '@/api/ai'
@@ -23,6 +22,7 @@ import {
   updateProfileApi
 } from '@/api/user'
 import { useNoIndexSeo } from '@/composables/useSeo'
+import { dialog, message } from '@/utils/feedback'
 import { unwrapResponseData } from '@/utils/response'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 用户信息/列表等后端 payload 字段动态，刻意保留宽松别名（全文件 25+ 处复用）
@@ -37,9 +37,9 @@ interface ProfileTabItem {
 const authStore = useAuthStore()
 const router = useRouter()
 
-const profileFormRef = ref<FormInstance | null>(null)
-const passwordFormRef = ref<FormInstance | null>(null)
-const feedbackFormRef = ref<FormInstance | null>(null)
+const profileFormRef = ref<FormInst | null>(null)
+const passwordFormRef = ref<FormInst | null>(null)
+const feedbackFormRef = ref<FormInst | null>(null)
 
 const loading = ref(false)
 const signInLoading = ref(false)
@@ -112,19 +112,20 @@ const tabs: ProfileTabItem[] = [
   { key: 'feedback', label: '反馈', icon: 'fas fa-comment-dots' }
 ]
 
+const menuOptions: MenuOption[] = tabs.map((tab) => ({
+  key: tab.key,
+  label: tab.label,
+  icon: () => h('i', { class: tab.icon })
+}))
+
 /**
  * 校验确认密码与新密码是否一致。
  */
-const validateConfirmPassword = (
-  _rule: unknown,
-  value: string,
-  callback: (error?: Error) => void
-) => {
+const validateConfirmPassword = (_rule: unknown, value: string) => {
   if (value !== passwordForm.newPassword) {
-    callback(new Error('两次输入的密码不一致'))
-    return
+    return new Error('两次输入的密码不一致')
   }
-  callback()
+  return true
 }
 
 const passwordRules = reactive<FormRules>({
@@ -238,18 +239,18 @@ function createEmptyQuotaSnapshot() {
 /**
  * 统一弹出错误提示。
  */
-function showError(message: string) {
+function showError(text: string) {
   if (import.meta.client) {
-    ElMessage.error(message)
+    message.error(text)
   }
 }
 
 /**
  * 统一弹出成功提示。
  */
-function showSuccess(message: string) {
+function showSuccess(text: string) {
   if (import.meta.client) {
-    ElMessage.success(message)
+    message.success(text)
   }
 }
 
@@ -276,19 +277,35 @@ function getQuotaLogTypeLabel(type: string) {
   return typeMap[type] || '额度变动'
 }
 
+type TagType = 'default' | 'error' | 'info' | 'primary' | 'success' | 'warning'
+
 /**
  * 获取额度流水标签样式。
  */
-function getQuotaLogTagType(type: string) {
-  const typeMap: Record<string, string> = {
+function getQuotaLogTagType(type: string): TagType {
+  const typeMap: Record<string, TagType> = {
     sign: 'success',
     article: 'warning',
-    like: 'danger',
+    like: 'error',
     favorite: 'primary',
     consume: 'info',
-    manual: ''
+    manual: 'default'
   }
-  return typeMap[type] || ''
+  return typeMap[type] || 'default'
+}
+
+/**
+ * 将字典中的 EP 风格标签类型映射为 Naive UI 标签类型。
+ */
+function normalizeTagType(type: unknown): TagType {
+  const value = String(type || '')
+  if (value === 'danger') {
+    return 'error'
+  }
+  if (value === 'primary' || value === 'success' || value === 'warning' || value === 'info') {
+    return value
+  }
+  return 'default'
 }
 
 /**
@@ -486,10 +503,16 @@ function editPost(id: number | string) {
  */
 async function deletePost(row: AnyRecord) {
   try {
-    await ElMessageBox.confirm(`确定要删除标题为 '${row.title}' 的文章吗？`, '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+    await new Promise<void>((resolve, reject) => {
+      dialog.warning({
+        title: '提示',
+        content: `确定要删除标题为 '${row.title}' 的文章吗？`,
+        positiveText: '确定',
+        negativeText: '取消',
+        onPositiveClick: () => resolve(),
+        onNegativeClick: () => reject(new Error('cancel')),
+        onClose: () => reject(new Error('close'))
+      })
     })
     await delArticleApi(row.id)
     showSuccess('删除成功')
@@ -498,7 +521,7 @@ async function deletePost(row: AnyRecord) {
       await getQuotaLogs()
     }
   } catch (error) {
-    if (error === 'cancel' || error === 'close') {
+    if (error instanceof Error && (error.message === 'cancel' || error.message === 'close')) {
       return
     }
     showError((error as Error)?.message || '删除失败')
@@ -526,16 +549,22 @@ async function handlePostChange(page: number) {
  */
 async function deleteComment(id: number | string) {
   try {
-    await ElMessageBox.confirm('此操作会把该评论下的子评论也一并删除，是否继续？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+    await new Promise<void>((resolve, reject) => {
+      dialog.warning({
+        title: '提示',
+        content: '此操作会把该评论下的子评论也一并删除，是否继续？',
+        positiveText: '确定',
+        negativeText: '取消',
+        onPositiveClick: () => resolve(),
+        onNegativeClick: () => reject(new Error('cancel')),
+        onClose: () => reject(new Error('close'))
+      })
     })
     await delMyCommentApi(id)
     showSuccess('删除成功')
     await getMyComment()
   } catch (error) {
-    if (error === 'cancel' || error === 'close') {
+    if (error instanceof Error && (error.message === 'cancel' || error.message === 'close')) {
       return
     }
     showError((error as Error)?.message || '删除失败')
@@ -547,16 +576,22 @@ async function deleteComment(id: number | string) {
  */
 async function deleteReply(id: number | string) {
   try {
-    await ElMessageBox.confirm('确定要删除这条回复吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+    await new Promise<void>((resolve, reject) => {
+      dialog.warning({
+        title: '提示',
+        content: '确定要删除这条回复吗？',
+        positiveText: '确定',
+        negativeText: '取消',
+        onPositiveClick: () => resolve(),
+        onNegativeClick: () => reject(new Error('cancel')),
+        onClose: () => reject(new Error('close'))
+      })
     })
     await delMyCommentApi(id)
     showSuccess('删除成功')
     await getMyReplies()
   } catch (error) {
-    if (error === 'cancel' || error === 'close') {
+    if (error instanceof Error && (error.message === 'cancel' || error.message === 'close')) {
       return
     }
     showError((error as Error)?.message || '删除失败')
@@ -568,10 +603,16 @@ async function deleteReply(id: number | string) {
  */
 async function cancelLike(id: number | string) {
   try {
-    await ElMessageBox.confirm('确定要取消点赞吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+    await new Promise<void>((resolve, reject) => {
+      dialog.warning({
+        title: '提示',
+        content: '确定要取消点赞吗？',
+        positiveText: '确定',
+        negativeText: '取消',
+        onPositiveClick: () => resolve(),
+        onNegativeClick: () => reject(new Error('cancel')),
+        onClose: () => reject(new Error('close'))
+      })
     })
     await unlikeArticleApi(id)
     showSuccess('已取消点赞')
@@ -580,7 +621,7 @@ async function cancelLike(id: number | string) {
       await getQuotaLogs()
     }
   } catch (error) {
-    if (error === 'cancel' || error === 'close') {
+    if (error instanceof Error && (error.message === 'cancel' || error.message === 'close')) {
       return
     }
     showError((error as Error)?.message || '取消点赞失败')
@@ -592,10 +633,16 @@ async function cancelLike(id: number | string) {
  */
 async function cancelFavorite(id: number | string) {
   try {
-    await ElMessageBox.confirm('确定要取消收藏吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+    await new Promise<void>((resolve, reject) => {
+      dialog.warning({
+        title: '提示',
+        content: '确定要取消收藏吗？',
+        positiveText: '确定',
+        negativeText: '取消',
+        onPositiveClick: () => resolve(),
+        onNegativeClick: () => reject(new Error('cancel')),
+        onClose: () => reject(new Error('close'))
+      })
     })
     await favoriteArticleApi(id)
     showSuccess('已取消收藏')
@@ -604,7 +651,7 @@ async function cancelFavorite(id: number | string) {
       await getQuotaLogs()
     }
   } catch (error) {
-    if (error === 'cancel' || error === 'close') {
+    if (error instanceof Error && (error.message === 'cancel' || error.message === 'close')) {
       return
     }
     showError((error as Error)?.message || '取消收藏失败')
@@ -615,7 +662,10 @@ async function cancelFavorite(id: number | string) {
  * 提交反馈。
  */
 async function submitFeedback() {
-  const valid = await feedbackFormRef.value?.validate().catch(() => false)
+  const valid = await feedbackFormRef.value
+    ?.validate()
+    .then(() => true)
+    .catch(() => false)
   if (!valid) {
     return
   }
@@ -625,7 +675,7 @@ async function submitFeedback() {
     await addFeedbackApi(feedbackForm)
     showSuccess('感谢您的反馈！')
     Object.assign(feedbackForm, getDefaultFeedbackForm())
-    feedbackFormRef.value?.resetFields()
+    feedbackFormRef.value?.restoreValidation()
   } finally {
     loading.value = false
   }
@@ -635,7 +685,10 @@ async function submitFeedback() {
  * 提交密码修改。
  */
 async function submitPasswordChange() {
-  const valid = await passwordFormRef.value?.validate().catch(() => false)
+  const valid = await passwordFormRef.value
+    ?.validate()
+    .then(() => true)
+    .catch(() => false)
   if (!valid) {
     return
   }
@@ -644,7 +697,12 @@ async function submitPasswordChange() {
   try {
     await updatePasswordApi(passwordForm)
     showSuccess('密码修改成功！')
-    passwordFormRef.value?.resetFields()
+    Object.assign(passwordForm, {
+      oldPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    })
+    passwordFormRef.value?.restoreValidation()
   } catch (error) {
     showError((error as Error)?.message || '密码修改失败')
   } finally {
@@ -656,7 +714,10 @@ async function submitPasswordChange() {
  * 提交个人资料修改。
  */
 async function submitProfile() {
-  const valid = await profileFormRef.value?.validate().catch(() => false)
+  const valid = await profileFormRef.value
+    ?.validate()
+    .then(() => true)
+    .catch(() => false)
   if (!valid) {
     return
   }
@@ -696,7 +757,7 @@ function resetProfile() {
     sex: userInfo.value.sex ?? 0,
     signature: userInfo.value.signature || ''
   })
-  profileFormRef.value?.clearValidate()
+  profileFormRef.value?.restoreValidation()
 }
 
 /**
@@ -875,7 +936,7 @@ function handleAvatarUpdate(newAvatarUrl: string) {
 <template>
   <div class="profile-container">
     <div class="profile-sidebar" role="complementary">
-      <ElCard class="user-card">
+      <div class="poetize-card user-card">
         <div class="avatar-section">
           <div
             class="avatar-wrapper"
@@ -884,7 +945,7 @@ function handleAvatarUpdate(newAvatarUrl: string) {
             aria-label="更换头像"
             @click="showCropper = true"
           >
-            <ElAvatar :size="100" :src="String(userInfo.avatar || '')" alt="用户头像" />
+            <NAvatar :size="100" round :src="String(userInfo.avatar || '')" alt="用户头像" />
             <div class="upload-overlay" inert>
               <i class="fas fa-camera"></i>
             </div>
@@ -895,7 +956,7 @@ function handleAvatarUpdate(newAvatarUrl: string) {
         <p class="signature">{{ userInfo.signature || '这个人很懒，还没有写简介...' }}</p>
 
         <div class="sign-in-section">
-          <ElButton
+          <NButton
             type="primary"
             size="small"
             :disabled="signInStatus.hasSignedIn"
@@ -904,7 +965,7 @@ function handleAvatarUpdate(newAvatarUrl: string) {
           >
             <i class="fas fa-check"></i>
             {{ signInStatus.hasSignedIn ? '今日已签到' : '立即签到' }}
-          </ElButton>
+          </NButton>
 
           <div class="sign-in-stats">
             <div class="stat-item">
@@ -967,70 +1028,71 @@ function handleAvatarUpdate(newAvatarUrl: string) {
             <template v-else> / 不限次 </template>
           </div>
         </div>
-      </ElCard>
+      </div>
 
-      <ElMenu class="nav-menu" :default-active="currentTab" @select="currentTab = $event">
-        <ElMenuItem v-for="tab in tabs" :key="tab.key" :index="tab.key">
-          <i :class="tab.icon"></i>
-          <span>{{ tab.label }}</span>
-        </ElMenuItem>
-      </ElMenu>
+      <NMenu v-model:value="currentTab" class="nav-menu" :options="menuOptions" />
     </div>
 
     <main class="content-area" role="main">
       <div v-if="currentTab === 'profile'" class="content-section">
         <h2 class="section-title">个人资料</h2>
-        <ElForm
+        <NForm
           ref="profileFormRef"
           :model="profileForm"
           :rules="profileRules"
+          label-placement="left"
+          label-align="right"
           label-width="80px"
           class="profile-form"
         >
-          <ElFormItem label="昵称" prop="nickname">
-            <ElInput
-              v-model="profileForm.nickname"
+          <NFormItem label="昵称" path="nickname">
+            <NInput
+              v-model:value="profileForm.nickname"
               placeholder="请输入昵称"
               aria-label="昵称输入框"
             />
-          </ElFormItem>
-          <ElFormItem label="邮箱" prop="email">
-            <ElInput v-model="profileForm.email" placeholder="请输入邮箱" aria-label="邮箱输入框" />
-          </ElFormItem>
-          <ElFormItem label="个人简介">
-            <ElInput
-              v-model="profileForm.signature"
+          </NFormItem>
+          <NFormItem label="邮箱" path="email">
+            <NInput
+              v-model:value="profileForm.email"
+              placeholder="请输入邮箱"
+              aria-label="邮箱输入框"
+            />
+          </NFormItem>
+          <NFormItem label="个人简介">
+            <NInput
+              v-model:value="profileForm.signature"
               type="textarea"
               :rows="4"
               placeholder="介绍一下自己吧..."
             />
-          </ElFormItem>
-          <ElFormItem label="性别">
-            <ElRadioGroup v-model="profileForm.sex">
-              <ElRadio :value="1">男</ElRadio>
-              <ElRadio :value="2">女</ElRadio>
-              <ElRadio :value="0">保密</ElRadio>
-            </ElRadioGroup>
-          </ElFormItem>
-          <ElFormItem>
-            <ElButton type="primary" size="small" :loading="loading" @click="submitProfile">
+          </NFormItem>
+          <NFormItem label="性别">
+            <NRadioGroup v-model:value="profileForm.sex">
+              <NRadio :value="1">男</NRadio>
+              <NRadio :value="2">女</NRadio>
+              <NRadio :value="0">保密</NRadio>
+            </NRadioGroup>
+          </NFormItem>
+          <NFormItem>
+            <NButton type="primary" size="small" :loading="loading" @click="submitProfile">
               <i class="fas fa-save"></i>
               保存修改
-            </ElButton>
-            <ElButton size="small" @click="resetProfile">
+            </NButton>
+            <NButton size="small" @click="resetProfile">
               <i class="fas fa-undo"></i>
               重置
-            </ElButton>
-          </ElFormItem>
-        </ElForm>
+            </NButton>
+          </NFormItem>
+        </NForm>
       </div>
 
       <div v-if="currentTab === 'posts'" class="content-section">
         <h2 class="section-title">我的文章</h2>
         <div class="action-bar">
           <div class="search-group">
-            <ElInput
-              v-model="params.title"
+            <NInput
+              v-model:value="params.title"
               class="search-input"
               size="small"
               placeholder="输入文字标题搜索文章..."
@@ -1038,14 +1100,14 @@ function handleAvatarUpdate(newAvatarUrl: string) {
               <template #prefix>
                 <i class="fas fa-search"></i>
               </template>
-            </ElInput>
-            <ElButton class="search-btn" type="primary" size="small" @click="handleSearch">
+            </NInput>
+            <NButton class="search-btn" type="primary" size="small" @click="handleSearch">
               <i class="fas fa-search"></i>
               搜索
-            </ElButton>
+            </NButton>
           </div>
 
-          <ElButton
+          <NButton
             class="create-post-btn"
             type="primary"
             size="small"
@@ -1053,193 +1115,193 @@ function handleAvatarUpdate(newAvatarUrl: string) {
           >
             <i class="fas fa-pen"></i>
             写文章
-          </ElButton>
+          </NButton>
         </div>
 
         <div v-if="posts.length" v-loading="loading">
-          <ElCard v-for="post in posts" :key="post.id" class="post-item">
+          <div v-for="post in posts" :key="post.id" class="poetize-card post-item">
             <div class="post-content">
               <h3 class="post-title" @click="viewPost(post.id)">{{ post.title }}</h3>
               <p class="post-excerpt">{{ post.summary }}</p>
               <div class="post-meta">
-                <ElTag size="small"><i class="far fa-calendar-alt"></i>{{ post.createTime }}</ElTag>
-                <ElTag size="small" type="info"
-                  ><i class="far fa-eye"></i>{{ post.quantity }} 阅读</ElTag
+                <NTag :bordered="false" size="small"
+                  ><i class="far fa-calendar-alt"></i>{{ post.createTime }}</NTag
                 >
-                <ElTag size="small" type="success"
-                  ><i class="far fa-comments"></i>{{ post.commentNum || 0 }} 评论</ElTag
+                <NTag :bordered="false" size="small" type="info"
+                  ><i class="far fa-eye"></i>{{ post.quantity }} 阅读</NTag
                 >
-                <ElTag size="small" type="warning"
-                  ><i class="far fa-star"></i>{{ post.likeNum || 0 }} 点赞</ElTag
+                <NTag :bordered="false" size="small" type="success"
+                  ><i class="far fa-comments"></i>{{ post.commentNum || 0 }} 评论</NTag
+                >
+                <NTag :bordered="false" size="small" type="warning"
+                  ><i class="far fa-star"></i>{{ post.likeNum || 0 }} 点赞</NTag
                 >
               </div>
             </div>
             <div class="post-actions">
-              <ElButton link @click="viewPost(post.id)"><i class="far fa-eye"></i>查看</ElButton>
-              <ElButton link @click="editPost(post.id)"><i class="fas fa-pen"></i>编辑</ElButton>
-              <ElButton link class="delete" @click="deletePost(post)"
-                ><i class="far fa-trash-alt"></i>删除</ElButton
+              <NButton text @click="viewPost(post.id)"><i class="far fa-eye"></i>查看</NButton>
+              <NButton text @click="editPost(post.id)"><i class="fas fa-pen"></i>编辑</NButton>
+              <NButton text type="error" @click="deletePost(post)"
+                ><i class="far fa-trash-alt"></i>删除</NButton
               >
             </div>
-          </ElCard>
+          </div>
 
           <div class="pagination-box">
-            <ElPagination
-              background
+            <NPagination
               class="pagination"
-              layout="prev, pager, next"
-              :current-page="params.pageNum"
+              :page="params.pageNum"
               :page-size="params.pageSize"
-              :total="total"
-              @current-change="handlePostChange"
+              :item-count="total"
+              @update:page="handlePostChange"
             />
           </div>
         </div>
-        <ElEmpty v-else description="暂无文章，快去发布你的文章吧~~" />
+        <NEmpty v-else description="暂无文章，快去发布你的文章吧~~" />
       </div>
 
       <div v-if="currentTab === 'comments'" class="content-section">
         <h2 class="section-title">我的评论</h2>
         <div v-if="myComments.length" v-loading="loading">
-          <ElCard v-for="comment in myComments" :key="comment.id" class="comment-item">
+          <div v-for="comment in myComments" :key="comment.id" class="poetize-card comment-item">
             <div class="comment-actions">
               <p class="comment-text" v-html="parseContent(comment.content)"></p>
-              <ElButton link class="delete" @click="deleteComment(comment.id)"
-                ><i class="far fa-trash-alt"></i>删除</ElButton
+              <NButton text type="error" @click="deleteComment(comment.id)"
+                ><i class="far fa-trash-alt"></i>删除</NButton
               >
             </div>
             <div class="comment-meta">
-              <ElLink type="primary" @click="viewPost(comment.articleId)"
-                >文章：{{ comment.articleTitle }}</ElLink
+              <NButton text type="primary" @click="viewPost(comment.articleId)"
+                >文章：{{ comment.articleTitle }}</NButton
               >
-              <ElTag size="small"><i class="far fa-clock"></i>{{ comment.createTime }}</ElTag>
-              <ElTag size="small" type="success"
-                ><i class="far fa-star"></i>{{ comment.likeCount || 0 }} 赞</ElTag
+              <NTag :bordered="false" size="small"
+                ><i class="far fa-clock"></i>{{ comment.createTime }}</NTag
+              >
+              <NTag :bordered="false" size="small" type="success"
+                ><i class="far fa-star"></i>{{ comment.likeCount || 0 }} 赞</NTag
               >
             </div>
-          </ElCard>
+          </div>
           <div class="pagination-box">
-            <ElPagination
-              background
-              layout="prev, pager, next"
-              :current-page="params.pageNum"
+            <NPagination
+              :page="params.pageNum"
               :page-size="params.pageSize"
-              :total="total"
-              @current-change="handlePageChange"
+              :item-count="total"
+              @update:page="handlePageChange"
             />
           </div>
         </div>
-        <ElEmpty v-else description="暂无评论数据" />
+        <NEmpty v-else description="暂无评论数据" />
       </div>
 
       <div v-if="currentTab === 'replies'" class="content-section">
         <h2 class="section-title">我的回复</h2>
         <div v-if="myReplies.length" v-loading="loading">
-          <ElCard v-for="reply in myReplies" :key="reply.id" class="reply-item">
+          <div v-for="reply in myReplies" :key="reply.id" class="poetize-card reply-item">
             <div class="reply-content">
               <div class="comment-actions">
                 <div class="reply-text">
-                  <ElTag size="small" type="info">回复 @{{ reply.replyNickname }}</ElTag>
+                  <NTag :bordered="false" size="small" type="info"
+                    >回复 @{{ reply.replyNickname }}</NTag
+                  >
                   <div v-html="parseContent(reply.content)"></div>
                 </div>
-                <ElButton link class="delete" @click="deleteReply(reply.id)"
-                  ><i class="far fa-trash-alt"></i>删除</ElButton
+                <NButton text type="error" @click="deleteReply(reply.id)"
+                  ><i class="far fa-trash-alt"></i>删除</NButton
                 >
               </div>
               <div class="reply-meta">
-                <ElLink type="primary" @click="viewPost(reply.articleId)"
-                  >文章：{{ reply.articleTitle }}</ElLink
+                <NButton text type="primary" @click="viewPost(reply.articleId)"
+                  >文章：{{ reply.articleTitle }}</NButton
                 >
-                <ElTag size="small"><i class="far fa-clock"></i>{{ reply.createTime }}</ElTag>
+                <NTag :bordered="false" size="small"
+                  ><i class="far fa-clock"></i>{{ reply.createTime }}</NTag
+                >
               </div>
             </div>
-          </ElCard>
+          </div>
           <div class="pagination-box">
-            <ElPagination
-              background
-              layout="prev, pager, next"
-              :current-page="params.pageNum"
+            <NPagination
+              :page="params.pageNum"
               :page-size="params.pageSize"
-              :total="total"
-              @current-change="handleReplyPageChange"
+              :item-count="total"
+              @update:page="handleReplyPageChange"
             />
           </div>
         </div>
-        <ElEmpty v-else description="暂无回复评论数据" />
+        <NEmpty v-else description="暂无回复评论数据" />
       </div>
 
       <div v-if="currentTab === 'likes'" class="content-section">
         <h2 class="section-title">我的点赞</h2>
         <div v-if="myLikes.length" v-loading="loading">
-          <ElCard v-for="like in myLikes" :key="like.id" class="like-item">
+          <div v-for="like in myLikes" :key="like.id" class="poetize-card like-item">
             <div class="like-content">
               <div class="comment-actions">
-                <ElLink class="article-title" @click="viewPost(like.id)">{{ like.title }}</ElLink>
-                <ElButton link class="delete" @click="cancelLike(like.id)"
-                  ><i class="far fa-star"></i>取消点赞</ElButton
+                <a class="article-title" @click="viewPost(like.id)">{{ like.title }}</a>
+                <NButton text type="error" @click="cancelLike(like.id)"
+                  ><i class="far fa-star"></i>取消点赞</NButton
                 >
               </div>
               <div class="like-meta">
-                <ElTag size="small"><i class="far fa-clock"></i>{{ like.createTime }}</ElTag>
+                <NTag :bordered="false" size="small"
+                  ><i class="far fa-clock"></i>{{ like.createTime }}</NTag
+                >
               </div>
             </div>
-          </ElCard>
+          </div>
           <div class="pagination-box">
-            <ElPagination
-              background
-              layout="prev, pager, next"
-              :current-page="params.pageNum"
+            <NPagination
+              :page="params.pageNum"
               :page-size="params.pageSize"
-              :total="total"
-              @current-change="handleLikePageChange"
+              :item-count="total"
+              @update:page="handleLikePageChange"
             />
           </div>
         </div>
-        <ElEmpty v-else description="暂无点赞数据" />
+        <NEmpty v-else description="暂无点赞数据" />
       </div>
 
       <div v-if="currentTab === 'favorites'" class="content-section">
         <h2 class="section-title">我的收藏</h2>
         <div v-if="myFavorites.length" v-loading="loading">
-          <ElCard v-for="favorite in myFavorites" :key="favorite.id" class="like-item">
+          <div v-for="favorite in myFavorites" :key="favorite.id" class="poetize-card like-item">
             <div class="like-content">
               <div class="comment-actions">
-                <ElLink class="article-title" @click="viewPost(favorite.id)">{{
-                  favorite.title
-                }}</ElLink>
-                <ElButton link class="delete" @click="cancelFavorite(favorite.id)"
-                  ><i class="far fa-star"></i>取消收藏</ElButton
+                <a class="article-title" @click="viewPost(favorite.id)">{{ favorite.title }}</a>
+                <NButton text type="error" @click="cancelFavorite(favorite.id)"
+                  ><i class="far fa-star"></i>取消收藏</NButton
                 >
               </div>
               <div class="like-meta">
-                <ElTag size="small"><i class="far fa-clock"></i>{{ favorite.createTime }}</ElTag>
+                <NTag :bordered="false" size="small"
+                  ><i class="far fa-clock"></i>{{ favorite.createTime }}</NTag
+                >
               </div>
             </div>
-          </ElCard>
+          </div>
           <div class="pagination-box">
-            <ElPagination
-              background
-              layout="prev, pager, next"
-              :current-page="params.pageNum"
+            <NPagination
+              :page="params.pageNum"
               :page-size="params.pageSize"
-              :total="total"
-              @current-change="handleFavoritePageChange"
+              :item-count="total"
+              @update:page="handleFavoritePageChange"
             />
           </div>
         </div>
-        <ElEmpty v-else description="暂无收藏数据" />
+        <NEmpty v-else description="暂无收藏数据" />
       </div>
 
       <div v-if="currentTab === 'quotaLogs'" class="content-section">
         <h2 class="section-title">AI额度流水</h2>
         <div v-if="quotaLogs.length" v-loading="loading">
-          <ElCard v-for="log in quotaLogs" :key="log.id" class="quota-log-item">
+          <div v-for="log in quotaLogs" :key="log.id" class="poetize-card quota-log-item">
             <div class="quota-log-main">
               <div class="quota-log-head">
                 <div class="quota-log-title">
-                  <ElTag size="small" :type="getQuotaLogTagType(log.bizType)">{{
+                  <NTag :bordered="false" size="small" :type="getQuotaLogTagType(log.bizType)">{{
                     getQuotaLogTypeLabel(log.bizType)
-                  }}</ElTag>
+                  }}</NTag>
                   <span class="quota-log-source">{{ log.sourceTitle || 'AI 额度变动' }}</span>
                 </div>
                 <span
@@ -1254,143 +1316,145 @@ function handleAvatarUpdate(newAvatarUrl: string) {
               </div>
               <p class="quota-log-remark">{{ log.remark || '额度发生变动' }}</p>
               <div class="quota-log-meta">
-                <ElTag size="small"><i class="far fa-clock"></i>{{ log.createTime }}</ElTag>
+                <NTag :bordered="false" size="small"
+                  ><i class="far fa-clock"></i>{{ log.createTime }}</NTag
+                >
               </div>
             </div>
-          </ElCard>
+          </div>
           <div class="pagination-box">
-            <ElPagination
-              background
-              layout="prev, pager, next"
-              :current-page="params.pageNum"
+            <NPagination
+              :page="params.pageNum"
               :page-size="params.pageSize"
-              :total="total"
-              @current-change="handleQuotaLogPageChange"
+              :item-count="total"
+              @update:page="handleQuotaLogPageChange"
             />
           </div>
         </div>
-        <ElEmpty v-else description="暂无额度流水" />
+        <NEmpty v-else description="暂无额度流水" />
       </div>
 
       <div v-if="currentTab === 'security'" class="content-section">
         <h2 class="section-title">修改密码</h2>
         <div class="binding-tips">
-          <ElAlert
-            class="password-tip"
-            title="修改密码提示"
-            type="info"
-            description="只有邮箱登录的才可修改密码，其他第三方登录不存在修改密码功能。"
-            show-icon
-            :closable="false"
-          />
+          <NAlert class="password-tip" title="修改密码提示" type="info">
+            只有邮箱登录的才可修改密码，其他第三方登录不存在修改密码功能。
+          </NAlert>
         </div>
-        <ElForm
+        <NForm
           ref="passwordFormRef"
           :model="passwordForm"
           :rules="passwordRules"
+          label-placement="left"
+          label-align="right"
           label-width="100px"
           class="security-form"
         >
-          <ElFormItem label="当前密码" prop="oldPassword">
-            <ElInput
-              v-model="passwordForm.oldPassword"
+          <NFormItem label="当前密码" path="oldPassword">
+            <NInput
+              v-model:value="passwordForm.oldPassword"
               type="password"
-              show-password
+              show-password-on="click"
               placeholder="请输入当前密码"
             />
-          </ElFormItem>
-          <ElFormItem label="新密码" prop="newPassword">
-            <ElInput
-              v-model="passwordForm.newPassword"
+          </NFormItem>
+          <NFormItem label="新密码" path="newPassword">
+            <NInput
+              v-model:value="passwordForm.newPassword"
               type="password"
-              show-password
+              show-password-on="click"
               placeholder="请输入新密码"
             />
-          </ElFormItem>
-          <ElFormItem label="确认新密码" prop="confirmPassword">
-            <ElInput
-              v-model="passwordForm.confirmPassword"
+          </NFormItem>
+          <NFormItem label="确认新密码" path="confirmPassword">
+            <NInput
+              v-model:value="passwordForm.confirmPassword"
               type="password"
-              show-password
+              show-password-on="click"
               placeholder="请再次输入新密码"
             />
-          </ElFormItem>
-          <ElFormItem>
-            <ElButton size="small" type="primary" :loading="loading" @click="submitPasswordChange">
+          </NFormItem>
+          <NFormItem>
+            <NButton size="small" type="primary" :loading="loading" @click="submitPasswordChange">
               <i class="fas fa-key"></i>
               确认修改
-            </ElButton>
-          </ElFormItem>
-        </ElForm>
+            </NButton>
+          </NFormItem>
+        </NForm>
       </div>
 
       <div v-if="currentTab === 'feedback'" class="content-section">
         <h2 class="section-title">意见反馈</h2>
-        <ElTabs>
-          <ElTabPane label="提交反馈">
-            <ElForm
+        <NTabs type="line">
+          <NTabPane tab="提交反馈" name="submit">
+            <NForm
               ref="feedbackFormRef"
               :model="feedbackForm"
               :rules="feedbackRules"
+              label-placement="left"
+              label-align="right"
               label-width="100px"
               class="feedback-form"
             >
-              <ElFormItem label="反馈类型" prop="type">
-                <ElSelect v-model="feedbackForm.type" placeholder="请选择反馈类型">
-                  <ElOption
-                    v-for="item in feedbackTypes"
-                    :key="item.value"
-                    :label="item.label"
-                    :value="item.value"
-                  />
-                </ElSelect>
-              </ElFormItem>
-              <ElFormItem label="反馈内容" prop="content">
-                <ElInput
-                  v-model="feedbackForm.content"
+              <NFormItem label="反馈类型" path="type">
+                <NSelect
+                  v-model:value="feedbackForm.type"
+                  :options="feedbackTypes"
+                  placeholder="请选择反馈类型"
+                />
+              </NFormItem>
+              <NFormItem label="反馈内容" path="content">
+                <NInput
+                  v-model:value="feedbackForm.content"
                   type="textarea"
                   :rows="5"
                   placeholder="请详细描述您的问题或建议..."
                 />
-              </ElFormItem>
-              <ElFormItem label="联系邮箱" prop="email">
-                <ElInput
-                  v-model="feedbackForm.email"
+              </NFormItem>
+              <NFormItem label="联系邮箱" path="email">
+                <NInput
+                  v-model:value="feedbackForm.email"
                   placeholder="请留下您的联系邮箱，方便我们回复您"
                 />
-              </ElFormItem>
-              <ElFormItem>
-                <ElButton type="primary" :loading="loading" @click="submitFeedback">
+              </NFormItem>
+              <NFormItem>
+                <NButton type="primary" :loading="loading" @click="submitFeedback">
                   <i class="fas fa-paper-plane"></i>
                   提交反馈
-                </ElButton>
-              </ElFormItem>
-            </ElForm>
-          </ElTabPane>
+                </NButton>
+              </NFormItem>
+            </NForm>
+          </NTabPane>
 
-          <ElTabPane label="我的反馈">
+          <NTabPane tab="我的反馈" name="list">
             <div class="feedback-list">
               <div v-if="myFeedbacks.length" v-loading="loading">
-                <ElCard v-for="feedback in myFeedbacks" :key="feedback.id" class="feedback-item">
+                <div
+                  v-for="feedback in myFeedbacks"
+                  :key="feedback.id"
+                  class="poetize-card feedback-item"
+                >
                   <div class="feedback-header">
                     <div class="feedback-info">
-                      <ElTag
+                      <NTag
                         v-if="getFeedbackTypeLabel(feedback.type)"
-                        :type="getFeedbackTypeStyle(feedback.type)"
+                        :bordered="false"
+                        :type="normalizeTagType(getFeedbackTypeStyle(feedback.type))"
                       >
                         {{ getFeedbackTypeLabel(feedback.type) }}
-                      </ElTag>
+                      </NTag>
                       <span class="feedback-time">
                         <i class="far fa-clock"></i>
                         {{ feedback.createTime }}
                       </span>
                     </div>
-                    <ElTag
+                    <NTag
                       v-if="getFeedbackStatusLabel(feedback.status)"
-                      :type="getFeedbackStatusStyle(feedback.status)"
+                      :bordered="false"
+                      :type="normalizeTagType(getFeedbackStatusStyle(feedback.status))"
                     >
                       {{ getFeedbackStatusLabel(feedback.status) }}
-                    </ElTag>
+                    </NTag>
                   </div>
                   <div class="feedback-content">
                     <p>{{ feedback.content }}</p>
@@ -1402,22 +1466,20 @@ function handleAvatarUpdate(newAvatarUrl: string) {
                     </div>
                     <p class="reply-content">{{ feedback.replyContent }}</p>
                   </div>
-                </ElCard>
+                </div>
                 <div class="pagination-box">
-                  <ElPagination
-                    background
-                    layout="prev, pager, next"
-                    :current-page="params.pageNum"
+                  <NPagination
+                    :page="params.pageNum"
                     :page-size="params.pageSize"
-                    :total="total"
-                    @current-change="handleFeedbackPageChange"
+                    :item-count="total"
+                    @update:page="handleFeedbackPageChange"
                   />
                 </div>
               </div>
-              <ElEmpty v-else description="暂无反馈记录" />
+              <NEmpty v-else description="暂无反馈记录" />
             </div>
-          </ElTabPane>
-        </ElTabs>
+          </NTabPane>
+        </NTabs>
       </div>
     </main>
 
@@ -1432,14 +1494,6 @@ function handleAvatarUpdate(newAvatarUrl: string) {
 <style scoped lang="scss">
 @use '@/styles/variables.scss' as *;
 @use '@/styles/mixins.scss' as *;
-
-:deep(input[aria-hidden='true']) {
-  display: none !important;
-}
-
-.delete {
-  color: red;
-}
 
 .profile-container {
   display: flex;
@@ -1457,16 +1511,18 @@ function handleAvatarUpdate(newAvatarUrl: string) {
 
   @include responsive(sm) {
     position: unset;
-
-    .el-dialog {
-      width: 95% !important;
-    }
   }
+}
+
+.poetize-card {
+  padding: 20px;
+  border-radius: 10px;
+  background: var(--card-bg);
+  box-shadow: var(--shadow-card);
 }
 
 .user-card {
   border: 1px solid var(--border-color);
-  background: var(--card-bg);
   text-align: center;
 }
 
@@ -1528,7 +1584,7 @@ function handleAvatarUpdate(newAvatarUrl: string) {
 
 .user-card .stat-item .number {
   display: block;
-  color: var(--primary-color, #409eff);
+  color: var(--primary-color);
   font-size: 18px;
   font-weight: 600;
 }
@@ -1544,9 +1600,9 @@ function handleAvatarUpdate(newAvatarUrl: string) {
   gap: 10px;
   margin-top: 16px;
   padding: 14px 16px;
-  border: 1px solid rgba(64, 158, 255, 0.14);
+  border: 1px solid rgba($primary, 0.14);
   border-radius: 16px;
-  background: linear-gradient(180deg, rgba(64, 158, 255, 0.1) 0%, rgba(64, 158, 255, 0.04) 100%);
+  background: linear-gradient(180deg, rgba($primary, 0.1) 0%, rgba($primary, 0.04) 100%);
 }
 
 .user-card .ai-quota-head,
@@ -1567,7 +1623,7 @@ function handleAvatarUpdate(newAvatarUrl: string) {
 }
 
 .user-card .ai-quota-mode {
-  color: var(--primary-color, #409eff);
+  color: var(--primary-color);
 }
 
 .user-card .ai-quota-grid {
@@ -1596,33 +1652,28 @@ function handleAvatarUpdate(newAvatarUrl: string) {
   font-size: 12px;
 }
 
-.el-menu-item {
-  color: var(--text-secondary) !important;
-}
-
 .nav-menu {
   margin-top: $spacing-md;
-  border-right: none;
   border-radius: 8px;
   background: var(--card-bg);
 }
 
-.nav-menu .is-active {
-  background: var(--hover-bg);
-  color: $primary;
-}
-
-.nav-menu :deep(.el-menu-item) {
+.nav-menu :deep(.n-menu-item-content) {
   height: 48px;
-  line-height: 48px;
+  color: var(--text-secondary);
 }
 
-.nav-menu :deep(.el-menu-item:hover) {
+.nav-menu :deep(.n-menu-item-content:hover) {
   background: var(--hover-bg);
   color: $primary;
 }
 
-.nav-menu :deep(.el-menu-item i) {
+.nav-menu :deep(.n-menu-item-content--selected) {
+  background: var(--hover-bg);
+  color: $primary;
+}
+
+.nav-menu :deep(.n-menu-item-content__icon) {
   margin-right: 12px;
 }
 
@@ -1647,6 +1698,10 @@ function handleAvatarUpdate(newAvatarUrl: string) {
 .security-form,
 .feedback-form {
   max-width: 600px;
+
+  :deep(.n-button + .n-button) {
+    margin-left: 12px;
+  }
 }
 
 .binding-tips {
@@ -1654,21 +1709,21 @@ function handleAvatarUpdate(newAvatarUrl: string) {
 }
 
 .binding-tips :deep(.password-tip) {
-  border: 1px solid rgba(64, 158, 255, 0.2);
+  border: 1px solid rgba($primary, 0.2);
   border-radius: 12px;
-  background: rgba(64, 158, 255, 0.08);
+  background: rgba($primary, 0.08);
 }
 
-.binding-tips :deep(.password-tip .el-alert__icon) {
-  color: #409eff;
+.binding-tips :deep(.password-tip .n-alert-icon) {
+  color: $primary;
 }
 
-.binding-tips :deep(.password-tip .el-alert__title) {
+.binding-tips :deep(.password-tip .n-alert-body__title) {
   color: var(--text-primary);
   font-weight: 600;
 }
 
-.binding-tips :deep(.password-tip .el-alert__description) {
+.binding-tips :deep(.password-tip .n-alert-body__content) {
   color: var(--text-secondary);
   line-height: 1.7;
 }
@@ -1704,7 +1759,7 @@ function handleAvatarUpdate(newAvatarUrl: string) {
   margin-bottom: 16px;
 }
 
-.post-item .post-meta .el-tag {
+.post-item .post-meta .n-tag {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -1736,8 +1791,14 @@ function handleAvatarUpdate(newAvatarUrl: string) {
 .comment-item .article-title,
 .reply-item .article-title,
 .like-item .article-title {
+  color: var(--text-secondary);
   font-size: 18px;
   font-weight: 700;
+  cursor: pointer;
+
+  &:hover {
+    color: $primary;
+  }
 }
 
 .comment-item .comment-text,
@@ -1871,7 +1932,11 @@ function handleAvatarUpdate(newAvatarUrl: string) {
 .quota-log-item,
 .post-item {
   border: 1px solid var(--border-color);
-  background: var(--card-bg);
+  transition: box-shadow 0.3s;
+
+  &:hover {
+    box-shadow: var(--shadow-card-hover);
+  }
 }
 
 .quota-log-main {
@@ -1923,6 +1988,46 @@ function handleAvatarUpdate(newAvatarUrl: string) {
   display: flex;
   align-items: center;
   justify-content: flex-start;
+}
+
+.pagination-box {
+  display: flex;
+  justify-content: center;
+  margin-top: $spacing-lg;
+
+  // 复刻原 el-pagination.is-background 观感：圆角页码、激活主色
+  :deep(.n-pagination-item) {
+    color: var(--text-secondary);
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    transition: all 0.3s ease;
+
+    &:hover {
+      color: $primary;
+      border-color: $primary;
+    }
+
+    &.n-pagination-item--active {
+      background: $primary;
+      color: #fff;
+      border-color: $primary;
+      font-weight: bold;
+
+      &:hover {
+        color: #fff;
+      }
+    }
+
+    &.n-pagination-item--disabled {
+      cursor: not-allowed;
+
+      &:hover {
+        color: var(--text-secondary);
+        border-color: var(--border-color);
+      }
+    }
+  }
 }
 
 .feedback-item {
@@ -2005,7 +2110,7 @@ function handleAvatarUpdate(newAvatarUrl: string) {
 }
 
 .sign-in-stats .value {
-  color: var(--primary-color, #409eff);
+  color: var(--primary-color);
   font-size: 16px;
   font-weight: 600;
 }

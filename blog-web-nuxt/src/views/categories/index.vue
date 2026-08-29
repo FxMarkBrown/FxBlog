@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ComponentPublicInstance } from 'vue'
 import { getCategoriesApi } from '@/api/article'
 import Sidebar from '@/components/Sidebar/index.vue'
 import { usePageSeo } from '@/composables/useSeo'
@@ -99,6 +100,9 @@ async function syncCategoryFromRoute() {
 function handleScroll() {
   for (let index = categories.value.length - 1; index >= 0; index -= 1) {
     const category = categories.value[index]
+    if (!category) {
+      continue
+    }
     const element = getCategoryElement(category.name)
     if (!element) {
       continue
@@ -129,7 +133,7 @@ function queueScrollUpdate() {
 /**
  * 记录分类节点引用。
  */
-function setCategoryRef(categoryName: string, element: Element | null) {
+function setCategoryRef(categoryName: string, element: Element | ComponentPublicInstance | null) {
   if (!element || !(element instanceof HTMLElement)) {
     categoryElements.delete(categoryName)
     return

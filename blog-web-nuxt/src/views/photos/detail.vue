@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
 import { getAlbumDetailApi, getAlbumPhotosApi, verifyAlbumPasswordApi } from '@/api/album'
 import ImagePreview from '@/components/Common/ImagePreview.vue'
 import { usePageSeo } from '@/composables/useSeo'
 import type { AlbumPhoto, AlbumSummary } from '@/types/article'
+import { message } from '@/utils/feedback'
 import { IMAGE_ERROR_PLACEHOLDER } from '@/utils/placeholders'
 import { unwrapResponseData } from '@/utils/response'
 import AlbumPasswordDialog from '@/views/photos/components/password.vue'
@@ -138,9 +138,9 @@ function openPasswordDialog() {
   })
 }
 
-function showError(message: string) {
+function showError(text: string) {
   if (import.meta.client) {
-    ElMessage.error(message)
+    message.error(text)
   }
 }
 
@@ -306,7 +306,7 @@ watch(albumId, async (nextId, prevId) => {
           </div>
         </div>
         <div v-else class="no-photos">
-          <ElEmpty description="暂无照片" />
+          <NEmpty description="暂无照片" />
         </div>
       </div>
 
@@ -535,15 +535,15 @@ watch(albumId, async (nextId, prevId) => {
 .photo-card {
   height: 100%;
   position: relative;
-  border-radius: 16px;
+  border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-card);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   display: block;
 
   &:hover {
     transform: translateY(-8px) scale(1.02);
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-card-hover);
 
     img {
       transform: scale(1.1);

@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ElLoading, ElMessage } from 'element-plus'
 import { defineAsyncComponent } from 'vue'
 import { marked } from 'marked'
 import type { ToolbarNames } from 'md-editor-v3'
 import { allToolbar, DropdownToolbar } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 import { uploadFileApi } from '@/api/file'
+import type { UploadedFileDetail } from '@/api/file'
+import { message } from '@/utils/feedback'
 import { unwrapResponseData } from '@/utils/response'
 
 interface MarkdownEditorProps {
@@ -143,7 +144,7 @@ async function handleUploadImg(files: File[], callback: (urls: string[]) => void
       const formData = new FormData()
       formData.append('file', file)
       const response = await uploadFileApi(formData, props.uploadType)
-      return normalizeMarkdownUrl(unwrapResponseData<string | null>(response))
+      return normalizeMarkdownUrl(unwrapResponseData<UploadedFileDetail | null>(response)?.url)
     })
   )
 
@@ -273,7 +274,7 @@ function buildMarkdownLink(url: string, explicitText: string) {
 function handleInsertExternalLink() {
   const url = normalizeMarkdownUrl(externalLinkUrlInput.value.trim())
   if (!url) {
-    ElMessage.warning('请输入外链地址')
+    message.warning('请输入外链地址')
     return
   }
 
@@ -290,7 +291,7 @@ function handleInsertExternalLink() {
 function handleInsertInternalLink() {
   const normalizedTarget = normalizeInternalTarget(internalLinkTargetInput.value)
   if (!normalizedTarget) {
-    ElMessage.warning('请输入站内路径或文章 ID')
+    message.warning('请输入站内路径或文章 ID')
     return
   }
 
@@ -315,7 +316,7 @@ async function uploadSingleFile(file: File) {
   const formData = new FormData()
   formData.append('file', file)
   const response = await uploadFileApi(formData, props.uploadType)
-  return normalizeMarkdownUrl(unwrapResponseData<string | null>(response))
+  return normalizeMarkdownUrl(unwrapResponseData<UploadedFileDetail | null>(response)?.url)
 }
 
 /**
@@ -358,11 +359,7 @@ async function handleVideoFileChange(event: Event) {
     return
   }
 
-  const loading = ElLoading.service({
-    lock: true,
-    text: '视频上传中...',
-    background: 'rgba(0, 0, 0, 0.35)'
-  })
+  const loadingMsg = message.loading('视频上传中...', { duration: 0 })
 
   try {
     for (const file of files) {
@@ -375,9 +372,9 @@ async function handleVideoFileChange(event: Event) {
         targetValue: buildVideoTag(url)
       }))
     }
-    ElMessage.success('视频已插入')
+    message.success('视频已插入')
   } finally {
-    loading.close()
+    loadingMsg.destroy()
     if (input) {
       input.value = ''
     }
@@ -390,7 +387,7 @@ async function handleVideoFileChange(event: Event) {
 function handleInsertVideoUrl() {
   const url = videoUrlInput.value.trim()
   if (!url) {
-    ElMessage.warning('请输入视频地址')
+    message.warning('请输入视频地址')
     return
   }
 
@@ -513,62 +510,68 @@ defineExpose({
       </template>
     </ClientOnly>
 
-    <ElDialog
-      v-model="externalLinkDialogVisible"
+    <NModal
+      v-model:show="externalLinkDialogVisible"
+      preset="card"
       title="添加外链"
-      width="min(92vw, 480px)"
-      append-to-body
+      style="width: min(92vw, 480px)"
     >
       <div class="dialog-form-stack">
-        <ElInput v-model="externalLinkUrlInput" placeholder="请输入完整外链地址" />
-        <ElInput v-model="externalLinkTextInput" placeholder="请输入显示文字，可留空使用选中文本" />
+        <NInput v-model:value="externalLinkUrlInput" placeholder="请输入完整外链地址" />
+        <NInput
+          v-model:value="externalLinkTextInput"
+          placeholder="请输入显示文字，可留空使用选中文本"
+        />
       </div>
 
       <template #footer>
         <div class="video-dialog-footer">
-          <ElButton @click="externalLinkDialogVisible = false">取 消</ElButton>
-          <ElButton type="primary" @click="handleInsertExternalLink">确 定</ElButton>
+          <NButton @click="externalLinkDialogVisible = false">取 消</NButton>
+          <NButton type="primary" @click="handleInsertExternalLink">确 定</NButton>
         </div>
       </template>
-    </ElDialog>
+    </NModal>
 
-    <ElDialog
-      v-model="internalLinkDialogVisible"
+    <NModal
+      v-model:show="internalLinkDialogVisible"
+      preset="card"
       title="添加站内跳转"
-      width="min(92vw, 480px)"
-      append-to-body
+      style="width: min(92vw, 480px)"
     >
       <div class="dialog-form-stack">
-        <ElInput
-          v-model="internalLinkTargetInput"
+        <NInput
+          v-model:value="internalLinkTargetInput"
           placeholder="请输入文章 ID、/post/123 或其他站内路径"
         />
-        <ElInput v-model="internalLinkTextInput" placeholder="请输入显示文字，可留空使用选中文本" />
+        <NInput
+          v-model:value="internalLinkTextInput"
+          placeholder="请输入显示文字，可留空使用选中文本"
+        />
       </div>
 
       <template #footer>
         <div class="video-dialog-footer">
-          <ElButton @click="internalLinkDialogVisible = false">取 消</ElButton>
-          <ElButton type="primary" @click="handleInsertInternalLink">确 定</ElButton>
+          <NButton @click="internalLinkDialogVisible = false">取 消</NButton>
+          <NButton type="primary" @click="handleInsertInternalLink">确 定</NButton>
         </div>
       </template>
-    </ElDialog>
+    </NModal>
 
-    <ElDialog
-      v-model="videoDialogVisible"
+    <NModal
+      v-model:show="videoDialogVisible"
+      preset="card"
       title="添加视频地址"
-      width="min(92vw, 480px)"
-      append-to-body
+      style="width: min(92vw, 480px)"
     >
-      <ElInput v-model="videoUrlInput" placeholder="请输入可访问的视频地址" />
+      <NInput v-model:value="videoUrlInput" placeholder="请输入可访问的视频地址" />
 
       <template #footer>
         <div class="video-dialog-footer">
-          <ElButton @click="videoDialogVisible = false">取 消</ElButton>
-          <ElButton type="primary" @click="handleInsertVideoUrl">确 定</ElButton>
+          <NButton @click="videoDialogVisible = false">取 消</NButton>
+          <NButton type="primary" @click="handleInsertVideoUrl">确 定</NButton>
         </div>
       </template>
-    </ElDialog>
+    </NModal>
   </div>
 </template>
 

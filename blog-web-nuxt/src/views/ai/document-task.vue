@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
-import { ElMessage } from 'element-plus'
 import type {
   Connection,
   Edge,
@@ -33,6 +32,7 @@ import type {
 } from '@/types/ai-document'
 import type { PageResult } from '@/types/common'
 import { normalizeMarkdownContent } from '@/utils/ai-markdown'
+import { message } from '@/utils/feedback'
 import { unwrapResponseData } from '@/utils/response'
 import { getThemeMode, initTheme, setThemeMode } from '@/utils/theme'
 
@@ -281,7 +281,7 @@ async function loadTask(silent = false) {
 
     if (!isParsedTask(taskDetail.value?.status)) {
       if (!silent) {
-        ElMessage.info('文档尚未解析完成，请稍后从任务列表进入画布')
+        message.info('文档尚未解析完成，请稍后从任务列表进入画布')
       }
       await router.replace('/ai/document')
       return
@@ -300,7 +300,7 @@ async function loadTask(silent = false) {
       await rebuildCanvas()
     }
   } catch (error) {
-    ElMessage.error((error as Error)?.message || '文档任务加载失败')
+    message.error((error as Error)?.message || '文档任务加载失败')
   } finally {
     if (!silent) {
       loading.value = false
@@ -1333,7 +1333,7 @@ async function handleSubmitQuestion(nodeId: string) {
   const currentState = getChatState(nodeId)
   const question = String(currentState.question || '').trim()
   if (!question) {
-    ElMessage.warning('先输入问题')
+    message.warning('先输入问题')
     return
   }
   if (!taskId.value) {
@@ -1544,7 +1544,7 @@ async function loadNodeThreadState(nodeId: string) {
       }
     }
   } catch (error) {
-    ElMessage.error((error as Error)?.message || '节点对话历史加载失败')
+    message.error((error as Error)?.message || '节点对话历史加载失败')
   }
 }
 
@@ -2199,51 +2199,47 @@ onBeforeUnmount(() => {
       </ClientOnly>
     </div>
 
-    <ElTooltip
-      content="切换主题"
-      placement="left"
-      effect="light"
-      popper-class="document-theme-tooltip"
-      :teleported="false"
-    >
-      <button
-        type="button"
-        class="document-theme-toggle"
-        :title="isDarkMode ? '切换为亮色' : '切换为暗色'"
-        @click="toggleTheme"
-      >
-        <i :class="['fas', isDarkMode ? 'fa-sun' : 'fa-moon']"></i>
-      </button>
-    </ElTooltip>
-
-    <div class="document-action-rail">
-      <ElTooltip
-        content="刷新结果"
-        placement="left"
-        effect="light"
-        popper-class="document-theme-tooltip"
-        :teleported="false"
-      >
+    <NTooltip placement="left" :to="false">
+      <template #trigger>
         <button
           type="button"
-          class="document-floating-action is-secondary"
-          title="刷新结果"
-          @click="loadTask()"
+          class="document-theme-toggle"
+          :title="isDarkMode ? '切换为亮色' : '切换为暗色'"
+          @click="toggleTheme"
         >
-          <i class="fas fa-rotate-right"></i>
+          <i :class="['fas', isDarkMode ? 'fa-sun' : 'fa-moon']"></i>
         </button>
-      </ElTooltip>
-      <ElTooltip
-        content="重新聚焦"
-        placement="left"
-        effect="light"
-        popper-class="document-theme-tooltip"
-        :teleported="false"
-      >
-        <button type="button" class="document-floating-action" title="重新聚焦" @click="fitCanvas">
-          <i class="fas fa-expand"></i>
-        </button>
-      </ElTooltip>
+      </template>
+      切换主题
+    </NTooltip>
+
+    <div class="document-action-rail">
+      <NTooltip placement="left" :to="false">
+        <template #trigger>
+          <button
+            type="button"
+            class="document-floating-action is-secondary"
+            title="刷新结果"
+            @click="loadTask()"
+          >
+            <i class="fas fa-rotate-right"></i>
+          </button>
+        </template>
+        刷新结果
+      </NTooltip>
+      <NTooltip placement="left" :to="false">
+        <template #trigger>
+          <button
+            type="button"
+            class="document-floating-action"
+            title="重新聚焦"
+            @click="fitCanvas"
+          >
+            <i class="fas fa-expand"></i>
+          </button>
+        </template>
+        重新聚焦
+      </NTooltip>
     </div>
 
     <aside v-if="!isMobileViewport" class="document-tip" :class="{ 'is-dark': isDarkMode }">
@@ -2722,7 +2718,7 @@ onBeforeUnmount(() => {
   }
 
   &.is-citation::before {
-    background: #a855f7;
+    background: $secondary;
   }
 }
 
@@ -2949,20 +2945,6 @@ onBeforeUnmount(() => {
 
 .document-task-page.is-dark :deep(.vue-flow__edge-textbg) {
   fill: rgba(15, 23, 42, 0.9);
-}
-
-:deep(.document-theme-tooltip.el-popper) {
-  background: var(--card-bg) !important;
-  color: var(--text-primary) !important;
-  border: 1px solid var(--border-color) !important;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14) !important;
-  white-space: nowrap !important;
-  writing-mode: horizontal-tb !important;
-}
-
-:deep(.document-theme-tooltip.el-popper .el-popper__arrow::before) {
-  background: var(--card-bg) !important;
-  border-color: var(--border-color) !important;
 }
 
 @media (max-width: 900px) {

@@ -22,15 +22,9 @@ const isMobile = ref(false)
 const deviceMemory = ref(8)
 const motionQuery = ref<MediaQueryList | null>(null)
 let engine: ReturnType<typeof createWeatherEngine> | null = null
-let refreshTimer: ReturnType<typeof setTimeout> | null = null
+let refreshTimer: number | null = null
 
-const themeMode = computed(() => {
-  if (!import.meta.client) {
-    return 'light'
-  }
-
-  return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
-})
+const themeMode = ref<'light' | 'dark'>('light')
 
 const renderProfile = computed<WeatherRenderProfile>(() =>
   resolveRenderProfile({
@@ -245,14 +239,28 @@ function removeReducedMotionListener() {
   motionQuery.value = null
 }
 
+/**
+ * 同步明暗主题
+ */
+function syncThemeMode() {
+  if (!import.meta.client) {
+    return
+  }
+
+  themeMode.value =
+    document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
+}
+
 onMounted(() => {
   isMobile.value = window.innerWidth < 768
   deviceMemory.value = Number(
     (navigator as Navigator & { deviceMemory?: number }).deviceMemory || 8
   )
   initReducedMotion()
+  syncThemeMode()
   document.addEventListener('visibilitychange', handleVisibilityChange)
   window.addEventListener('resize', handleResize, { passive: true })
+  window.addEventListener('theme-change', syncThemeMode)
   void fetchWeatherEffect()
 })
 
@@ -260,6 +268,7 @@ onBeforeUnmount(() => {
   clearRefreshTimer()
   document.removeEventListener('visibilitychange', handleVisibilityChange)
   window.removeEventListener('resize', handleResize)
+  window.removeEventListener('theme-change', syncThemeMode)
   removeReducedMotionListener()
   if (engine) {
     void engine.destroy()

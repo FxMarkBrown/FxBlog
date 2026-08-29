@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   createDocumentTaskApi,
   deleteDocumentTaskApi,
@@ -8,6 +7,7 @@ import {
 } from '@/api/ai-document'
 import { uploadFileApi } from '@/api/file'
 import { useNoIndexSeo } from '@/composables/useSeo'
+import { dialog, message, promptInput } from '@/utils/feedback'
 import { unwrapResponseData } from '@/utils/response'
 import type { DocumentTaskListItem } from '@/types/ai-document'
 
@@ -19,7 +19,7 @@ const loading = ref(false)
 const creating = ref(false)
 const tasks = ref<DocumentTaskListItem[]>([])
 const uploadInputRef = ref<HTMLInputElement | null>(null)
-let taskPollingTimer: ReturnType<typeof setInterval> | null = null
+let taskPollingTimer: number | null = null
 
 useNoIndexSeo({
   title: () => `文档任务 - ${runtimeConfig.public.siteName}`,
@@ -76,7 +76,7 @@ async function loadPageData(silent = false) {
     syncTaskPolling()
   } catch (error) {
     if (!silent) {
-      ElMessage.error((error as Error)?.message || '文档任务加载失败')
+      message.error((error as Error)?.message || '文档任务加载失败')
     }
   } finally {
     if (!silent) {
@@ -87,7 +87,7 @@ async function loadPageData(silent = false) {
 
 function openTask(taskId: number, status?: string) {
   if (!isTaskReady(status)) {
-    ElMessage.info('文档解析完成后才可进入画布')
+    message.info('文档解析完成后才可进入画布')
     return
   }
   router.push(`/ai/document/${taskId}`)
@@ -126,20 +126,22 @@ function statusClass(status?: string) {
 
 async function handleRenameTask(task: DocumentTaskListItem) {
   try {
-    const { value } = await ElMessageBox.prompt('输入新的文档任务名称', '重命名任务', {
-      inputValue: task.title || task.fileName || '',
-      inputPlaceholder: '请输入任务名称',
-      confirmButtonText: '保存',
-      cancelButtonText: '取消'
+    const value = await promptInput({
+      title: '重命名任务',
+      content: '输入新的文档任务名称',
+      defaultValue: task.title || task.fileName || '',
+      placeholder: '请输入任务名称',
+      positiveText: '保存',
+      negativeText: '取消'
     })
 
     const nextTitle = value.trim()
     if (!nextTitle) {
-      ElMessage.warning('任务名称不能为空')
+      message.warning('任务名称不能为空')
       return
     }
     if (nextTitle.length > 255) {
-      ElMessage.warning('任务名称不能超过 255 个字符')
+      message.warning('任务名称不能超过 255 个字符')
       return
     }
     if (nextTitle === (task.title || '').trim()) {
@@ -148,35 +150,37 @@ async function handleRenameTask(task: DocumentTaskListItem) {
 
     await renameDocumentTaskApi(task.taskId, { title: nextTitle })
     task.title = nextTitle
-    ElMessage.success('任务名称已更新')
+    message.success('任务名称已更新')
   } catch (error) {
-    if (error === 'cancel' || error === 'close') {
+    if (error instanceof Error && error.message === 'cancel') {
       return
     }
-    ElMessage.error((error as Error)?.message || '重命名失败')
+    message.error((error as Error)?.message || '重命名失败')
   }
 }
 
 async function handleDeleteTask(task: DocumentTaskListItem) {
   try {
-    await ElMessageBox.confirm(
-      `确认删除“${task.title || task.fileName || `文档任务 #${task.taskId}`}”吗？`,
-      '删除任务',
-      {
-        type: 'warning',
-        confirmButtonText: '删除',
-        cancelButtonText: '取消'
-      }
-    )
+    await new Promise<void>((resolve, reject) => {
+      dialog.warning({
+        title: '删除任务',
+        content: `确认删除“${task.title || task.fileName || `文档任务 #${task.taskId}`}”吗？`,
+        positiveText: '删除',
+        negativeText: '取消',
+        onPositiveClick: () => resolve(),
+        onNegativeClick: () => reject(new Error('cancel')),
+        onClose: () => reject(new Error('cancel'))
+      })
+    })
     await deleteDocumentTaskApi(task.taskId)
     tasks.value = tasks.value.filter((item) => item.taskId !== task.taskId)
     syncTaskPolling()
-    ElMessage.success('任务已删除')
+    message.success('任务已删除')
   } catch (error) {
-    if (error === 'cancel' || error === 'close') {
+    if (error instanceof Error && error.message === 'cancel') {
       return
     }
-    ElMessage.error((error as Error)?.message || '删除失败')
+    message.error((error as Error)?.message || '删除失败')
   }
 }
 
@@ -201,7 +205,7 @@ async function handleDocumentUpload(event: Event) {
     const sourceUrl = String(uploaded?.url || '')
     const sourceFileId = String(uploaded?.id || '')
     if (!sourceUrl || !sourceFileId) {
-      ElMessage.error('文件上传成功，但缺少文件记录信息')
+      message.error('文件上传成功，但缺少文件记录信息')
       return
     }
 
@@ -212,10 +216,10 @@ async function handleDocumentUpload(event: Event) {
       sourceFileId
     }
     await createDocumentTaskApi(requestBody)
-    ElMessage.success('文档任务已提交，解析完成后将开放进入画布')
+    message.success('文档任务已提交，解析完成后将开放进入画布')
     await loadPageData()
   } catch (error) {
-    ElMessage.error((error as Error)?.message || '上传文档失败')
+    message.error((error as Error)?.message || '上传文档失败')
   } finally {
     creating.value = false
     if (input) {
@@ -280,7 +284,7 @@ onBeforeUnmount(() => {
             <p>上传 PDF、Office 文档或 Markdown 后即可进入结构画布，继续浏览、追问和整理上下文。</p>
           </div>
           <div class="document-section__actions">
-            <button type="button" class="back-link as-button" @click="loadPageData">
+            <button type="button" class="back-link as-button" @click="() => void loadPageData()">
               刷新列表
             </button>
             <NuxtLink to="/ai" class="back-link">返回 AI</NuxtLink>

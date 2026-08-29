@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import type { FormInstance, FormRules } from 'element-plus'
-import { ElMessage } from 'element-plus'
+import type { FormInst, FormRules } from 'naive-ui'
 import {
   forgotPasswordApi,
   getAuthRenderApi,
@@ -15,6 +14,7 @@ import {
 import { useNoIndexSeo } from '@/composables/useSeo'
 import LoginParticles from '@/views/login/components/LoginParticles.vue'
 import SliderVerify from '@/views/login/components/SliderVerify.vue'
+import { message } from '@/utils/feedback'
 import { WECHAT_QR_PLACEHOLDER } from '@/utils/placeholders'
 import { setCookieExpires } from '@/utils/cookie'
 import { unwrapResponseData } from '@/utils/response'
@@ -38,9 +38,9 @@ const authStore = useAuthStore()
 const siteStore = useSiteStore()
 const router = useRouter()
 
-const ruleFormRef = ref<FormInstance | null>(null)
-const registerFormRef = ref<FormInstance | null>(null)
-const forgotFormRef = ref<FormInstance | null>(null)
+const ruleFormRef = ref<FormInst | null>(null)
+const registerFormRef = ref<FormInst | null>(null)
+const forgotFormRef = ref<FormInst | null>(null)
 const sliderVerifyRef = ref<SliderVerifyExpose | null>(null)
 
 const loading = ref(false)
@@ -87,7 +87,7 @@ const loginTypes: Record<LoginType, LoginOptionItem> = {
   weibo: { title: '微博账号登录', icon: 'fab fa-weibo' }
 }
 
-const rules = reactive<FormRules>({
+const rules: FormRules = {
   nickname: [
     { required: true, message: '请输入昵称', trigger: 'blur' },
     { min: 3, max: 10, message: '长度在 3 到 10 个字符', trigger: 'blur' }
@@ -105,7 +105,7 @@ const rules = reactive<FormRules>({
     { min: 6, max: 16, message: '长度在 6 到 16 个字符', trigger: 'blur' }
   ],
   code: [{ required: true, message: '请输入验证码', trigger: 'blur' }]
-})
+}
 
 const enabledLoginTypeList = computed<string[]>(() => {
   const raw = siteStore.websiteInfo.loginTypeList
@@ -196,18 +196,18 @@ function syncThemeState() {
 /**
  * 统一弹出错误提示。
  */
-function showError(message: string) {
+function showError(text: string) {
   if (import.meta.client) {
-    ElMessage.error(message)
+    message.error(text)
   }
 }
 
 /**
  * 统一弹出成功提示。
  */
-function showSuccess(message: string) {
+function showSuccess(text: string) {
   if (import.meta.client) {
-    ElMessage.success(message)
+    message.success(text)
   }
 }
 
@@ -344,7 +344,10 @@ function isSliderCaptchaEnabled(payload: unknown) {
  * 触发账号密码登录前的表单校验和验证码开关判断。
  */
 async function handleLogin() {
-  const valid = await ruleFormRef.value?.validate().catch(() => false)
+  const valid = await ruleFormRef.value
+    ?.validate()
+    .then(() => true)
+    .catch(() => false)
   if (!valid) {
     return
   }
@@ -366,7 +369,10 @@ async function handleLogin() {
  * 处理邮箱注册。
  */
 async function handleRegister() {
-  const valid = await registerFormRef.value?.validate().catch(() => false)
+  const valid = await registerFormRef.value
+    ?.validate()
+    .then(() => true)
+    .catch(() => false)
   if (!valid) {
     return
   }
@@ -387,7 +393,10 @@ async function handleRegister() {
  * 处理找回密码。
  */
 async function handleResetPassword() {
-  const valid = await forgotFormRef.value?.validate().catch(() => false)
+  const valid = await forgotFormRef.value
+    ?.validate()
+    .then(() => true)
+    .catch(() => false)
   if (!valid) {
     return
   }
@@ -657,7 +666,7 @@ function backToHome() {
         </div>
 
         <div v-if="hasOauthLogin" class="divider">
-          <ElDivider>{{ hasWechatLogin ? '其他登录方式' : '第三方登录' }}</ElDivider>
+          <NDivider>{{ hasWechatLogin ? '其他登录方式' : '第三方登录' }}</NDivider>
         </div>
 
         <div v-if="hasOauthLogin" class="third-party-login">
@@ -682,10 +691,10 @@ function backToHome() {
           <p class="form-subtitle">欢迎回来,请输入您的账号</p>
         </div>
 
-        <ElForm ref="ruleFormRef" :model="loginForm" :rules="rules">
-          <ElFormItem class="form-item" prop="username">
-            <ElInput
-              v-model="loginForm.username"
+        <NForm ref="ruleFormRef" :model="loginForm" :rules="rules">
+          <NFormItem class="form-item" path="username">
+            <NInput
+              v-model:value="loginForm.username"
               placeholder="请输入用户名"
               size="large"
               @keyup.enter="handleLogin"
@@ -693,38 +702,39 @@ function backToHome() {
               <template #prefix>
                 <i class="fas fa-user"></i>
               </template>
-            </ElInput>
-          </ElFormItem>
+            </NInput>
+          </NFormItem>
 
-          <ElFormItem class="form-item" prop="password">
-            <ElInput
-              v-model="loginForm.password"
+          <NFormItem class="form-item" path="password">
+            <NInput
+              v-model:value="loginForm.password"
               placeholder="请输入密码"
-              show-password
+              type="password"
+              show-password-on="click"
               size="large"
               @keyup.enter="handleLogin"
             >
               <template #prefix>
                 <i class="fas fa-lock"></i>
               </template>
-            </ElInput>
-          </ElFormItem>
+            </NInput>
+          </NFormItem>
 
           <div class="form-options">
-            <ElCheckbox v-model="rememberMe">记住我</ElCheckbox>
+            <NCheckbox v-model:checked="rememberMe">记住我</NCheckbox>
           </div>
 
-          <ElFormItem class="form-item">
-            <ElButton
+          <NFormItem class="form-item">
+            <NButton
               class="submit-btn ripple"
               :loading="loading"
               type="primary"
               @click="handleLogin"
             >
               登 录
-            </ElButton>
-          </ElFormItem>
-        </ElForm>
+            </NButton>
+          </NFormItem>
+        </NForm>
 
         <div class="form-switch">
           <a @click="switchForm('register')">立即注册</a>
@@ -739,57 +749,62 @@ function backToHome() {
           <p class="form-subtitle">欢迎注册,请输入您的账号</p>
         </div>
 
-        <ElForm ref="registerFormRef" :model="registerForm" :rules="rules">
-          <ElFormItem class="form-item" prop="nickname">
-            <ElInput v-model="registerForm.nickname" placeholder="请输入昵称">
+        <NForm ref="registerFormRef" :model="registerForm" :rules="rules">
+          <NFormItem class="form-item" path="nickname">
+            <NInput v-model:value="registerForm.nickname" placeholder="请输入昵称">
               <template #prefix>
                 <i class="fas fa-user"></i>
               </template>
-            </ElInput>
-          </ElFormItem>
+            </NInput>
+          </NFormItem>
 
-          <ElFormItem class="form-item" prop="email">
-            <ElInput v-model="registerForm.email" placeholder="请输入邮箱">
+          <NFormItem class="form-item" path="email">
+            <NInput v-model:value="registerForm.email" placeholder="请输入邮箱">
               <template #prefix>
                 <i class="fas fa-envelope"></i>
               </template>
-            </ElInput>
-          </ElFormItem>
+            </NInput>
+          </NFormItem>
 
-          <ElFormItem class="form-item" prop="code">
-            <ElInput v-model="registerForm.code" placeholder="请输入验证码">
-              <template #prefix>
-                <i class="fas fa-key"></i>
-              </template>
-              <template #append>
-                <ElButton
-                  class="code-btn"
-                  type="primary"
-                  :disabled="codeSending"
-                  @click="sendRegisterCode"
-                >
-                  {{ codeButtonText }}
-                </ElButton>
-              </template>
-            </ElInput>
-          </ElFormItem>
+          <NFormItem class="form-item" path="code">
+            <NInputGroup>
+              <NInput v-model:value="registerForm.code" placeholder="请输入验证码">
+                <template #prefix>
+                  <i class="fas fa-key"></i>
+                </template>
+              </NInput>
+              <NButton
+                class="code-btn"
+                type="primary"
+                :disabled="codeSending"
+                @click="sendRegisterCode"
+              >
+                {{ codeButtonText }}
+              </NButton>
+            </NInputGroup>
+          </NFormItem>
 
-          <ElFormItem class="form-item" prop="password">
-            <ElInput v-model="registerForm.password" placeholder="请输入密码" show-password>
+          <NFormItem class="form-item" path="password">
+            <NInput
+              v-model:value="registerForm.password"
+              placeholder="请输入密码"
+              type="password"
+              show-password-on="click"
+            >
               <template #prefix>
                 <i class="fas fa-lock"></i>
               </template>
-            </ElInput>
-          </ElFormItem>
+            </NInput>
+          </NFormItem>
 
-          <ElFormItem class="form-item">
-            <ElButton class="submit-btn" type="primary" :loading="loading" @click="handleRegister">
+          <NFormItem class="form-item">
+            <NButton class="submit-btn" type="primary" :loading="loading" @click="handleRegister">
               注 册
-            </ElButton>
-          </ElFormItem>
+            </NButton>
+          </NFormItem>
 
           <div class="form-switch">已有账号？<a @click="switchForm('account')">立即登录</a></div>
-        </ElForm>
+        </NForm>
       </div>
 
       <div v-show="currentForm === 'forgot'" class="form-container">
@@ -798,70 +813,75 @@ function backToHome() {
           <p class="form-subtitle">重置密码,请输入您的邮箱</p>
         </div>
 
-        <ElForm ref="forgotFormRef" :model="forgotForm" :rules="rules">
-          <ElFormItem class="form-item" prop="email">
-            <ElInput v-model="forgotForm.email" placeholder="请输入注册邮箱">
+        <NForm ref="forgotFormRef" :model="forgotForm" :rules="rules">
+          <NFormItem class="form-item" path="email">
+            <NInput v-model:value="forgotForm.email" placeholder="请输入注册邮箱">
               <template #prefix>
                 <i class="fas fa-envelope"></i>
               </template>
-            </ElInput>
-          </ElFormItem>
+            </NInput>
+          </NFormItem>
 
-          <ElFormItem class="form-item" prop="code">
-            <ElInput v-model="forgotForm.code" placeholder="请输入验证码">
-              <template #prefix>
-                <i class="fas fa-key"></i>
-              </template>
-              <template #append>
-                <ElButton
-                  class="code-btn"
-                  type="primary"
-                  :disabled="codeSending"
-                  @click="sendVerificationCode"
-                >
-                  {{ codeButtonText }}
-                </ElButton>
-              </template>
-            </ElInput>
-          </ElFormItem>
+          <NFormItem class="form-item" path="code">
+            <NInputGroup>
+              <NInput v-model:value="forgotForm.code" placeholder="请输入验证码">
+                <template #prefix>
+                  <i class="fas fa-key"></i>
+                </template>
+              </NInput>
+              <NButton
+                class="code-btn"
+                type="primary"
+                :disabled="codeSending"
+                @click="sendVerificationCode"
+              >
+                {{ codeButtonText }}
+              </NButton>
+            </NInputGroup>
+          </NFormItem>
 
-          <ElFormItem class="form-item" prop="password">
-            <ElInput v-model="forgotForm.password" placeholder="请输入新密码" show-password>
+          <NFormItem class="form-item" path="password">
+            <NInput
+              v-model:value="forgotForm.password"
+              placeholder="请输入新密码"
+              type="password"
+              show-password-on="click"
+            >
               <template #prefix>
                 <i class="fas fa-lock"></i>
               </template>
-            </ElInput>
-          </ElFormItem>
+            </NInput>
+          </NFormItem>
 
-          <ElFormItem class="form-item">
-            <ElButton
+          <NFormItem class="form-item">
+            <NButton
               class="submit-btn"
               type="primary"
               :loading="loading"
               @click="handleResetPassword"
             >
               重置密码
-            </ElButton>
-          </ElFormItem>
+            </NButton>
+          </NFormItem>
 
           <div class="form-switch">
             <a @click="switchForm('account')">返回登录</a>
           </div>
-        </ElForm>
+        </NForm>
       </div>
     </div>
 
-    <ElDialog
-      v-model="isShowSliderVerify"
+    <NModal
+      v-model:show="isShowSliderVerify"
+      preset="card"
       title="请拖动滑块完成拼图"
-      width="360px"
-      :close-on-click-modal="false"
-      append-to-body
+      style="width: 360px; border-radius: 10px"
+      :mask-closable="false"
       class="login-slider-dialog"
       @close="refresh"
     >
       <SliderVerify ref="sliderVerifyRef" @success="onSuccess" @fail="onFail" @again="onAgain" />
-    </ElDialog>
+    </NModal>
   </div>
 </template>
 
@@ -891,11 +911,9 @@ function backToHome() {
   padding: 32px;
   z-index: 2;
   border: 1px solid rgba(255, 255, 255, 0.72);
-  border-radius: 28px;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow:
-    0 26px 56px rgba(79, 70, 229, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.52);
+  border-radius: 10px;
+  background: var(--card-bg);
+  box-shadow: var(--shadow-card);
   backdrop-filter: blur(14px) saturate(118%);
 }
 
@@ -907,37 +925,24 @@ function backToHome() {
   margin-bottom: 20px;
 }
 
-.form-item :deep(.el-input__inner) {
-  height: 44px;
+.form-item :deep(.n-input) {
+  --n-height: 44px;
+  --n-border: 1px solid rgba(124, 139, 150, 0.14);
+  --n-border-hover: 1px solid rgba(124, 139, 150, 0.14);
+  --n-color: rgba(255, 255, 255, 0.58);
+  border-radius: 12px;
   font-size: 14px;
 }
 
-.form-item :deep(.el-input__wrapper) {
-  background: rgba(255, 255, 255, 0.58);
-  box-shadow: 0 0 0 1px rgba(124, 139, 150, 0.14) inset;
-}
-
-.form-item :deep(.el-input-group--append .el-input__wrapper) {
-  border-radius: 12px 0 0 12px;
-}
-
-.form-item :deep(.el-input__inner)::placeholder {
+.form-item :deep(.n-input__input-el)::placeholder {
   color: #9ca3af;
 }
 
-.form-item :deep(.el-input__prefix) {
-  left: 12px;
+.form-item :deep(.n-input__prefix) {
   color: #6b7280;
 }
 
-:deep(.submit-btn.el-button) {
-  --el-button-bg-color: #6677ff;
-  --el-button-border-color: transparent;
-  --el-button-text-color: #ffffff;
-  --el-button-hover-bg-color: #7180ff;
-  --el-button-hover-border-color: transparent;
-  --el-button-active-bg-color: #5668f0;
-  --el-button-active-border-color: transparent;
+.submit-btn {
   width: 100%;
   height: 52px;
   display: inline-flex;
@@ -957,37 +962,22 @@ function backToHome() {
     filter 0.2s ease;
 }
 
-:deep(.submit-btn.el-button:hover) {
+.submit-btn:hover {
   transform: translateY(-1px);
   filter: brightness(1.03);
   box-shadow: 0 18px 36px rgba(99, 102, 241, 0.3);
+  background: linear-gradient(135deg, #5b67f1 0%, #6677ff 100%);
+  color: #fff;
 }
 
-:deep(.submit-btn.el-button:active) {
+.submit-btn:active {
   transform: translateY(0);
   box-shadow: 0 10px 22px rgba(99, 102, 241, 0.22);
 }
 
-.form-item :deep(.el-input-group__append) {
-  padding: 0;
-  border: 0;
-  border-radius: 0 12px 12px 0;
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: 0 0 0 1px rgba(124, 139, 150, 0.14) inset;
-  overflow: hidden;
-  transition:
-    box-shadow 0.2s ease,
-    background-color 0.2s ease;
-}
-
-.form-item :deep(.el-input-group:focus-within .el-input-group__append) {
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 0 0 1px var(--el-color-primary) inset;
-}
-
-.form-item :deep(.el-input-group__append .el-button) {
+.form-item .code-btn {
   min-width: 112px;
-  height: 100%;
+  height: 44px;
   padding: 0 18px;
   border: none;
   border-left: 1px solid rgba(148, 163, 184, 0.2);
@@ -1000,26 +990,9 @@ function backToHome() {
     color 0.2s ease;
 }
 
-.form-item :deep(.el-input-group__append .el-button:hover) {
+.form-item .code-btn:hover {
   background: rgba(99, 102, 241, 0.14);
   color: #4338ca;
-}
-
-:deep(.code-btn.el-button) {
-  --el-button-bg-color: linear-gradient(135deg, #5b67f1 0%, #6677ff 100%);
-  --el-button-border-color: transparent;
-  --el-button-text-color: #ffffff;
-  --el-button-hover-bg-color: #7180ff;
-  --el-button-hover-border-color: transparent;
-  --el-button-active-bg-color: #5668f0;
-  --el-button-active-border-color: transparent;
-  background: linear-gradient(135deg, #5b67f1 0%, #6677ff 100%);
-  color: #fff;
-  box-shadow: none;
-}
-
-:deep(.code-btn.el-button:hover) {
-  filter: brightness(1.03);
 }
 
 .divider {
@@ -1027,9 +1000,7 @@ function backToHome() {
   color: #9ca3af;
 }
 
-.divider :deep(.el-divider__text) {
-  padding: 0 12px;
-  background-color: rgba(255, 255, 255, 0.74);
+.divider :deep(.n-divider__title) {
   font-size: 14px;
 }
 
@@ -1165,7 +1136,7 @@ function backToHome() {
   margin-bottom: 24px;
 }
 
-.form-options :deep(.el-checkbox__label) {
+.form-options :deep(.n-checkbox__label) {
   color: #64748b;
 }
 
@@ -1246,10 +1217,6 @@ function backToHome() {
 
 .login-container.is-dark .login-body {
   border-color: rgba(148, 163, 184, 0.2);
-  background: rgba(15, 23, 42, 0.86);
-  box-shadow:
-    0 30px 80px rgba(2, 6, 23, 0.44),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .login-container.is-dark .form-title {
@@ -1263,8 +1230,7 @@ function backToHome() {
   color: #94a3b8;
 }
 
-.login-container.is-dark .divider :deep(.el-divider__text) {
-  background-color: rgba(15, 23, 42, 0.76);
+.login-container.is-dark .divider :deep(.n-divider__title) {
   color: #cbd5e1;
 }
 
@@ -1286,70 +1252,43 @@ function backToHome() {
   background: rgba(51, 65, 85, 0.82);
 }
 
-.login-container.is-dark .form-item :deep(.el-input__wrapper) {
-  background: rgba(15, 23, 42, 0.72);
-  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.16) inset;
+.login-container.is-dark .form-item :deep(.n-input) {
+  --n-border: 1px solid rgba(148, 163, 184, 0.16);
+  --n-border-hover: 1px solid rgba(148, 163, 184, 0.16);
+  --n-color: rgba(15, 23, 42, 0.72);
 }
 
-.login-container.is-dark .form-item :deep(.el-input-group__append) {
-  background: rgba(15, 23, 42, 0.76);
-  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.16) inset;
-}
-
-.login-container.is-dark .form-item :deep(.el-input-group:focus-within .el-input-group__append) {
-  background: rgba(15, 23, 42, 0.92);
-  box-shadow: 0 0 0 1px var(--el-color-primary) inset;
-}
-
-.login-container.is-dark .form-item :deep(.el-input__inner) {
+.login-container.is-dark .form-item :deep(.n-input__input-el) {
   color: #e2e8f0;
 }
 
-.login-container.is-dark .form-item :deep(.el-input__inner)::placeholder {
+.login-container.is-dark .form-item :deep(.n-input__input-el)::placeholder {
   color: #64748b;
 }
 
-.login-container.is-dark .form-item :deep(.el-input__prefix) {
+.login-container.is-dark .form-item :deep(.n-input__prefix) {
   color: #94a3b8;
 }
 
-.login-container.is-dark .form-options :deep(.el-checkbox__label) {
+.login-container.is-dark .form-options :deep(.n-checkbox__label) {
   color: #cbd5e1;
 }
 
-.login-container.is-dark :deep(.submit-btn.el-button) {
-  --el-button-bg-color: #6d63f4;
-  --el-button-border-color: transparent;
-  --el-button-text-color: #ffffff;
-  --el-button-hover-bg-color: #776ef8;
-  --el-button-hover-border-color: transparent;
-  --el-button-active-bg-color: #5d56df;
-  --el-button-active-border-color: transparent;
+.login-container.is-dark .submit-btn,
+.login-container.is-dark .submit-btn:hover {
   background: linear-gradient(135deg, #6466f1 0%, #6d63f4 100%);
   box-shadow: 0 16px 34px rgba(79, 70, 229, 0.28);
 }
 
-.login-container.is-dark .form-item :deep(.el-input-group__append .el-button) {
+.login-container.is-dark .form-item .code-btn {
   border-left-color: rgba(148, 163, 184, 0.18);
   background: rgba(99, 102, 241, 0.16);
   color: #c7d2fe;
 }
 
-.login-container.is-dark .form-item :deep(.el-input-group__append .el-button:hover) {
+.login-container.is-dark .form-item .code-btn:hover {
   background: rgba(99, 102, 241, 0.24);
   color: #e0e7ff;
-}
-
-.login-container.is-dark :deep(.code-btn.el-button) {
-  --el-button-bg-color: linear-gradient(135deg, #6466f1 0%, #6d63f4 100%);
-  --el-button-border-color: transparent;
-  --el-button-text-color: #ffffff;
-  --el-button-hover-bg-color: #776ef8;
-  --el-button-hover-border-color: transparent;
-  --el-button-active-bg-color: #5d56df;
-  --el-button-active-border-color: transparent;
-  background: linear-gradient(135deg, #6466f1 0%, #6d63f4 100%);
-  color: #fff;
 }
 
 @media (max-width: 768px) {
@@ -1363,7 +1302,7 @@ function backToHome() {
   .login-body {
     margin-top: 0;
     padding: 24px 20px 22px;
-    border-radius: 24px;
+    border-radius: 10px;
   }
 
   .form-header {

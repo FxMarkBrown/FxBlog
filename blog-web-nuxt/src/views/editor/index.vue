@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { defineAsyncComponent } from 'vue'
-import type { FormInstance, FormRules } from 'element-plus'
-import { ElMessage } from 'element-plus'
+import type { FormInst, FormItemRule, FormRules } from 'naive-ui'
 import { createArticleApi, getArticleInfoApi, updateArticleApi } from '@/api/article'
 import { getDictDataApi } from '@/api/dict'
 import type { UploadedFileDetail } from '@/api/file'
@@ -9,6 +8,7 @@ import { uploadFileApi } from '@/api/file'
 import { getCategoriesApi, getTagsApi } from '@/api/tags'
 import { useNoIndexSeo } from '@/composables/useSeo'
 import type { ArticleDetail, TagSummary } from '@/types/article'
+import { message } from '@/utils/feedback'
 import { unwrapResponseData } from '@/utils/response'
 
 interface ArticleFormState {
@@ -60,7 +60,7 @@ const authStore = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 
-const articleFormRef = ref<FormInstance | null>(null)
+const articleFormRef = ref<FormInst | null>(null)
 const coverInputRef = ref<HTMLInputElement | null>(null)
 const mdRef = ref<MarkdownEditorExpose | null>(null)
 
@@ -71,6 +71,11 @@ const tags = ref<TagSummary[]>([])
 const statusList = ref<DictItem[]>([])
 
 const articleForm = reactive<ArticleFormState>(createDefaultArticleForm())
+
+const categoryOptions = computed(() =>
+  categories.value.map((item) => ({ label: item.name, value: item.id }))
+)
+const tagOptions = computed(() => tags.value.map((item) => ({ label: item.name, value: item.id })))
 
 const rules = reactive<FormRules>({
   title: [
@@ -88,7 +93,7 @@ const rules = reactive<FormRules>({
   cover: [{ required: true, message: '请上传封面图片', trigger: 'change' }],
   categoryId: [{ required: true, message: '请选择文章分类', trigger: 'change' }],
   tagIds: [
-    { required: true, message: '请选择文章标签', trigger: 'change' },
+    { required: true, type: 'array', message: '请选择文章标签', trigger: 'change' },
     { validator: validateTagIds, trigger: 'change' }
   ],
   originalUrl: [{ validator: validateOriginalUrl, trigger: 'blur' }],
@@ -136,84 +141,74 @@ function createDefaultArticleForm(): ArticleFormState {
 /**
  * 统一弹出错误提示。
  */
-function showError(message: string) {
+function showError(text: string) {
   if (import.meta.client) {
-    ElMessage.error(message)
+    message.error(text)
   }
 }
 
 /**
  * 统一弹出成功提示。
  */
-function showSuccess(message: string) {
+function showSuccess(text: string) {
   if (import.meta.client) {
-    ElMessage.success(message)
+    message.success(text)
   }
 }
 
 /**
  * 校验文章正文内容。
  */
-function validateContentMarkdown(_rule: unknown, value: string, callback: (error?: Error) => void) {
+function validateContentMarkdown(_rule: FormItemRule, value: string) {
   if (!value) {
-    callback()
-    return
+    return true
   }
 
   if (value.length < 50) {
-    callback(new Error('文章内容至少需要50个字符'))
-    return
+    return new Error('文章内容至少需要50个字符')
   }
 
   if (/^[a-zA-Z]{10,}$/.test(value)) {
-    callback(new Error('文章内容似乎没有实际意义，请认真编写'))
-    return
+    return new Error('文章内容似乎没有实际意义，请认真编写')
   }
 
-  callback()
+  return true
 }
 
 /**
  * 校验标签数量限制。
  */
-function validateTagIds(
-  _rule: unknown,
-  value: Array<number | string>,
-  callback: (error?: Error) => void
-) {
+function validateTagIds(_rule: FormItemRule, value: Array<number | string>) {
   if (Array.isArray(value) && value.length > 3) {
-    callback(new Error('最多只能选择3个标签'))
-    return
+    return new Error('最多只能选择3个标签')
   }
-  callback()
+  return true
 }
 
 /**
  * 校验转载文章的原文地址。
  */
-function validateOriginalUrl(_rule: unknown, value: string, callback: (error?: Error) => void) {
+function validateOriginalUrl(_rule: FormItemRule, value: string) {
   if (articleForm.isOriginal === 1) {
-    callback()
-    return
+    return true
   }
 
   if (!value) {
-    callback(new Error('请输入原文地址'))
-    return
+    return new Error('请输入原文地址')
   }
 
   try {
     new URL(value)
-    callback()
+    return true
   } catch {
-    callback(new Error('请输入有效的URL地址'))
+    return new Error('请输入有效的URL地址')
   }
 }
 
 /**
  * 校验关键词数量限制。
  */
-function validateKeywords(_rule: unknown, value: string, callback: (error?: Error) => void) {
+function validateKeywords(_rule: FormItemRule, value: string) {
   if (
     value &&
     value
@@ -221,10 +216,9 @@ function validateKeywords(_rule: unknown, value: string, callback: (error?: Erro
       .map((item) => item.trim())
       .filter(Boolean).length > 5
   ) {
-    callback(new Error('关键词最多不超过5个'))
-    return
+    return new Error('关键词最多不超过5个')
   }
-  callback()
+  return true
 }
 
 /**
@@ -370,7 +364,10 @@ async function submitArticle() {
     return
   }
 
-  const valid = await articleFormRef.value?.validate().catch(() => false)
+  const valid = await articleFormRef.value
+    ?.validate()
+    .then(() => true)
+    .catch(() => false)
   if (!valid) {
     return
   }
@@ -440,32 +437,32 @@ function removeCover() {
 <template>
   <div v-loading="bootstrapping" class="editor-container">
     <div class="editor-main">
-      <ElForm
+      <NForm
         ref="articleFormRef"
         :model="articleForm"
         :rules="rules"
-        label-position="top"
+        label-placement="top"
         size="small"
       >
         <div class="editor-content">
           <div class="content-card">
             <div class="title-cover-layout">
               <div class="title-section">
-                <ElFormItem label="文章标题" prop="title">
-                  <ElInput v-model="articleForm.title" placeholder="请输入文章标题..." />
-                </ElFormItem>
-                <ElFormItem label="文章描述" prop="summary">
-                  <ElInput
-                    v-model="articleForm.summary"
+                <NFormItem label="文章标题" path="title">
+                  <NInput v-model:value="articleForm.title" placeholder="请输入文章标题..." />
+                </NFormItem>
+                <NFormItem label="文章描述" path="summary">
+                  <NInput
+                    v-model:value="articleForm.summary"
                     type="textarea"
                     :rows="4"
                     placeholder="请输入文章描述..."
                   />
-                </ElFormItem>
+                </NFormItem>
               </div>
 
               <div class="cover-section">
-                <ElFormItem label="封面图片" prop="cover">
+                <NFormItem label="封面图片" path="cover">
                   <div class="cover-area" @click="triggerCoverUpload">
                     <div v-if="!articleForm.cover" class="cover-placeholder">
                       <i class="fas fa-image"></i>
@@ -474,9 +471,9 @@ function removeCover() {
                     <div v-else class="cover-preview">
                       <img :src="articleForm.cover" alt="文章封面" />
                       <div class="cover-actions">
-                        <ElButton circle size="small" type="danger" @click.stop="removeCover">
+                        <NButton circle size="small" type="error" @click.stop="removeCover">
                           <i class="fas fa-trash"></i>
-                        </ElButton>
+                        </NButton>
                       </div>
                     </div>
                   </div>
@@ -487,13 +484,13 @@ function removeCover() {
                     style="display: none"
                     @change="handleCoverUpload"
                   />
-                </ElFormItem>
+                </NFormItem>
               </div>
             </div>
           </div>
 
           <div class="content-card flex-card">
-            <ElFormItem prop="contentMd" class="mb-20">
+            <NFormItem path="contentMd" class="mb-20">
               <MarkdownEditor
                 ref="mdRef"
                 v-model="articleForm.contentMd"
@@ -501,7 +498,7 @@ function removeCover() {
                 height="500px"
                 upload-type="articlePicture"
               />
-            </ElFormItem>
+            </NFormItem>
           </div>
         </div>
 
@@ -511,16 +508,13 @@ function removeCover() {
               <i class="fas fa-folder"></i>
               文章分类
             </h3>
-            <ElFormItem prop="categoryId">
-              <ElSelect v-model="articleForm.categoryId" placeholder="请选择分类">
-                <ElOption
-                  v-for="item in categories"
-                  :key="item.id"
-                  :label="item.name"
-                  :value="item.id"
-                />
-              </ElSelect>
-            </ElFormItem>
+            <NFormItem path="categoryId">
+              <NSelect
+                v-model:value="articleForm.categoryId"
+                :options="categoryOptions"
+                placeholder="请选择分类"
+              />
+            </NFormItem>
           </div>
 
           <div class="sidebar-section">
@@ -528,18 +522,16 @@ function removeCover() {
               <i class="fas fa-tags"></i>
               文章标签
             </h3>
-            <ElFormItem prop="tagIds">
-              <ElSelect
-                v-model="articleForm.tagIds"
+            <NFormItem path="tagIds">
+              <NSelect
+                v-model:value="articleForm.tagIds"
                 multiple
                 filterable
-                allow-create
-                default-first-option
+                tag
+                :options="tagOptions"
                 placeholder="请选择标签"
-              >
-                <ElOption v-for="item in tags" :key="item.id" :label="item.name" :value="item.id" />
-              </ElSelect>
-            </ElFormItem>
+              />
+            </NFormItem>
           </div>
 
           <div class="sidebar-section">
@@ -548,49 +540,49 @@ function removeCover() {
               文章设置
             </h3>
             <div class="setting-item">
-              <ElSwitch
-                v-model="articleForm.isOriginal"
-                :active-value="1"
-                :inactive-value="0"
-                active-text="原创文章"
+              <NSwitch
+                v-model:value="articleForm.isOriginal"
+                :checked-value="1"
+                :unchecked-value="0"
               />
+              <span class="setting-switch-label">原创文章</span>
             </div>
             <div v-if="!articleForm.isOriginal" class="setting-item">
               <div class="setting-label">转载地址：</div>
-              <ElFormItem prop="originalUrl">
-                <ElInput
-                  v-model="articleForm.originalUrl"
+              <NFormItem path="originalUrl">
+                <NInput
+                  v-model:value="articleForm.originalUrl"
                   placeholder="请输入原文地址"
                   size="small"
                 />
-              </ElFormItem>
+              </NFormItem>
             </div>
             <div class="setting-item">
               <div class="setting-label">关键词：</div>
-              <ElFormItem prop="keywords">
-                <ElInput
-                  v-model="articleForm.keywords"
+              <NFormItem path="keywords">
+                <NInput
+                  v-model:value="articleForm.keywords"
                   placeholder="请输入关键词（多个用逗号隔开）"
                   size="small"
                 />
-              </ElFormItem>
+              </NFormItem>
             </div>
           </div>
 
           <div class="sidebar-section">
             <div class="setting-item">
-              <ElButton size="small" :loading="loading" @click="saveDraft">
+              <NButton size="small" :loading="loading" @click="saveDraft">
                 <i class="fas fa-save"></i>
                 保存草稿
-              </ElButton>
-              <ElButton size="small" type="primary" :loading="loading" @click="publishArticle">
+              </NButton>
+              <NButton size="small" type="primary" :loading="loading" @click="publishArticle">
                 <i class="fas fa-paper-plane"></i>
                 提交审核
-              </ElButton>
+              </NButton>
             </div>
           </div>
         </div>
-      </ElForm>
+      </NForm>
     </div>
   </div>
 </template>
@@ -609,7 +601,7 @@ function removeCover() {
   margin: 0 auto;
   padding: 24px 40px;
 
-  :deep(.el-form) {
+  :deep(.n-form) {
     display: flex;
     gap: 24px;
   }
@@ -635,14 +627,14 @@ function removeCover() {
       flex: 1;
       flex-direction: column;
 
-      :deep(.el-form-item) {
+      :deep(.n-form-item) {
         display: flex;
         flex: 1;
         flex-direction: column;
         margin-bottom: 0;
       }
 
-      :deep(.el-form-item__content) {
+      :deep(.n-form-item-blank) {
         display: flex;
         flex: 1;
         flex-direction: column;
@@ -650,11 +642,11 @@ function removeCover() {
     }
   }
 
-  :deep(.el-form-item) {
+  :deep(.n-form-item) {
     margin-bottom: 0;
   }
 
-  :deep(.el-form-item__label) {
+  :deep(.n-form-item-label) {
     padding-bottom: 12px;
     color: #999;
     font-size: 13px;
@@ -688,7 +680,7 @@ function removeCover() {
     transition: border-color 0.15s ease;
 
     &:hover {
-      border-color: #409eff;
+      border-color: var(--primary-color);
     }
   }
 
@@ -757,7 +749,7 @@ function removeCover() {
     font-weight: 500;
 
     i {
-      color: #409eff;
+      color: var(--primary-color);
       font-size: 14px;
     }
   }
@@ -782,7 +774,13 @@ function removeCover() {
     font-size: 13px;
   }
 
-  :deep(.el-form-item) {
+  .setting-switch-label {
+    margin-left: 8px;
+    color: #999;
+    font-size: 13px;
+  }
+
+  :deep(.n-form-item) {
     margin-bottom: 0;
   }
 }
@@ -791,7 +789,7 @@ function removeCover() {
   .editor-main {
     padding: 24px;
 
-    :deep(.el-form) {
+    :deep(.n-form) {
       flex-direction: column;
     }
   }
@@ -805,7 +803,7 @@ function removeCover() {
   .editor-main {
     padding: 16px;
 
-    :deep(.el-form) {
+    :deep(.n-form) {
       gap: 16px;
     }
   }
@@ -831,10 +829,9 @@ function removeCover() {
       width: 100% !important;
       height: 120px;
     }
-    :deep(.el-form-item),
-    :deep(.el-form-item__content),
-    :deep(.el-input),
-    :deep(.el-textarea) {
+    :deep(.n-form-item),
+    :deep(.n-form-item-blank),
+    :deep(.n-input) {
       width: 100%;
     }
   }

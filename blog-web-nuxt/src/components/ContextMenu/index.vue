@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
+import { message } from '@/utils/feedback'
 import { getThemeMode, setThemeMode } from '@/utils/theme'
 
 const router = useRouter()
@@ -110,9 +110,9 @@ function handleForward() {
 async function handleCopyUrl() {
   try {
     await navigator.clipboard.writeText(window.location.href)
-    ElMessage.success('链接已复制到剪贴板')
+    message.success('链接已复制到剪贴板')
   } catch {
-    ElMessage.error('复制失败，请手动复制')
+    message.error('复制失败，请手动复制')
   } finally {
     hide()
   }
@@ -138,7 +138,7 @@ function toggleTheme() {
     :style="{ left: `${adjustedX}px`, top: `${adjustedY}px` }"
   >
     <div class="menu-item" @click="handleRefresh">
-      <i class="fas fa-sync" style="color: #409eff"></i>
+      <i class="fas fa-sync" style="color: var(--primary-color)"></i>
       刷新页面
     </div>
     <div class="menu-item" @click="handleBack">
@@ -157,7 +157,7 @@ function toggleTheme() {
     <div class="menu-item" @click="toggleTheme">
       <i
         :class="['fas', isDark ? 'fa-sun' : 'fa-moon']"
-        :style="{ color: isDark ? '#E6A23C' : '#409EFF' }"
+        :style="{ color: isDark ? 'var(--accent-color)' : 'var(--primary-color)' }"
       ></i>
       {{ isDark ? '浅色模式' : '深色模式' }}
     </div>

@@ -32,11 +32,11 @@
 
   h1 {
     margin-bottom: 24px;
-    color: var(--primary-color, #409eff);
+    color: var(--primary-color);
     font-size: 120px;
     font-weight: 700;
     line-height: 1;
-    text-shadow: 4px 4px 0 rgba(64, 158, 255, 0.2);
+    text-shadow: 4px 4px 0 rgba($primary, 0.2);
   }
 
   p {
@@ -52,7 +52,7 @@
   gap: 8px;
   padding: 12px 28px;
   border-radius: 25px;
-  background: var(--primary-color, #409eff);
+  background: var(--primary-color);
   color: #fff;
   font-weight: 500;
   text-decoration: none;
@@ -62,7 +62,7 @@
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+    box-shadow: 0 4px 12px rgba($primary, 0.3);
   }
 }
 
