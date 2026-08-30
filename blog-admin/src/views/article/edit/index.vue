@@ -7,16 +7,29 @@
         <span class="page-title">{{ isEdit ? '修改文章' : '新增文章' }}</span>
       </div>
       <div class="header-right">
+        <span class="draft-status">
+          <template v-if="dirty">正在编辑…</template>
+          <template v-else-if="savedAt">
+            草稿已自动保存 {{ dayjs(savedAt).format('HH:mm:ss') }}
+          </template>
+        </span>
         <el-button type="primary" :loading="submitLoading" icon="Promotion" @click="submitForm">
           保存
         </el-button>
       </div>
     </div>
 
-    <el-form ref="formRef" :model="form" :rules="rules" label-position="top" class="edit-body">
-      <!-- 左侧：标题 + 编辑器 -->
-      <div class="edit-main">
-        <el-form-item prop="title" class="title-item">
+    <el-form
+      ref="formRef"
+      :model="form"
+      :rules="rules"
+      label-position="top"
+      class="edit-body"
+      @submit.prevent
+    >
+      <!-- 主行：标题 + 分类 + 标签（必填项常显，一行搞定） -->
+      <div class="primary-row">
+        <el-form-item prop="title" class="primary-title">
           <el-input
             v-model="form.title"
             placeholder="请输入文章标题"
@@ -25,34 +38,11 @@
             show-word-limit
           />
         </el-form-item>
-        <el-form-item prop="contentMd" class="editor-item">
-          <div ref="editorWrapRef" class="editor-wrap">
-            <MarkdownEditor
-              ref="mdRef"
-              v-model="form.contentMd"
-              placeholder="输入文章内容..."
-              :height="`${editorHeight}px`"
-              upload-type="articlePicture"
-              :enable-video-insert="true"
-            />
-          </div>
-        </el-form-item>
-      </div>
-
-      <!-- 右侧：元信息栏 -->
-      <div class="edit-aside">
-        <el-form-item label="文章封面" prop="cover">
-          <UploadImage v-model="form.cover" :limit="1" :source="'articleCover'" />
-        </el-form-item>
-
-        <el-form-item label="文章简介" prop="summary">
-          <el-input v-model="form.summary" type="textarea" :rows="3" placeholder="请输入文章简介" />
-        </el-form-item>
-
-        <el-form-item label="分类" prop="categoryName">
+        <el-form-item prop="categoryName" class="primary-category">
           <el-select
             v-model="form.categoryName"
-            placeholder="请选择或输入分类"
+            placeholder="分类（必选）"
+            size="large"
             filterable
             allow-create
             default-first-option
@@ -66,15 +56,17 @@
             />
           </el-select>
         </el-form-item>
-
-        <el-form-item label="标签" prop="tags">
+        <el-form-item prop="tags" class="primary-tags">
           <el-select
             v-model="form.tags"
-            placeholder="请选择或输入标签（最多3个）"
+            placeholder="标签（必选，最多3个）"
+            size="large"
             multiple
             filterable
             allow-create
             default-first-option
+            collapse-tags
+            collapse-tags-tooltip
             :multiple-limit="3"
           >
             <el-option
@@ -85,68 +77,121 @@
             />
           </el-select>
         </el-form-item>
+      </div>
 
-        <el-form-item label="文章类型" prop="isOriginal">
-          <el-select v-model="form.isOriginal" placeholder="请选择文章类型">
-            <el-option label="原创" :value="1" />
-            <el-option label="转载" :value="0" />
-          </el-select>
-        </el-form-item>
+      <!-- 更多设置折叠条 -->
+      <div class="settings-toggle" @click="settingsOpen = !settingsOpen">
+        <span class="toggle-line"></span>
+        <span class="toggle-text">
+          更多设置
+          <i class="fas fa-chevron-down toggle-arrow" :class="{ 'is-open': settingsOpen }"></i>
+        </span>
+        <span class="toggle-line"></span>
+      </div>
 
-        <el-form-item v-if="form.isOriginal === 0" label="转载地址" prop="originalUrl">
-          <el-input v-model="form.originalUrl" placeholder="请输入转载地址" />
-        </el-form-item>
-
-        <el-form-item label="关键词" prop="keywords">
-          <el-input v-model="form.keywords" placeholder="请输入关键词" />
-        </el-form-item>
-
-        <el-form-item label="发布时间" prop="createTime">
-          <el-date-picker
-            v-model="form.createTime"
-            type="datetime"
-            value-format="YYYY-MM-DD HH:mm:ss"
-            format="YYYY-MM-DD HH:mm:ss"
-            placeholder="请选择发布时间"
-            style="width: 100%"
-            clearable
-          />
-        </el-form-item>
-
-        <div class="switch-group">
-          <el-form-item label="是否置顶" prop="isStick">
-            <el-switch
-              v-model="form.isStick"
-              style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
-              :active-value="1"
-              :inactive-value="0"
-            />
+      <!-- 设置面板：默认收起，写作时界面保持干净 -->
+      <el-collapse-transition>
+        <div v-show="settingsOpen" class="edit-meta">
+          <el-form-item label="文章封面" prop="cover" class="meta-cover">
+            <UploadImage v-model="form.cover" :limit="1" :source="'articleCover'" />
           </el-form-item>
-          <el-form-item label="是否发布" prop="status">
-            <el-switch
-              v-model="form.status"
-              style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
-              :active-value="1"
-              :inactive-value="0"
-            />
-          </el-form-item>
-          <el-form-item label="首页轮播" prop="isCarousel">
-            <el-switch
-              v-model="form.isCarousel"
-              style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
-              :active-value="1"
-              :inactive-value="0"
-            />
-          </el-form-item>
-          <el-form-item label="是否推荐" prop="isRecommend">
-            <el-switch
-              v-model="form.isRecommend"
-              style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
-              :active-value="1"
-              :inactive-value="0"
-            />
-          </el-form-item>
+
+          <div class="meta-grid">
+            <el-form-item label="文章简介" prop="summary" class="meta-summary">
+              <el-input
+                v-model="form.summary"
+                type="textarea"
+                :rows="2"
+                maxlength="500"
+                show-word-limit
+                placeholder="请输入文章简介"
+              />
+            </el-form-item>
+
+            <el-form-item label="文章类型" prop="isOriginal">
+              <el-select v-model="form.isOriginal" placeholder="请选择文章类型">
+                <el-option label="原创" :value="1" />
+                <el-option label="转载" :value="0" />
+              </el-select>
+            </el-form-item>
+
+            <el-form-item label="关键词" prop="keywords">
+              <el-input v-model="form.keywords" placeholder="请输入关键词" />
+            </el-form-item>
+
+            <el-form-item label="发布时间" prop="createTime">
+              <el-date-picker
+                v-model="form.createTime"
+                type="datetime"
+                value-format="YYYY-MM-DD HH:mm:ss"
+                format="YYYY-MM-DD HH:mm:ss"
+                placeholder="请选择发布时间"
+                style="width: 100%"
+                clearable
+              />
+            </el-form-item>
+
+            <el-form-item
+              v-if="form.isOriginal === 0"
+              label="转载地址"
+              prop="originalUrl"
+              class="meta-original-url"
+            >
+              <el-input v-model="form.originalUrl" placeholder="请输入转载地址" />
+            </el-form-item>
+
+            <div class="switch-group">
+              <el-form-item label="置顶" prop="isStick">
+                <el-switch
+                  v-model="form.isStick"
+                  style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
+                  :active-value="1"
+                  :inactive-value="0"
+                />
+              </el-form-item>
+              <el-form-item label="发布" prop="status">
+                <el-switch
+                  v-model="form.status"
+                  style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
+                  :active-value="1"
+                  :inactive-value="0"
+                />
+              </el-form-item>
+              <el-form-item label="轮播" prop="isCarousel">
+                <el-switch
+                  v-model="form.isCarousel"
+                  style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
+                  :active-value="1"
+                  :inactive-value="0"
+                />
+              </el-form-item>
+              <el-form-item label="推荐" prop="isRecommend">
+                <el-switch
+                  v-model="form.isRecommend"
+                  style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
+                  :active-value="1"
+                  :inactive-value="0"
+                />
+              </el-form-item>
+            </div>
+          </div>
         </div>
+      </el-collapse-transition>
+
+      <!-- 编辑器：撑满剩余高度 -->
+      <div class="edit-main">
+        <el-form-item prop="contentMd" class="editor-item">
+          <div ref="editorWrapRef" class="editor-wrap">
+            <MarkdownEditor
+              ref="mdRef"
+              v-model="form.contentMd"
+              placeholder="输入文章内容..."
+              :height="`${editorHeight}px`"
+              upload-type="articlePicture"
+              :enable-video-insert="true"
+            />
+          </div>
+        </el-form-item>
       </div>
     </el-form>
   </div>
@@ -230,11 +275,14 @@ const rules = reactive<FormRules>({
 })
 
 // 草稿（新增页 article-draft:new，编辑页 article-draft:{id}）
-const { clearDraft, checkDraft, startWatch } = useArticleDraft({
+const { clearDraft, checkDraft, startWatch, dirty, savedAt } = useArticleDraft({
   key: isEdit.value ? `article-draft:${articleId.value}` : 'article-draft:new',
   form,
   onRestore: (draftForm) => Object.assign(form, draftForm)
 })
+
+// 「更多设置」面板默认收起，保持写作界面干净
+const settingsOpen = ref(false)
 
 // 标签最多 3 个，超出时提示并阻止
 watch(
@@ -247,7 +295,7 @@ watch(
   }
 )
 
-// 编辑器高度自适应剩余可视区域，至少 600px
+// 编辑器高度自适应剩余可视区域；元信息区已移到上方，高度不足时页面可滚动，下限放宽到 400px
 const pageRef = ref<HTMLElement | null>(null)
 const editorWrapRef = ref<HTMLElement | null>(null)
 const editorHeight = ref(600)
@@ -256,7 +304,7 @@ const updateEditorHeight = () => {
   if (!pageRef.value || !editorWrapRef.value) return
   const wrapTop = editorWrapRef.value.getBoundingClientRect().top
   const pageBottom = pageRef.value.getBoundingClientRect().bottom
-  editorHeight.value = Math.max(600, Math.floor(pageBottom - wrapTop))
+  editorHeight.value = Math.max(400, Math.floor(pageBottom - wrapTop))
 }
 
 // 返回列表
@@ -360,6 +408,17 @@ onBeforeUnmount(() => {
     align-items: center;
   }
 
+  .header-right {
+    display: flex;
+    align-items: center;
+  }
+
+  .draft-status {
+    margin-right: 12px;
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+  }
+
   .page-title {
     margin-left: 12px;
     font-size: 16px;
@@ -371,22 +430,143 @@ onBeforeUnmount(() => {
   flex: 1;
   min-height: 0;
   display: flex;
-  gap: 16px;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+// 主行：标题 + 分类 + 标签，必填项一屏可见
+.primary-row {
+  flex-shrink: 0;
+  display: flex;
+  gap: 12px;
+
+  .el-form-item {
+    margin-bottom: 0;
+  }
+
+  .primary-title {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .primary-category {
+    width: 220px;
+  }
+
+  .primary-tags {
+    width: 320px;
+  }
+
+  .el-select {
+    width: 100%;
+  }
+}
+
+// 「更多设置」折叠条：两侧细线 + 居中文字
+.settings-toggle {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+
+  .toggle-line {
+    flex: 1;
+    height: 1px;
+    background: var(--el-border-color-lighter);
+  }
+
+  .toggle-text {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: color 0.2s ease;
+  }
+
+  .toggle-arrow {
+    font-size: 11px;
+    transition: transform 0.3s ease;
+
+    &.is-open {
+      transform: rotate(180deg);
+    }
+  }
+
+  &:hover .toggle-text {
+    color: var(--el-color-primary);
+  }
+}
+
+.edit-meta {
+  flex-shrink: 0;
+  display: flex;
+  gap: 20px;
+  padding: 16px 16px 2px;
+  background: var(--el-fill-color-light);
+  border-radius: 8px;
+
+  .meta-cover {
+    flex-shrink: 0;
+    width: 150px;
+
+    // 封面是横图，把上传框压成 3:2 小卡片；已有封面时隐藏「+」占位框
+    :deep(.el-upload--picture-card),
+    :deep(.el-upload-list--picture-card .el-upload-list__item) {
+      width: 150px;
+      height: 100px;
+    }
+
+    :deep(.el-upload-list--picture-card:has(.el-upload-list__item) .el-upload--picture-card) {
+      display: none;
+    }
+  }
+
+  .meta-grid {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    column-gap: 16px;
+
+    .meta-summary {
+      grid-column: span 3;
+    }
+
+    .meta-original-url {
+      grid-column: span 2;
+    }
+
+    .el-select {
+      width: 100%;
+    }
+
+    .switch-group {
+      grid-column: span 3;
+      display: flex;
+      flex-wrap: wrap;
+      column-gap: 32px;
+
+      .el-form-item {
+        margin-bottom: 12px;
+      }
+    }
+  }
 }
 
 .edit-main {
   flex: 1;
-  min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-
-  .title-item {
-    flex-shrink: 0;
-  }
 
   .editor-item {
     flex: 1;
     min-height: 0;
+    margin-bottom: 0;
     display: flex;
     flex-direction: column;
 
@@ -402,36 +582,42 @@ onBeforeUnmount(() => {
   }
 }
 
-.edit-aside {
-  width: 320px;
-  flex-shrink: 0;
-  overflow-y: auto;
-  padding-right: 4px;
-
-  .el-select {
-    width: 100%;
-  }
-
-  .switch-group {
-    display: flex;
-    flex-wrap: wrap;
-    column-gap: 24px;
-  }
-}
-
 @media (max-width: 992px) {
   .article-edit {
     height: auto;
   }
 
-  .edit-body {
-    flex-direction: column;
+  .primary-row {
+    flex-wrap: wrap;
+
+    .primary-title {
+      flex-basis: 100%;
+    }
+
+    .primary-category,
+    .primary-tags {
+      flex: 1;
+      width: auto;
+      min-width: 0;
+    }
   }
 
-  .edit-aside {
-    width: 100%;
-    overflow-y: visible;
-    padding-right: 0;
+  .edit-meta {
+    flex-direction: column;
+
+    .meta-cover {
+      width: 100%;
+    }
+
+    .meta-grid {
+      grid-template-columns: 1fr;
+
+      .meta-summary,
+      .meta-original-url,
+      .switch-group {
+        grid-column: auto;
+      }
+    }
   }
 }
 </style>

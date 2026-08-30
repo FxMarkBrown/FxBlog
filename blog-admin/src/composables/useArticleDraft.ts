@@ -20,6 +20,7 @@ export function useArticleDraft(options: {
   onRestore: (draftForm: Record<string, any>) => void
 }) {
   const dirty = ref(false)
+  const savedAt = ref<number | null>(null)
   let timer: ReturnType<typeof setTimeout> | null = null
   let stopWatch: (() => void) | null = null
 
@@ -45,6 +46,7 @@ export function useArticleDraft(options: {
     } catch {
       // 隐私模式 / 存储超限时静默失败
     } finally {
+      savedAt.value = Date.now()
       dirty.value = false
     }
   }
@@ -142,6 +144,7 @@ export function useArticleDraft(options: {
 
   return {
     dirty,
+    savedAt,
     checkDraft,
     startWatch,
     clearDraft,
