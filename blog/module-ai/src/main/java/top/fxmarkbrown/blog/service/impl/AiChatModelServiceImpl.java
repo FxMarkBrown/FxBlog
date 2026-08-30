@@ -113,7 +113,7 @@ public class AiChatModelServiceImpl implements AiChatModelService {
 
     private OpenAIClient buildOpenAiClient(AiProperties.OpenAiCompatibleProvider provider) {
         return OpenAIOkHttpClient.builder()
-                .baseUrl(provider.getBaseUrl().trim())
+                .baseUrl(provider.openAiBaseUrl())
                 .apiKey(provider.getApiKey().trim())
                 .build();
     }

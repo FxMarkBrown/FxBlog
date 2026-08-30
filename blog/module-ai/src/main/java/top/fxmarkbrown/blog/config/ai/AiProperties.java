@@ -129,6 +129,19 @@ public class AiProperties {
         private String baseUrl;
 
         private String apiKey;
+
+        /**
+         * openai-java SDK 会在 baseUrl 后直接拼接 /chat/completions、/embeddings，
+         * 因此兼容网关的 baseUrl 必须以 /v1 结尾（如 https://api.siliconflow.cn/v1），
+         * 这里统一对缺省配置补齐，避免 404。
+         */
+        public String openAiBaseUrl() {
+            String url = baseUrl == null ? "" : baseUrl.trim();
+            while (url.endsWith("/")) {
+                url = url.substring(0, url.length() - 1);
+            }
+            return url.endsWith("/v1") ? url : url + "/v1";
+        }
     }
 
     @Data
