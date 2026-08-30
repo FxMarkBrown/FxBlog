@@ -16,7 +16,13 @@ const show = ref(false)
 const content = ref('')
 const count = ref<number | null>(null)
 const timer = ref<ReturnType<typeof setInterval> | null>(null)
-const barrageList = ref<MessageItem[]>([])
+
+const { data: messageListData } = await useAsyncData('messages-list', async () => {
+  const response = await getMessagesApi().catch(() => null)
+  return unwrapResponseData<MessageItem[] | null>(response) || []
+})
+
+const barrageList = ref<MessageItem[]>(messageListData.value || [])
 
 const currentUser = computed(() => authStore.userInfo)
 const touristAvatar = computed(() =>
@@ -38,7 +44,7 @@ onMounted(async () => {
     await siteStore.fetchWebsiteInfo().catch(() => null)
   }
 
-  await listMessage()
+  await playDanmaku()
 })
 
 onBeforeUnmount(() => {
@@ -132,20 +138,6 @@ async function addToList() {
     await playDanmaku()
   } catch {
     showError('留言失败')
-  }
-}
-
-/**
- * 拉取留言列表并初始化弹幕。
- */
-async function listMessage() {
-  try {
-    const response = await getMessagesApi()
-    barrageList.value = unwrapResponseData<MessageItem[] | null>(response) || []
-    await playDanmaku()
-  } catch {
-    barrageList.value = []
-    showError('获取留言列表失败')
   }
 }
 </script>

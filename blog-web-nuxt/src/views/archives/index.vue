@@ -7,34 +7,12 @@ import { unwrapResponseData } from '@/utils/response'
 
 const router = useRouter()
 const runtimeConfig = useRuntimeConfig()
-const loading = ref(false)
-const archives = ref<Array<{ year: string; posts: ArticleSummary[] }>>([])
 const collapsedYears = reactive<Record<string, boolean>>({})
 
 usePageSeo({
   title: () => `归档 - ${runtimeConfig.public.siteName}`,
   description: '文章归档列表'
 })
-
-/**
- * 获取归档列表
- */
-async function getArchives() {
-  loading.value = true
-  try {
-    const response = await getArchivesApi()
-    const result =
-      unwrapResponseData<Array<{ year: string; posts: ArticleSummary[] }> | ArchiveGroup[] | null>(
-        response
-      ) || []
-    archives.value = normalizeArchives(result)
-    for (const item of archives.value) {
-      collapsedYears[item.year] = false
-    }
-  } finally {
-    loading.value = false
-  }
-}
 
 /**
  * 格式化月份
@@ -122,9 +100,20 @@ function normalizeArchives(
     .filter((item) => item.year && item.posts.length > 0)
 }
 
-onMounted(() => {
-  void getArchives()
+const { data: archivesData, pending: loading } = await useAsyncData('archives-list', async () => {
+  const response = await getArchivesApi().catch(() => null)
+  const result =
+    unwrapResponseData<Array<{ year: string; posts: ArticleSummary[] }> | ArchiveGroup[] | null>(
+      response
+    ) || []
+  return normalizeArchives(result)
 })
+
+const archives = computed(() => archivesData.value || [])
+
+for (const item of archives.value) {
+  collapsedYears[item.year] = false
+}
 </script>
 
 <template>
@@ -132,10 +121,11 @@ onMounted(() => {
     <div class="content-layout">
       <main class="main-content">
         <div v-loading="loading" class="content-card poetize-card">
+          <h1 class="sr-only">文章归档</h1>
           <div class="timeline">
             <div v-for="item in archives" :key="item.year" class="year-group">
               <div class="year-header" @click="toggleYear(item.year)">
-                <span class="year">{{ item.year }}</span>
+                <h2 class="year">{{ item.year }}</h2>
                 <span class="toggle-icon" :class="{ 'is-open': !collapsedYears[item.year] }">
                   <i class="fas fa-chevron-down"></i>
                 </span>
@@ -211,6 +201,18 @@ onMounted(() => {
   padding: 20px;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .timeline {
   position: relative;
   padding-left: $spacing-xl * 2;
@@ -260,6 +262,7 @@ onMounted(() => {
     font-size: 1.8em;
     font-weight: 700;
     color: var(--text-primary);
+    margin: 0;
   }
 
   .toggle-icon {

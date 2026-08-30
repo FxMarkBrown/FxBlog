@@ -64,13 +64,13 @@ function getTagNames(post: ArticleSummary): string[] {
             <span class="post-date">{{ formatTime(post.createTime) }}</span>
           </div>
 
-          <h3 class="post-title" @click="emit('articleClick', post.id)">
+          <h2 class="post-title" @click="emit('articleClick', post.id)">
             <span v-if="post.isStick" class="stick-tag">
               <i class="fas fa-thumbtack"></i>
               置顶
             </span>
             {{ post.title }}
-          </h3>
+          </h2>
 
           <div class="post-meta">
             <span class="meta-item meta-view">

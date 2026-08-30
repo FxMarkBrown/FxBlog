@@ -9,6 +9,13 @@ export default defineEventHandler((event) => {
 
   return `User-Agent: *
 Allow: /
+Disallow: /login
+Disallow: /editor
+Disallow: /user
+Disallow: /profile
+Disallow: /ai
+Disallow: /notifications
+Disallow: /404
 
 Sitemap: ${siteUrl}/sitemap.xml
 `

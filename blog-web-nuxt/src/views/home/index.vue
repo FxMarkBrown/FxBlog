@@ -13,8 +13,6 @@ import MomentsList from '@/views/home/components/moments.vue'
 const router = useRouter()
 const runtimeConfig = useRuntimeConfig()
 const siteStore = useSiteStore()
-const loading = ref(false)
-const total = ref(0)
 const postsSection = ref<HTMLElement | null>(null)
 const sidebarReady = ref(false)
 const momentsReady = ref(false)
@@ -23,7 +21,6 @@ const params = reactive({
   pageSize: 10,
   categoryId: null as number | null
 })
-const articleList = ref<ArticleSummary[]>([])
 const activeName = ref('all')
 type CategoryTab = {
   id: string | number
@@ -36,7 +33,6 @@ const defaultCategory: CategoryTab = {
   name: '全部',
   icon: 'fas fa-layer-group'
 }
-const categories = ref<CategoryTab[]>([{ ...defaultCategory }])
 
 usePageSeo({
   title: () =>
@@ -46,14 +42,90 @@ usePageSeo({
   image: () => siteStore.websiteInfo.logo || runtimeConfig.public.seoImage
 })
 
-async function bootstrapHome() {
-  await getArticleList()
-  setTimeout(() => {
-    void getAllCategories()
-    momentsReady.value = true
-    sidebarReady.value = true
-  }, 160)
-}
+// 站点级 WebSite 结构化数据
+useHead(() => {
+  const siteUrl = String(runtimeConfig.public.siteUrl || '').replace(/\/+$/, '')
+  return {
+    script: [
+      {
+        type: 'application/ld+json',
+        children: JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'WebSite',
+          name:
+            siteStore.websiteInfo.name ||
+            siteStore.websiteInfo.title ||
+            runtimeConfig.public.siteName,
+          url: siteUrl,
+          description:
+            siteStore.websiteInfo.summary || siteStore.websiteInfo.description || undefined,
+          inLanguage: 'zh-CN'
+        })
+      }
+    ]
+  }
+})
+
+const {
+  data: articlePageData,
+  pending: articlePending,
+  error: articleError
+} = await useAsyncData(
+  () => `home-articles:${params.categoryId ?? 'all'}:${params.pageNum}:${params.pageSize}`,
+  async () => {
+    const requestParams: Record<string, unknown> = {
+      ...params
+    }
+
+    if (requestParams.categoryId === null) {
+      delete requestParams.categoryId
+    }
+
+    const response = await getArticlesApi(requestParams)
+    const page = unwrapResponseData<PageResult<ArticleSummary> | null>(response)
+    return {
+      records: page?.records || [],
+      total: Number(page?.total || 0)
+    }
+  },
+  {
+    watch: [() => params.pageNum, () => params.categoryId]
+  }
+)
+
+const { data: categoriesData } = await useAsyncData('home-categories', async () => {
+  const response = await getAllCategoriesApi().catch(() => null)
+  const icons = [
+    'far fa-file-alt',
+    'fas fa-book-open',
+    'fas fa-feather-alt',
+    'fas fa-mug-hot',
+    'fas fa-bookmark',
+    'fas fa-pen-fancy'
+  ]
+  const categoriesList = unwrapResponseData<ArticleCategoryGroup[] | null>(response) || []
+
+  return [
+    { ...defaultCategory },
+    ...categoriesList.map<CategoryTab>((category, index) => ({
+      id: category.id ?? `category-${index}`,
+      name: String(category.name || category.categoryName || '未命名分类'),
+      icon: icons[index % icons.length] ?? defaultCategory.icon
+    }))
+  ]
+})
+
+const articleList = computed(() => articlePageData.value?.records || [])
+const total = computed(() => articlePageData.value?.total || 0)
+const loading = computed(() => articlePending.value)
+const categories = computed<CategoryTab[]>(() => categoriesData.value || [{ ...defaultCategory }])
+
+// SSR 阶段的错误直接体现在空列表上；客户端重新拉取失败时提示
+watch(articleError, (error) => {
+  if (import.meta.client && error) {
+    message.error((error as Error)?.message || '获取文章列表失败')
+  }
+})
 
 /**
  * 规范化分类 ID
@@ -77,12 +149,11 @@ function goToPost(id: number | string) {
  * 切换分类标签
  * @param tabName 标签名
  */
-async function handleClick(tabName?: string | number) {
+function handleClick(tabName?: string | number) {
   const currentTabName = String(tabName ?? activeName.value)
   params.categoryId = currentTabName === 'all' ? null : normalizeCategoryId(currentTabName)
   params.pageNum = 1
   activeName.value = currentTabName
-  await getArticleList()
 }
 
 /**
@@ -91,7 +162,7 @@ async function handleClick(tabName?: string | number) {
  */
 async function changePage(page: number) {
   params.pageNum = page
-  await getArticleList()
+  await nextTick()
 
   if (!import.meta.client) {
     return
@@ -104,60 +175,11 @@ async function changePage(page: number) {
   })
 }
 
-/**
- * 获取文章列表
- */
-async function getArticleList() {
-  loading.value = true
-  try {
-    const requestParams: Record<string, unknown> = {
-      ...params
-    }
-
-    if (requestParams.categoryId === null) {
-      delete requestParams.categoryId
-    }
-
-    const response = await getArticlesApi(requestParams)
-    const page = unwrapResponseData<PageResult<ArticleSummary> | null>(response)
-    articleList.value = page?.records || []
-    total.value = Number(page?.total || 0)
-  } catch (error) {
-    if (import.meta.client) {
-      message.error((error as Error)?.message || '获取文章列表失败')
-    }
-  } finally {
-    loading.value = false
-  }
-}
-
-/**
- * 获取全部分类
- */
-async function getAllCategories() {
-  const response = await getAllCategoriesApi().catch(() => null)
-  const icons = [
-    'far fa-file-alt',
-    'fas fa-book-open',
-    'fas fa-feather-alt',
-    'fas fa-mug-hot',
-    'fas fa-bookmark',
-    'fas fa-pen-fancy'
-  ]
-  const categoriesData = unwrapResponseData<ArticleCategoryGroup[] | null>(response) || []
-
-  categories.value = [
-    { ...defaultCategory },
-    ...categoriesData.map<CategoryTab>((category, index) => ({
-      id: category.id ?? `category-${index}`,
-      name: String(category.name || category.categoryName || '未命名分类'),
-      icon: icons[index % icons.length] ?? defaultCategory.icon
-    }))
-  ]
-}
-
 onMounted(() => {
-  void bootstrapHome()
+  setTimeout(() => {
+    momentsReady.value = true
+    sidebarReady.value = true
+  }, 160)
 })
 </script>
 

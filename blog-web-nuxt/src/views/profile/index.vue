@@ -1939,16 +1939,21 @@ function handleAvatarUpdate(newAvatarUrl: string) {
   }
 }
 
+// 额度流水卡片适当增加内边距，避免内容显得拥挤
+.quota-log-item {
+  padding: 22px 24px;
+}
+
 .quota-log-main {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .quota-log-head {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 16px;
 }
 
@@ -1956,7 +1961,7 @@ function handleAvatarUpdate(newAvatarUrl: string) {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .quota-log-source {

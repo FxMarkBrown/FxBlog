@@ -331,7 +331,8 @@ onBeforeUnmount(() => {
 
 <style lang="scss" scoped>
 .weather-decor-host {
-  position: fixed;
+  // 从全视口 fixed 改为 absolute：天气装饰现在只存在于 Hero 区域内（见 components/Hero/index.vue）
+  position: absolute;
   inset: 0;
   z-index: 1;
   pointer-events: none;

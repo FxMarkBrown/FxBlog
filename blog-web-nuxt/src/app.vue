@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { getCookie, removeCookie } from '@/utils/cookie'
+import { initNaiveThemeSync, naiveConfigProviderProps } from '@/utils/naive-theme'
 import { initTheme } from '@/utils/theme'
 
-const WeatherDecor = defineAsyncComponent(() => import('@/components/WeatherDecor/index.vue'))
 const MobileMenu = defineAsyncComponent(() => import('@/layout/MobileMenu/index.vue'))
 const SearchDialog = defineAsyncComponent(() => import('@/components/Search/index.vue'))
 const FloatingButtons = defineAsyncComponent(
@@ -99,6 +99,7 @@ function initCursorEffect() {
 
 onMounted(async () => {
   initTheme()
+  initNaiveThemeSync()
   initCursorEffect()
   await handleThirdPartyLogin()
 
@@ -119,24 +120,23 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="app-root">
-    <ClientOnly>
-      <WeatherDecor v-if="!disableGlobalOverlays" />
-    </ClientOnly>
-    <div class="app-shell" :class="{ 'app-shell--minimal': disableGlobalOverlays }">
-      <NuxtLayout>
-        <NuxtPage :page-key="getPageKey" />
-      </NuxtLayout>
-      <ClientOnly>
-        <MobileMenu v-if="!disableGlobalOverlays" />
-        <SearchDialog v-if="!disableGlobalOverlays" />
-        <FloatingButtons v-if="!disableGlobalOverlays && showFloatingButtons" />
-        <Lantern v-if="!disableGlobalOverlays" />
-        <ContextMenu v-if="!disableGlobalOverlays" />
-      </ClientOnly>
-      <div class="cursor-container"></div>
+  <n-config-provider v-bind="naiveConfigProviderProps">
+    <div class="app-root">
+      <div class="app-shell" :class="{ 'app-shell--minimal': disableGlobalOverlays }">
+        <NuxtLayout>
+          <NuxtPage :page-key="getPageKey" />
+        </NuxtLayout>
+        <ClientOnly>
+          <MobileMenu v-if="!disableGlobalOverlays" />
+          <SearchDialog v-if="!disableGlobalOverlays" />
+          <FloatingButtons v-if="!disableGlobalOverlays && showFloatingButtons" />
+          <Lantern v-if="!disableGlobalOverlays" />
+          <ContextMenu v-if="!disableGlobalOverlays" />
+        </ClientOnly>
+        <div class="cursor-container"></div>
+      </div>
     </div>
-  </div>
+  </n-config-provider>
 </template>
 
 <style lang="scss">

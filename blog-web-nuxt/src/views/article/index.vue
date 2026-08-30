@@ -75,6 +75,19 @@ const normalizedSiteUrl = computed(() =>
   String(runtimeConfig.public.siteUrl || '').replace(/\/+$/, '')
 )
 const canonicalUrl = computed(() => `${normalizedSiteUrl.value}/post/${articleId.value}`)
+// JSON-LD 用绝对封面地址，回退站点 logo / 默认分享图
+const articleImageUrl = computed(() => {
+  const candidate = String(
+    article.value?.cover || siteStore.websiteInfo.logo || runtimeConfig.public.seoImage || ''
+  ).trim()
+  if (!candidate) {
+    return undefined
+  }
+  if (/^https?:\/\//i.test(candidate)) {
+    return candidate
+  }
+  return `${normalizedSiteUrl.value}/${candidate.replace(/^\/+/, '')}`
+})
 const currentUrl = computed(() => (import.meta.client ? window.location.href : canonicalUrl.value))
 const categoryName = computed(() =>
   String(article.value?.category?.name || article.value?.categoryName || '未分类')
@@ -98,6 +111,7 @@ useHead(() => ({
             '@type': 'BlogPosting',
             headline: article.value.title,
             description: articleSummary.value,
+            image: articleImageUrl.value,
             datePublished: article.value.createTime,
             dateModified: article.value.updateTime || article.value.createTime,
             mainEntityOfPage: canonicalUrl.value,
@@ -105,6 +119,10 @@ useHead(() => ({
             author: {
               '@type': 'Person',
               name: article.value.nickname || siteStore.websiteInfo.author || siteName.value
+            },
+            publisher: {
+              '@type': 'Organization',
+              name: siteName.value
             }
           })
         }

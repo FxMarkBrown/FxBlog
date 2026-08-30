@@ -18,7 +18,7 @@ import { message } from '@/utils/feedback'
 import { WECHAT_QR_PLACEHOLDER } from '@/utils/placeholders'
 import { setCookieExpires } from '@/utils/cookie'
 import { unwrapResponseData } from '@/utils/response'
-import { getThemeMode, initTheme } from '@/utils/theme'
+import { initTheme } from '@/utils/theme'
 import type { LoginUserInfo } from '@/types/auth'
 
 type LoginFormType = 'login' | 'account' | 'register' | 'forgot'
@@ -49,7 +49,6 @@ const codeButtonText = ref('发送验证码')
 const currentForm = ref<LoginFormType>('login')
 const rememberMe = ref(false)
 const isShowSliderVerify = ref(false)
-const isDarkMode = ref(false)
 const previousBodyOverflow = ref('')
 const previousNuxtPaddingTop = ref('')
 const codeTimer = ref<ReturnType<typeof setInterval> | null>(null)
@@ -156,7 +155,7 @@ watch(
 )
 
 onMounted(async () => {
-  isDarkMode.value = initTheme()
+  initTheme()
   previousBodyOverflow.value = document.body.style.overflow
   previousNuxtPaddingTop.value =
     (document.getElementById('__nuxt') as HTMLElement | null)?.style.paddingTop || ''
@@ -165,7 +164,6 @@ onMounted(async () => {
   if (nuxtRoot) {
     nuxtRoot.style.paddingTop = '0'
   }
-  window.addEventListener('theme-change', syncThemeState)
 
   if (!siteStore.loaded) {
     await siteStore.fetchWebsiteInfo().catch(() => null)
@@ -177,7 +175,6 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('theme-change', syncThemeState)
   document.body.style.overflow = previousBodyOverflow.value
   const nuxtRoot = document.getElementById('__nuxt') as HTMLElement | null
   if (nuxtRoot) {
@@ -185,13 +182,6 @@ onBeforeUnmount(() => {
   }
   clearTimer()
 })
-
-/**
- * 同步登录页主题状态。
- */
-function syncThemeState() {
-  isDarkMode.value = getThemeMode() === 'dark'
-}
 
 /**
  * 统一弹出错误提示。
@@ -623,7 +613,7 @@ function backToHome() {
 </script>
 
 <template>
-  <div class="login-container" :class="{ 'is-dark': isDarkMode }">
+  <div class="login-container">
     <ClientOnly>
       <LoginParticles />
     </ClientOnly>
@@ -899,9 +889,9 @@ function backToHome() {
   overflow: hidden;
   isolation: isolate;
   background:
-    radial-gradient(circle at top left, rgba(56, 189, 248, 0.16), transparent 32%),
-    radial-gradient(circle at bottom right, rgba(139, 92, 246, 0.16), transparent 30%),
-    linear-gradient(135deg, #dbeafe 0%, #e0e7ff 38%, #f8fafc 100%);
+    radial-gradient(circle at top left, rgba($primary, 0.14), transparent 32%),
+    radial-gradient(circle at bottom right, rgba($secondary, 0.12), transparent 30%),
+    linear-gradient(135deg, #f0fdfa 0%, #f7f9fe 45%, #eef6ff 100%);
 }
 
 .login-body {
@@ -922,24 +912,31 @@ function backToHome() {
 }
 
 .form-item {
-  margin-bottom: 20px;
+  margin-bottom: 10px;
+}
+
+// 折叠 naive 为校验提示预留的 24px 反馈空间，消除输入框之间的过大间距
+.form-item :deep(.n-form-item-feedback-wrapper) {
+  min-height: 0;
 }
 
 .form-item :deep(.n-input) {
   --n-height: 44px;
-  --n-border: 1px solid rgba(124, 139, 150, 0.14);
-  --n-border-hover: 1px solid rgba(124, 139, 150, 0.14);
-  --n-color: rgba(255, 255, 255, 0.58);
+  --n-border: 1px solid var(--border-color);
+  --n-border-hover: 1px solid var(--primary-color);
+  --n-border-focus: 1px solid var(--primary-color);
+  --n-color: var(--input-bg);
+  --n-color-focus: var(--input-bg);
   border-radius: 12px;
   font-size: 14px;
 }
 
 .form-item :deep(.n-input__input-el)::placeholder {
-  color: #9ca3af;
+  color: var(--text-tertiary);
 }
 
 .form-item :deep(.n-input__prefix) {
-  color: #6b7280;
+  color: var(--text-secondary);
 }
 
 .submit-btn {
@@ -949,13 +946,13 @@ function backToHome() {
   align-items: center;
   justify-content: center;
   border: none;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #5b67f1 0%, #6677ff 100%);
+  border-radius: 999px;
+  background: var(--primary-color);
   color: #fff;
   font-size: 18px;
   font-weight: 600;
   letter-spacing: 0.22em;
-  box-shadow: 0 14px 30px rgba(99, 102, 241, 0.26);
+  box-shadow: 0 14px 30px rgba($primary, 0.26);
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease,
@@ -964,15 +961,15 @@ function backToHome() {
 
 .submit-btn:hover {
   transform: translateY(-1px);
-  filter: brightness(1.03);
-  box-shadow: 0 18px 36px rgba(99, 102, 241, 0.3);
-  background: linear-gradient(135deg, #5b67f1 0%, #6677ff 100%);
+  filter: brightness(1.06);
+  box-shadow: 0 18px 36px rgba($primary, 0.3);
+  background: var(--primary-color);
   color: #fff;
 }
 
 .submit-btn:active {
   transform: translateY(0);
-  box-shadow: 0 10px 22px rgba(99, 102, 241, 0.22);
+  box-shadow: 0 10px 22px rgba($primary, 0.22);
 }
 
 .form-item .code-btn {
@@ -980,10 +977,10 @@ function backToHome() {
   height: 44px;
   padding: 0 18px;
   border: none;
-  border-left: 1px solid rgba(148, 163, 184, 0.2);
+  border-left: 1px solid var(--border-color);
   border-radius: 0 12px 12px 0;
-  background: rgba(99, 102, 241, 0.08);
-  color: #4f46e5;
+  background: rgba($primary, 0.08);
+  color: var(--primary-color);
   font-weight: 600;
   transition:
     background-color 0.2s ease,
@@ -991,13 +988,13 @@ function backToHome() {
 }
 
 .form-item .code-btn:hover {
-  background: rgba(99, 102, 241, 0.14);
-  color: #4338ca;
+  background: rgba($primary, 0.14);
+  color: var(--primary-color);
 }
 
 .divider {
   margin: 24px 0;
-  color: #9ca3af;
+  color: var(--text-tertiary);
 }
 
 .divider :deep(.n-divider__title) {
@@ -1018,7 +1015,7 @@ function backToHome() {
   width: 40px;
   height: 40px;
   border-radius: 8px;
-  background: #f3f4f6;
+  background: var(--hover-bg);
   font-size: 20px;
   cursor: pointer;
   transition: all 0.2s;
@@ -1052,8 +1049,8 @@ function backToHome() {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-top: 24px;
-  color: #6b7280;
+  margin-top: 20px;
+  color: var(--text-secondary);
   font-size: 14px;
 }
 
@@ -1070,7 +1067,7 @@ function backToHome() {
 
 .divider-line {
   margin: 0 12px;
-  color: #e5e7eb;
+  color: var(--border-color);
 }
 
 .qrcode-content {
@@ -1084,9 +1081,9 @@ function backToHome() {
   height: 200px;
   margin: 0 auto 16px;
   padding: 8px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--input-bg);
 }
 
 .qrcode-box img {
@@ -1097,12 +1094,12 @@ function backToHome() {
 
 .qrcode-tip {
   margin: 8px 0;
-  color: #6b7280;
+  color: var(--text-secondary);
   font-size: 14px;
 }
 
 .code-text {
-  color: #6366f1;
+  color: var(--primary-color);
   font-weight: 500;
 }
 
@@ -1112,20 +1109,20 @@ function backToHome() {
 }
 
 .form-header {
-  margin-bottom: 32px;
+  margin-bottom: 22px;
   text-align: center;
 }
 
 .form-title {
   margin: 0 0 8px;
-  color: #1a1a1a;
+  color: var(--text-primary);
   font-size: 24px;
   font-weight: 600;
 }
 
 .form-subtitle {
   margin: 0;
-  color: #666;
+  color: var(--text-secondary);
   font-size: 14px;
 }
 
@@ -1133,11 +1130,11 @@ function backToHome() {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 14px;
 }
 
 .form-options :deep(.n-checkbox__label) {
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 @keyframes fadeIn {
@@ -1161,14 +1158,14 @@ function backToHome() {
   height: 36px;
   border: none;
   border-radius: 50%;
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--hover-bg);
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .switch-form-btn:hover {
-  background: #e5e7eb;
+  background: var(--border-color);
   transform: rotate(180deg);
 }
 
@@ -1188,8 +1185,8 @@ function backToHome() {
   height: 36px;
   border: none;
   border-radius: 50%;
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--hover-bg);
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -1199,8 +1196,8 @@ function backToHome() {
 }
 
 .back-btn:hover {
-  background: #e5e7eb;
-  color: #6366f1;
+  background: var(--border-color);
+  color: var(--accent-color);
   transform: translateX(-4px);
 }
 
@@ -1208,87 +1205,15 @@ function backToHome() {
   font-size: 20px;
 }
 
-.login-container.is-dark {
+:global(html[data-theme='dark']) .login-container {
   background:
-    radial-gradient(circle at top left, rgba(14, 165, 233, 0.14), transparent 34%),
-    radial-gradient(circle at bottom right, rgba(129, 140, 248, 0.16), transparent 30%),
-    linear-gradient(135deg, #020617 0%, #0f172a 45%, #111827 100%);
+    radial-gradient(circle at top left, rgba($primary, 0.1), transparent 34%),
+    radial-gradient(circle at bottom right, rgba($secondary, 0.08), transparent 30%),
+    linear-gradient(135deg, #14201f 0%, #1e1e1e 50%, #18222b 100%);
 }
 
-.login-container.is-dark .login-body {
-  border-color: rgba(148, 163, 184, 0.2);
-}
-
-.login-container.is-dark .form-title {
-  color: #f8fafc;
-}
-
-.login-container.is-dark .form-subtitle,
-.login-container.is-dark .qrcode-tip,
-.login-container.is-dark .form-switch,
-.login-container.is-dark .divider {
-  color: #94a3b8;
-}
-
-.login-container.is-dark .divider :deep(.n-divider__title) {
-  color: #cbd5e1;
-}
-
-.login-container.is-dark .qrcode-box {
-  border-color: rgba(148, 163, 184, 0.24);
-  background: rgba(15, 23, 42, 0.4);
-}
-
-.login-container.is-dark .login-icon,
-.login-container.is-dark .switch-form-btn,
-.login-container.is-dark .back-btn {
-  background: rgba(30, 41, 59, 0.72);
-  color: #cbd5e1;
-  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12);
-}
-
-.login-container.is-dark .switch-form-btn:hover,
-.login-container.is-dark .back-btn:hover {
-  background: rgba(51, 65, 85, 0.82);
-}
-
-.login-container.is-dark .form-item :deep(.n-input) {
-  --n-border: 1px solid rgba(148, 163, 184, 0.16);
-  --n-border-hover: 1px solid rgba(148, 163, 184, 0.16);
-  --n-color: rgba(15, 23, 42, 0.72);
-}
-
-.login-container.is-dark .form-item :deep(.n-input__input-el) {
-  color: #e2e8f0;
-}
-
-.login-container.is-dark .form-item :deep(.n-input__input-el)::placeholder {
-  color: #64748b;
-}
-
-.login-container.is-dark .form-item :deep(.n-input__prefix) {
-  color: #94a3b8;
-}
-
-.login-container.is-dark .form-options :deep(.n-checkbox__label) {
-  color: #cbd5e1;
-}
-
-.login-container.is-dark .submit-btn,
-.login-container.is-dark .submit-btn:hover {
-  background: linear-gradient(135deg, #6466f1 0%, #6d63f4 100%);
-  box-shadow: 0 16px 34px rgba(79, 70, 229, 0.28);
-}
-
-.login-container.is-dark .form-item .code-btn {
-  border-left-color: rgba(148, 163, 184, 0.18);
-  background: rgba(99, 102, 241, 0.16);
-  color: #c7d2fe;
-}
-
-.login-container.is-dark .form-item .code-btn:hover {
-  background: rgba(99, 102, 241, 0.24);
-  color: #e0e7ff;
+:global(html[data-theme='dark']) .login-body {
+  border-color: var(--border-color);
 }
 
 @media (max-width: 768px) {

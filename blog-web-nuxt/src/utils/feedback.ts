@@ -1,9 +1,11 @@
 import { createDiscreteApi, NInput, type DialogApi, type MessageApi } from 'naive-ui'
 import { h, ref } from 'vue'
-import { naiveThemeOverrides } from '@/utils/naive-theme'
+import { naiveConfigProviderProps } from '@/utils/naive-theme'
 
 /**
  * 命令式反馈 API（toast / 确认框）。
+ * configProviderProps 传入的是 computed——naive 的 discrete app 渲染时会 unref，
+ * 因此明暗主题切换能实时生效（见 utils/naive-theme.ts）。
  */
 interface FeedbackApis {
   message: MessageApi
@@ -15,7 +17,7 @@ let apis: FeedbackApis | null = null
 function getApis(): FeedbackApis {
   if (!apis) {
     apis = createDiscreteApi(['message', 'dialog'], {
-      configProviderProps: { themeOverrides: naiveThemeOverrides }
+      configProviderProps: naiveConfigProviderProps
     })
   }
   return apis

@@ -66,11 +66,11 @@ onBeforeUnmount(() => {
 @use '@/styles/mixins.scss' as *;
 
 .site-footer {
-  background: var(--gradient-rainbow);
-  background-size: 300% 300%;
-  animation: rainbowFlow 15s ease infinite;
+  background: var(--card-bg);
+  border-top: 1px solid var(--border-color);
   padding: $spacing-lg 0;
   margin-top: auto;
+  transition: background 0.3s ease;
 }
 
 .footer-content {
@@ -88,16 +88,16 @@ onBeforeUnmount(() => {
 
 .running-time {
   font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text-secondary);
 
   .icon {
-    color: #fff;
+    color: var(--accent-color);
     margin-right: 4px;
   }
 }
 
 .time-value {
-  color: #fff;
+  color: var(--primary-color);
   font-weight: 600;
   font-family: 'Fira Code', monospace;
 }
@@ -109,7 +109,7 @@ onBeforeUnmount(() => {
   gap: $spacing-sm;
   flex-wrap: wrap;
   font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-secondary);
 }
 
 .record {
@@ -118,19 +118,7 @@ onBeforeUnmount(() => {
   transition: color 0.2s ease;
 
   &:hover {
-    color: #fff;
-  }
-}
-
-@keyframes rainbowFlow {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
+    color: var(--accent-color);
   }
 }
 

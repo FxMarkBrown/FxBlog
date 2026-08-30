@@ -68,7 +68,7 @@ const apiServer = readEnvValue('NUXT_API_BASE_SERVER', 'http://127.0.0.1:8800')
 const siteUrl = readEnvValue('NUXT_PUBLIC_SITE_URL', 'http://localhost:3000')
 const siteName = readEnvValue('NUXT_PUBLIC_SITE_NAME', 'Open Source Blog')
 const siteDescription = readEnvValue('NUXT_PUBLIC_SITE_DESCRIPTION', '个人知识库与生活博客')
-const seoImage = readEnvValue('NUXT_PUBLIC_SEO_IMAGE', '/favicon.ico')
+const seoImage = readEnvValue('NUXT_PUBLIC_SEO_IMAGE', '/og-image.png')
 const proxiedPrefixes = ['/api', '/auth', '/sys', '/portal', '/file', '/static', '/sign']
 const devProxyEntries = Object.fromEntries(
   proxiedPrefixes.map((prefix) => [
@@ -86,7 +86,11 @@ export default defineNuxtConfig({
   devtools: { enabled: false },
   srcDir: 'src/',
   modules: ['@pinia/nuxt', '@nuxt/eslint'],
-  css: ['@/styles/global.scss'],
+  css: ['@/styles/global.scss', '@fortawesome/fontawesome-free/css/all.min.css'],
+  build: {
+    // naive-ui 的依赖 vueuc 是 CJS，SSR（尤其 dev 的 vite-node）需要 Vite 转译
+    transpile: ['naive-ui', 'vueuc', '@css-render/vue3-ssr']
+  },
   vite: {
     server: {
       proxy: devProxyEntries

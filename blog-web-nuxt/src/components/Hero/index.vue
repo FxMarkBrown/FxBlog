@@ -2,8 +2,12 @@
 /**
  * 首页 Hero：自设计抽象渐变封面（光斑 + 网格 + 噪点，非动漫图）
  * + 居中大标题 + 打字机胶囊 + 双层 SVG 错速流动波浪 + 下箭头。
+ * 天气装饰（雨/雪等粒子与氛围）只渲染在 Hero 区域内，随 Hero 滚走，
+ * 不再作为全屏 fixed 覆盖层（避免与内容区产生色带接缝）。
  * 挂载时通过 ui store 置 hasHero，驱动 Header 透明悬浮模式。
  */
+const WeatherDecor = defineAsyncComponent(() => import('@/components/WeatherDecor/index.vue'))
+
 interface Props {
   title?: string
   phrases?: string[]
@@ -22,13 +26,40 @@ const uiStore = useUiStore()
 const heroTitle = computed(
   () => props.title || siteStore.websiteInfo.name || siteStore.websiteInfo.title || '个人知识库'
 )
+
+const poemPhrases = ref<string[]>([])
+
 const heroPhrases = computed(() => {
   if (props.phrases.length > 0) {
     return props.phrases
   }
+  if (poemPhrases.value.length > 0) {
+    return poemPhrases.value
+  }
   const summary = siteStore.websiteInfo.summary || siteStore.websiteInfo.description
   return [summary || '记录知识，沉淀思考', '相信记录的力量']
 })
+
+async function fetchPoem() {
+  try {
+    const response = await fetch('https://v1.jinrishici.com/shuqing/youqing')
+    if (!response.ok) {
+      return
+    }
+    const data = await response.json()
+    const content = String(data?.content ?? '').trim()
+    if (!content) {
+      return
+    }
+    const origin = data?.origin ?? data
+    const author = String(origin?.author ?? '').trim()
+    const title = String(origin?.title ?? '').trim()
+    const suffix = title ? ` —— ${author}${author ? ' ' : ''}《${title}》` : ''
+    poemPhrases.value = [`${content}${suffix}`]
+  } catch {
+    // 网络/CORS 失败时静默回退默认文案
+  }
+}
 
 // ---- 打字机 ----
 const typedText = ref('')
@@ -48,7 +79,10 @@ function typeLoop(phraseIndex: number, charIndex: number, deleting: boolean) {
   if (!deleting) {
     typedText.value = phrase.slice(0, charIndex + 1)
     if (charIndex + 1 >= phrase.length) {
-      typerTimer = setTimeout(() => typeLoop(phraseIndex, charIndex, true), 2200)
+      // 单句（古诗）打完即停留；多句（自定义文案）才循环擦除重打
+      if (list.length > 1) {
+        typerTimer = setTimeout(() => typeLoop(phraseIndex, charIndex, true), 2200)
+      }
       return
     }
     typerTimer = setTimeout(() => typeLoop(phraseIndex, charIndex + 1, false), 130)
@@ -70,9 +104,24 @@ function handleScrollDown() {
   window.scrollTo({ top: Math.max(heroHeight - 60, 0), behavior: 'smooth' })
 }
 
+let typingStarted = false
+
+function startTyping() {
+  if (typingStarted) {
+    return
+  }
+  typingStarted = true
+  typeLoop(0, 0, false)
+}
+
 onMounted(() => {
   uiStore.setHasHero(true)
-  typerTimer = setTimeout(() => typeLoop(0, 0, false), 400)
+  // 诗词接口较慢时先用默认文案开打，不等网络
+  typerTimer = setTimeout(startTyping, 1800)
+  void fetchPoem().finally(() => {
+    clearTimeout(typerTimer)
+    typerTimer = setTimeout(startTyping, 300)
+  })
 })
 
 onBeforeUnmount(() => {
@@ -89,6 +138,12 @@ onBeforeUnmount(() => {
       <div class="hero-noise"></div>
     </div>
     <div class="hero-mask"></div>
+
+    <ClientOnly>
+      <div class="hero-weather" aria-hidden="true">
+        <WeatherDecor />
+      </div>
+    </ClientOnly>
 
     <div class="hero-content">
       <h1 class="hero-title">{{ heroTitle }}</h1>
@@ -266,6 +321,15 @@ onBeforeUnmount(() => {
   50% {
     opacity: 0;
   }
+}
+
+// 天气装饰容器：绝对定位铺满 Hero（Hero overflow hidden 裁剪），
+// 层级低于波浪（波浪把页面底色干净地切出来）与文字内容
+.hero-weather {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
 }
 
 // 双层错速流动波浪，填充页面底色与下方内容衔接

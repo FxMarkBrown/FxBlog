@@ -237,11 +237,18 @@ function goToMessages() {
   max-width: 320px;
 
   .author-card {
-    padding: 22px 0 0;
-    color: #fff;
-    background: var(--gradient-soft);
-    background-size: 400% 400%;
-    animation: gradientFlow 12s ease infinite;
+    position: relative;
+    overflow: hidden;
+    padding: 0 0 4px;
+    color: var(--text-primary);
+
+    // 顶部品牌色横幅（静态，主色→信息蓝）
+    &::before {
+      content: '';
+      display: block;
+      height: 96px;
+      background: linear-gradient(135deg, rgba($primary, 0.85), rgba($secondary, 0.75));
+    }
   }
 
   .author-avatar-wrap {
@@ -249,6 +256,7 @@ function goToMessages() {
     justify-content: center;
     position: relative;
     z-index: 1;
+    margin-top: -44px;
 
     .avatar-hitbox {
       display: inline-flex;
@@ -257,7 +265,7 @@ function goToMessages() {
     }
 
     .avatar {
-      border: 4px solid rgba(255, 255, 255, 0.96);
+      border: 4px solid var(--card-bg);
       box-shadow: var(--shadow-mini, 0 8px 20px rgba(0, 0, 0, 0.18));
       background: #fff;
       transition: transform 0.6s ease;
@@ -276,15 +284,14 @@ function goToMessages() {
       margin: 0;
       font-size: 1.6rem;
       font-weight: 700;
-      color: #fff;
+      color: var(--text-primary);
       letter-spacing: 0.5px;
       line-height: 1.2;
-      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
     }
 
     .bio {
       margin: 10px 0 0;
-      color: rgba(255, 255, 255, 0.85);
+      color: var(--text-secondary);
       font-size: 0.95rem;
       line-height: 1.7;
     }
@@ -315,7 +322,7 @@ function goToMessages() {
       justify-content: center;
       gap: 5px;
       min-width: 0;
-      color: rgba(255, 255, 255, 0.85);
+      color: var(--text-secondary);
       font-size: 0.9rem;
       font-weight: 600;
       line-height: 1.2;
@@ -329,7 +336,7 @@ function goToMessages() {
     strong {
       display: block;
       width: 100%;
-      color: #fff;
+      color: var(--text-primary);
       font-size: 1.35rem;
       line-height: 1.15;
       font-variant-numeric: tabular-nums;
@@ -338,15 +345,15 @@ function goToMessages() {
     }
 
     .fa-book-open {
-      color: #fff;
+      color: var(--primary-color);
     }
 
     .fa-heart {
-      color: #fff;
+      color: #ff6496;
     }
 
     .fa-fire {
-      color: #fff;
+      color: var(--accent-color);
     }
   }
 
@@ -365,8 +372,8 @@ function goToMessages() {
       align-items: center;
       justify-content: center;
       border-radius: 12px;
-      background: rgba(255, 255, 255, 0.72);
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+      background: var(--hover-bg);
+      box-shadow: none;
       font-size: 1.05rem;
       transition: all 0.25s ease;
       text-decoration: none;
@@ -600,28 +607,9 @@ function goToMessages() {
   }
 }
 
-:global(html[data-theme='dark']) .sidebar {
-  .author-card {
-    background: linear-gradient(var(--mask-mini), var(--mask-mini)), var(--gradient-soft);
-    background-size: 400% 400%;
-  }
-}
-
 @include responsive(lg) {
   .sidebar {
     display: none;
-  }
-}
-
-@keyframes gradientFlow {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
   }
 }
 
