@@ -18,6 +18,12 @@ public class SysArticleDetailVo {
     @Schema(description = "分类名称")
     private String categoryName;
 
+    @Schema(description = "系列id")
+    private Integer seriesId;
+
+    @Schema(description = "系列名称")
+    private String seriesName;
+
     @Schema(description = "文章标题")
     private String title;
 

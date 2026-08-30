@@ -19,6 +19,8 @@
         <result property="likeNum" column="likeNum"/>
         <result property="commentNum" column="commentNum"/>
         <result property="categoryName" column="categoryName"/>
+        <result property="seriesId" column="series_id"/>
+        <result property="seriesName" column="seriesName"/>
     </resultMap>
 
     <resultMap id="articleDetailResultMap" type="top.fxmarkbrown.blog.vo.article.ArticleDetailVo">
@@ -45,6 +47,8 @@
             <id property="id" column="categoryId"/>
             <result property="name" column="categoryName"/>
         </association>
+        <result property="seriesId" column="series_id"/>
+        <result property="seriesName" column="seriesName"/>
         <collection property="tags" ofType="top.fxmarkbrown.blog.vo.tag.TagListVo" column="id" select="top.fxmarkbrown.blog.mapper.SysTagMapper.getTagByArticleId" />
     </resultMap>
 
@@ -96,11 +100,14 @@
             a.quantity,
             a.is_stick,
             a.create_time,
+            a.series_id,
             c.name AS categoryName,
+            se.name AS seriesName,
             u.nickname,
             u.avatar
         FROM sys_article a
         LEFT JOIN sys_category c ON a.category_id = c.id
+        LEFT JOIN sys_series se ON a.series_id = se.id
         LEFT JOIN sys_user u ON a.user_id = u.id
         WHERE a.status = 1
         <if test="tagId != null">
@@ -113,6 +120,9 @@
         </if>
         <if test="categoryId != null">
             AND a.category_id = #{categoryId}
+        </if>
+        <if test="seriesId != null">
+            AND a.series_id = #{seriesId}
         </if>
         <if test="keyword != null and keyword != ''">
             AND a.title like concat('%',#{keyword},'%')
@@ -136,8 +146,10 @@
             a.update_time,
             a.is_original,
             a.original_url,
+            a.series_id,
             c.id AS categoryId,
             c.name AS categoryName,
+            se.name AS seriesName,
             u.nickname,
             u.avatar,
             (SELECT COUNT(sc.id) FROM sys_comment sc WHERE sc.article_id = a.id) AS commentNum,
@@ -145,6 +157,7 @@
             (SELECT COUNT(saf.id) FROM sys_article_favorite saf WHERE saf.article_id = a.id) AS favoriteNum
         FROM sys_article a
         LEFT JOIN sys_category c ON a.category_id = c.id
+        LEFT JOIN sys_series se ON a.series_id = se.id
         LEFT JOIN sys_user u ON a.user_id = u.id
         where a.id = #{id}
     </select>
@@ -177,11 +190,14 @@
             a.quantity,
             a.status,
             a.create_time,
+            a.series_id,
             c.name AS categoryName,
+            se.name AS seriesName,
             u.nickname,
             u.avatar
         FROM sys_article a
         LEFT JOIN sys_category c ON a.category_id = c.id
+        LEFT JOIN sys_series se ON a.series_id = se.id
         left join sys_user u on a.user_id = u.id
         <where>
             <if test="query.status != null">
@@ -192,6 +208,9 @@
             </if>
             <if test="query.categoryId != null">
                 and a.category_id = #{query.categoryId}
+            </if>
+            <if test="query.seriesId != null">
+                and a.series_id = #{query.seriesId}
             </if>
             <if test="query.tagId != null">
                 AND EXISTS (
@@ -304,12 +323,15 @@
             a.is_stick,
             a.status,
             a.create_time,
+            a.series_id,
             c.name AS categoryName,
+            se.name AS seriesName,
             COALESCE(sc.comment_num, 0) AS commentNum,
             COALESCE(sal.like_num, 0) AS likeNum
         FROM
             sys_article a
             LEFT JOIN sys_category c ON a.category_id = c.id
+            LEFT JOIN sys_series se ON a.series_id = se.id
             LEFT JOIN (
                 SELECT article_id, COUNT(id) AS comment_num
                 FROM sys_comment

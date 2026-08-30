@@ -61,6 +61,12 @@ public class ArticleListVo {
     @Schema(description = "分类名称")
     private String categoryName;
 
+    @Schema(description = "系列id")
+    private Integer seriesId;
+
+    @Schema(description = "系列名称")
+    private String seriesName;
+
     @Schema(description = "标签列表")
     private List<TagListVo> tags;
 

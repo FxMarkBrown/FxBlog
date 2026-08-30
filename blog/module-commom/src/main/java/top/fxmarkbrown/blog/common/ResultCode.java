@@ -23,7 +23,8 @@ public enum ResultCode {
     CATEGORY_IS_EXIST(10019,"该分类名称已存在!"),
     CATEGORY_IS_TOP(10020,"该分类已经在顶端!!"),
     TAG_IS_EXIST(10021,"该标签名已存在!"),
-    ARTICLE_NOT_EXIST(10023,"文章不存在!");
+    ARTICLE_NOT_EXIST(10023,"文章不存在!"),
+    SERIES_IS_EXIST(10024,"该系列名称已存在!");
 
     public int code;
     public String desc;

@@ -32,6 +32,9 @@ public class SysArticle implements Serializable {
     @Schema(description = "分类id")
     private Integer categoryId;
 
+    @Schema(description = "系列id")
+    private Integer seriesId;
+
     @Schema(description = "文章标题")
     private String title;
 

@@ -25,7 +25,8 @@ public interface SysArticleMapper extends BaseMapper<SysArticle> {
      * 门户-获取文章列表
      */
     IPage<ArticleListVo> getArticleListApi(@Param("page") Page<Object> page, @Param("tagId") Integer tagId,
-                                           @Param("categoryId") Integer categoryId, @Param("keyword") String keyword);
+                                           @Param("categoryId") Integer categoryId, @Param("seriesId") Integer seriesId,
+                                           @Param("keyword") String keyword);
 
     /**
      * 获取文章详情

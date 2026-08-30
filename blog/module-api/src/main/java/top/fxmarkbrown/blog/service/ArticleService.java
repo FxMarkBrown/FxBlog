@@ -14,7 +14,7 @@ public interface ArticleService {
     /**
      * 获取文章列表
      */
-    PageResponse<ArticleListVo> getArticleList(PageQuery pageQuery, Integer tagId, Integer categoryId, String keyword);
+    PageResponse<ArticleListVo> getArticleList(PageQuery pageQuery, Integer tagId, Integer categoryId, Integer seriesId, String keyword);
 
     /**
      * 获取文章详情

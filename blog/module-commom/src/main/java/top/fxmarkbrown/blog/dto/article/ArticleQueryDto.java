@@ -13,6 +13,9 @@ public class ArticleQueryDto {
     @Schema(description = "分类id")
     private Integer categoryId;
 
+    @Schema(description = "系列id")
+    private Integer seriesId;
+
     @Schema(description = "状态 0：下架 1：发布")
     private Integer status;
 

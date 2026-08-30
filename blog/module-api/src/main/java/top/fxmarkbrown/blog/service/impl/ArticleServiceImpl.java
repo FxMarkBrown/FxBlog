@@ -44,14 +44,15 @@ public class ArticleServiceImpl implements ArticleService {
 
     @Override
     @Cacheable(cacheNames = CacheNames.PUBLIC_ARTICLE_LIST,
-               key = "'p:' + #pageQuery.pageNum + ':s:' + #pageQuery.pageSize + ':t:' + #tagId + ':c:' + #categoryId + ':k:' + #keyword",
+               key = "'p:' + #pageQuery.pageNum + ':s:' + #pageQuery.pageSize + ':t:' + #tagId + ':c:' + #categoryId + ':se:' + #seriesId + ':k:' + #keyword",
                sync = true)
-    public PageResponse<ArticleListVo> getArticleList(PageQuery pageQuery, Integer tagId, Integer categoryId, String keyword) {
+    public PageResponse<ArticleListVo> getArticleList(PageQuery pageQuery, Integer tagId, Integer categoryId, Integer seriesId, String keyword) {
         PageQuery query = pageQuery == null ? new PageQuery() : pageQuery;
         IPage<ArticleListVo> page = sysArticleMapper.getArticleListApi(
                 new Page<>(query.getPageNum(), query.getPageSize()),
                 tagId,
                 categoryId,
+                seriesId,
                 keyword
         );
         return PageResponse.from(page);

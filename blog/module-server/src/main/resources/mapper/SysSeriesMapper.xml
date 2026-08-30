@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="top.fxmarkbrown.blog.mapper.SysSeriesMapper">
+
+    <select id="getSeriesWithCount" resultType="top.fxmarkbrown.blog.vo.article.SeriesListVo">
+        SELECT
+            s.id,
+            s.name,
+            s.description,
+            COUNT(a.id) AS articleCount
+        FROM sys_series s
+        LEFT JOIN sys_article a ON a.series_id = s.id AND a.status = 1
+        GROUP BY s.id, s.name, s.description
+        ORDER BY s.sort ASC, s.id ASC
+    </select>
+
+    <select id="getSeriesArticles" resultMap="top.fxmarkbrown.blog.mapper.SysArticleMapper.articleResultMap">
+        SELECT
+            a.id,
+            a.user_id,
+            a.title,
+            a.summary,
+            a.cover,
+            a.quantity,
+            a.is_stick,
+            a.is_recommend,
+            a.status,
+            a.create_time,
+            a.series_id,
+            c.name AS categoryName,
+            se.name AS seriesName,
+            u.nickname,
+            u.avatar
+        FROM sys_article a
+        LEFT JOIN sys_category c ON a.category_id = c.id
+        LEFT JOIN sys_series se ON a.series_id = se.id
+        LEFT JOIN sys_user u ON a.user_id = u.id
+        WHERE a.status = 1
+          AND a.series_id = #{seriesId}
+        ORDER BY a.create_time ASC
+    </select>
+</mapper>

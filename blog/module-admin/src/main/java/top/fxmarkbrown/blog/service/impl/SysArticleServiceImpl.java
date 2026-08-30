@@ -2,6 +2,7 @@ package top.fxmarkbrown.blog.service.impl;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,7 @@ import top.fxmarkbrown.blog.common.Constants;
 import top.fxmarkbrown.blog.dto.article.ArticleQueryDto;
 import top.fxmarkbrown.blog.entity.SysArticle;
 import top.fxmarkbrown.blog.entity.SysCategory;
+import top.fxmarkbrown.blog.entity.SysSeries;
 import top.fxmarkbrown.blog.entity.SysTag;
 import top.fxmarkbrown.blog.event.IndexNowArticleEvent;
 import top.fxmarkbrown.blog.event.ai.AiArticleIndexRemoveEvent;
@@ -23,6 +25,7 @@ import top.fxmarkbrown.blog.event.ai.AiArticleIndexSyncEvent;
 import top.fxmarkbrown.blog.exception.ServiceException;
 import top.fxmarkbrown.blog.mapper.SysArticleMapper;
 import top.fxmarkbrown.blog.mapper.SysCategoryMapper;
+import top.fxmarkbrown.blog.mapper.SysSeriesMapper;
 import top.fxmarkbrown.blog.mapper.SysTagMapper;
 import top.fxmarkbrown.blog.service.AiQuotaCoreService;
 import top.fxmarkbrown.blog.service.SysArticleService;
@@ -42,6 +45,7 @@ public class SysArticleServiceImpl extends ServiceImpl<SysArticleMapper, SysArti
     private final SysTagMapper sysTagMapper;
 
     private final SysCategoryMapper sysCategoryMapper;
+    private final SysSeriesMapper sysSeriesMapper;
 
     private final AiQuotaCoreService aiQuotaCoreService;
 
@@ -62,6 +66,12 @@ public class SysArticleServiceImpl extends ServiceImpl<SysArticleMapper, SysArti
         SysCategory sysCategory = sysCategoryMapper.selectById(sysArticle.getCategoryId());
         sysArticleDetailVo.setCategoryName(sysCategory.getName());
 
+        //回填系列
+        if (sysArticle.getSeriesId() != null) {
+            SysSeries sysSeries = sysSeriesMapper.selectById(sysArticle.getSeriesId());
+            sysArticleDetailVo.setSeriesName(sysSeries != null ? sysSeries.getName() : null);
+        }
+
         //获取标签
         List<String> tags = sysTagMapper.getTagNameByArticleId(id);
         sysArticleDetailVo.setTags(tags);
@@ -78,7 +88,9 @@ public class SysArticleServiceImpl extends ServiceImpl<SysArticleMapper, SysArti
             @CacheEvict(cacheNames = CacheNames.PUBLIC_TAG, allEntries = true),
             @CacheEvict(cacheNames = CacheNames.PUBLIC_HOME_CONFIG, allEntries = true),
             @CacheEvict(cacheNames = CacheNames.PUBLIC_ARTICLE_LIST, allEntries = true),
-            @CacheEvict(cacheNames = CacheNames.PUBLIC_CATEGORY_ALL, allEntries = true)
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_CATEGORY_ALL, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_SERIES, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_SERIES_ARTICLES, allEntries = true)
     })
     public Boolean add(SysArticleDetailVo sysArticle) {
 
@@ -88,6 +100,7 @@ public class SysArticleServiceImpl extends ServiceImpl<SysArticleMapper, SysArti
 
         //添加分类
         addCategory(sysArticle, obj);
+        addSeries(sysArticle, obj);
         baseMapper.insert(obj);
         if (Integer.valueOf(Constants.YES).equals(obj.getStatus())) {
             aiQuotaCoreService.recordArticleReward(obj.getUserId(), obj.getId(), obj.getTitle(), true);
@@ -113,7 +126,9 @@ public class SysArticleServiceImpl extends ServiceImpl<SysArticleMapper, SysArti
             @CacheEvict(cacheNames = CacheNames.PUBLIC_TAG, allEntries = true),
             @CacheEvict(cacheNames = CacheNames.PUBLIC_HOME_CONFIG, allEntries = true),
             @CacheEvict(cacheNames = CacheNames.PUBLIC_ARTICLE_LIST, allEntries = true),
-            @CacheEvict(cacheNames = CacheNames.PUBLIC_CATEGORY_ALL, allEntries = true)
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_CATEGORY_ALL, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_SERIES, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_SERIES_ARTICLES, allEntries = true)
     })
     public Boolean update(SysArticleDetailVo sysArticle) {
         SysArticle previousArticle = baseMapper.selectById(sysArticle.getId());
@@ -133,7 +148,14 @@ public class SysArticleServiceImpl extends ServiceImpl<SysArticleMapper, SysArti
         }
 
         addCategory(sysArticle, obj);
+        addSeries(sysArticle, obj);
         baseMapper.updateById(obj);
+        //系列被清空时需显式置空（updateById 忽略 null 字段）
+        if (obj.getSeriesId() == null) {
+            baseMapper.update(null, new LambdaUpdateWrapper<SysArticle>()
+                    .eq(SysArticle::getId, obj.getId())
+                    .set(SysArticle::getSeriesId, null));
+        }
         if (!Objects.equals(previousArticle.getStatus(), obj.getStatus())) {
             if (Integer.valueOf(Constants.YES).equals(obj.getStatus())) {
                 aiQuotaCoreService.recordArticleReward(previousArticle.getUserId(), obj.getId(), obj.getTitle(), true);
@@ -160,7 +182,9 @@ public class SysArticleServiceImpl extends ServiceImpl<SysArticleMapper, SysArti
             @CacheEvict(cacheNames = CacheNames.PUBLIC_TAG, allEntries = true),
             @CacheEvict(cacheNames = CacheNames.PUBLIC_HOME_CONFIG, allEntries = true),
             @CacheEvict(cacheNames = CacheNames.PUBLIC_ARTICLE_LIST, allEntries = true),
-            @CacheEvict(cacheNames = CacheNames.PUBLIC_CATEGORY_ALL, allEntries = true)
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_CATEGORY_ALL, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_SERIES, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_SERIES_ARTICLES, allEntries = true)
     })
     public Boolean delete(List<Long> ids) {
 
@@ -203,7 +227,9 @@ public class SysArticleServiceImpl extends ServiceImpl<SysArticleMapper, SysArti
             @CacheEvict(cacheNames = CacheNames.PUBLIC_TAG, allEntries = true),
             @CacheEvict(cacheNames = CacheNames.PUBLIC_HOME_CONFIG, allEntries = true),
             @CacheEvict(cacheNames = CacheNames.PUBLIC_ARTICLE_LIST, allEntries = true),
-            @CacheEvict(cacheNames = CacheNames.PUBLIC_CATEGORY_ALL, allEntries = true)
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_CATEGORY_ALL, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_SERIES, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PUBLIC_SERIES_ARTICLES, allEntries = true)
     })
     public boolean updateById(SysArticle entity) {
         return super.updateById(entity);
@@ -217,6 +243,20 @@ public class SysArticleServiceImpl extends ServiceImpl<SysArticleMapper, SysArti
             sysCategoryMapper.insert(sysCategory);
         }
         obj.setCategoryId(sysCategory.getId());
+    }
+
+    private void addSeries(SysArticleDetailVo sysArticle, SysArticle obj) {
+        if (sysArticle.getSeriesName() == null || sysArticle.getSeriesName().isBlank()) {
+            obj.setSeriesId(null);
+            return;
+        }
+        SysSeries sysSeries = sysSeriesMapper.selectOne(new LambdaQueryWrapper<SysSeries>()
+                .eq(SysSeries::getName, sysArticle.getSeriesName()));
+        if (sysSeries == null) {
+            sysSeries = SysSeries.builder().name(sysArticle.getSeriesName()).build();
+            sysSeriesMapper.insert(sysSeries);
+        }
+        obj.setSeriesId(sysSeries.getId());
     }
 
     private void addTags(SysArticleDetailVo sysArticle, SysArticle obj) {

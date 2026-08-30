@@ -31,8 +31,8 @@ public class ArticleController {
 
     @GetMapping("/list")
     @Operation(summary = "获取文章列表")
-    public Result<PageResponse<ArticleListVo>> getArticleList(PageQuery pageQuery, String tagId, String categoryId, String keyword) {
-        return Result.success(articleService.getArticleList(pageQuery, parseInteger(tagId), parseInteger(categoryId), keyword));
+    public Result<PageResponse<ArticleListVo>> getArticleList(PageQuery pageQuery, String tagId, String categoryId, String seriesId, String keyword) {
+        return Result.success(articleService.getArticleList(pageQuery, parseInteger(tagId), parseInteger(categoryId), parseInteger(seriesId), keyword));
     }
 
     @GetMapping("/detail/{id}")
