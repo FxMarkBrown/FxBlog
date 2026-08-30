@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { message } from '@/utils/feedback'
 import { addCommentApi, getCommentsApi } from '@/api/article'
+import AppPagination from '@/components/Common/AppPagination.vue'
 import EmojiPicker from '@/components/Common/EmojiPicker.vue'
 import { getBrowserInfo } from '@/utils/browser'
 import { formatTime } from '@/utils/time'
@@ -616,7 +617,7 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="pagination-box">
-          <NPagination
+          <AppPagination
             v-if="total"
             :page="params.pageNum"
             :page-size="params.pageSize"
@@ -962,40 +963,6 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: center;
   padding-top: $spacing-lg;
-
-  // 复刻原 el-pagination.is-background 观感：圆角页码、激活主色
-  :deep(.n-pagination-item) {
-    color: var(--text-secondary);
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 999px;
-    transition: all 0.3s ease;
-
-    &:hover {
-      color: var(--primary-color);
-      border-color: var(--primary-color);
-    }
-
-    &.n-pagination-item--active {
-      background: var(--primary-color);
-      color: #fff;
-      border-color: var(--primary-color);
-      font-weight: bold;
-
-      &:hover {
-        color: #fff;
-      }
-    }
-
-    &.n-pagination-item--disabled {
-      cursor: not-allowed;
-
-      &:hover {
-        color: var(--text-secondary);
-        border-color: var(--border-color);
-      }
-    }
-  }
 }
 
 .empty-state {

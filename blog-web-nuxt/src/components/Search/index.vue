@@ -3,6 +3,7 @@ import type { InputInst } from 'naive-ui'
 import { message } from '@/utils/feedback'
 import { getArticlesApi } from '@/api/article'
 import { getTagsApi } from '@/api/tags'
+import AppPagination from '@/components/Common/AppPagination.vue'
 import type { ArticleSummary, TagSummary } from '@/types/article'
 import type { PageResult } from '@/types/common'
 import { unwrapResponseData } from '@/utils/response'
@@ -268,7 +269,7 @@ function formatDate(date?: string) {
       </div>
 
       <div class="pagination-box">
-        <NPagination
+        <AppPagination
           v-if="total"
           :page="params.pageNum"
           :page-size="params.pageSize"
@@ -445,40 +446,6 @@ function formatDate(date?: string) {
 .pagination-box {
   display: flex;
   justify-content: center;
-
-  // 复刻原 el-pagination.is-background 观感：圆角页码、激活主色
-  :deep(.n-pagination-item) {
-    color: var(--text-secondary);
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 999px;
-    transition: all 0.3s ease;
-
-    &:hover {
-      color: var(--primary-color);
-      border-color: var(--primary-color);
-    }
-
-    &.n-pagination-item--active {
-      background: var(--primary-color);
-      color: #fff;
-      border-color: var(--primary-color);
-      font-weight: bold;
-
-      &:hover {
-        color: #fff;
-      }
-    }
-
-    &.n-pagination-item--disabled {
-      cursor: not-allowed;
-
-      &:hover {
-        color: var(--text-secondary);
-        border-color: var(--border-color);
-      }
-    }
-  }
 }
 
 :deep(mark) {

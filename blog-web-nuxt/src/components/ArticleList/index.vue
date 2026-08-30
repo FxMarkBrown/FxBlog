@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ArticleSummary } from '@/types/article'
+import AppPagination from '@/components/Common/AppPagination.vue'
 import { IMAGE_ERROR_PLACEHOLDER } from '@/utils/placeholders'
 
 interface ArticleListProps {
@@ -106,7 +107,7 @@ function getTagNames(post: ArticleSummary): string[] {
     <NEmpty v-if="!props.loading && props.articles.length === 0" description="暂无文章" />
 
     <div class="pagination-box">
-      <NPagination
+      <AppPagination
         v-if="props.articles.length"
         :page="props.params.pageNum"
         :page-size="props.params.pageSize"
@@ -293,40 +294,6 @@ function getTagNames(post: ArticleSummary): string[] {
   display: flex;
   justify-content: center;
   margin-top: $spacing-lg;
-
-  // 复刻原 el-pagination.is-background 观感：圆角页码、激活主色
-  :deep(.n-pagination-item) {
-    color: var(--text-secondary);
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 999px;
-    transition: all 0.3s ease;
-
-    &:hover {
-      color: $primary;
-      border-color: $primary;
-    }
-
-    &.n-pagination-item--active {
-      background: $primary;
-      color: #fff;
-      border-color: $primary;
-      font-weight: bold;
-
-      &:hover {
-        color: #fff;
-      }
-    }
-
-    &.n-pagination-item--disabled {
-      cursor: not-allowed;
-
-      &:hover {
-        color: var(--text-secondary);
-        border-color: var(--border-color);
-      }
-    }
-  }
 }
 
 // ≤700px：封面移到顶部，变纵向卡

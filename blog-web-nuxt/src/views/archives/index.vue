@@ -292,12 +292,12 @@ for (const item of archives.value) {
   padding: $spacing-md;
   background: var(--card-bg);
   border-radius: 10px;
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   cursor: pointer;
   transition: all 0.3s ease;
 
   &:hover {
-    box-shadow: var(--shadow-card-hover);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
     transform: translateX(10px);
 
     .post-date {

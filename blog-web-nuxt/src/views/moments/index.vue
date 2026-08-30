@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { getMomentsApi } from '@/api/moments'
+import AppPagination from '@/components/Common/AppPagination.vue'
 import ImagePreview from '@/components/Common/ImagePreview.vue'
 import { usePageSeo } from '@/composables/useSeo'
 import type { MomentSummary } from '@/types/article'
@@ -154,7 +155,7 @@ function previewImage(images: string[], index: number) {
         </div>
       </div>
       <div class="pagination-box">
-        <NPagination
+        <AppPagination
           v-if="moments.length"
           :page="params.pageNum"
           :page-size="params.pageSize"
@@ -326,38 +327,5 @@ function previewImage(images: string[], index: number) {
   display: flex;
   justify-content: center;
   margin-top: $spacing-lg;
-
-  :deep(.n-pagination-item) {
-    color: var(--text-secondary);
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 999px;
-    transition: all 0.3s ease;
-
-    &:hover {
-      color: $primary;
-      border-color: $primary;
-    }
-
-    &.n-pagination-item--active {
-      background: $primary;
-      color: #fff;
-      border-color: $primary;
-      font-weight: bold;
-
-      &:hover {
-        color: #fff;
-      }
-    }
-
-    &.n-pagination-item--disabled {
-      cursor: not-allowed;
-
-      &:hover {
-        color: var(--text-secondary);
-        border-color: var(--border-color);
-      }
-    }
-  }
 }
 </style>

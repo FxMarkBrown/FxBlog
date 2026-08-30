@@ -2,6 +2,7 @@
 import type { FormInst, FormRules, MenuOption } from 'naive-ui'
 import { marked } from 'marked'
 import AvatarCropper from '@/components/Common/AvatarCropper.vue'
+import AppPagination from '@/components/Common/AppPagination.vue'
 import { getConversationQuotaApi } from '@/api/ai'
 import { delArticleApi, favoriteArticleApi, getMyArticleApi, unlikeArticleApi } from '@/api/article'
 import { getDictDataApi } from '@/api/dict'
@@ -1148,7 +1149,7 @@ function handleAvatarUpdate(newAvatarUrl: string) {
           </div>
 
           <div class="pagination-box">
-            <NPagination
+            <AppPagination
               class="pagination"
               :page="params.pageNum"
               :page-size="params.pageSize"
@@ -1183,7 +1184,7 @@ function handleAvatarUpdate(newAvatarUrl: string) {
             </div>
           </div>
           <div class="pagination-box">
-            <NPagination
+            <AppPagination
               :page="params.pageNum"
               :page-size="params.pageSize"
               :item-count="total"
@@ -1221,7 +1222,7 @@ function handleAvatarUpdate(newAvatarUrl: string) {
             </div>
           </div>
           <div class="pagination-box">
-            <NPagination
+            <AppPagination
               :page="params.pageNum"
               :page-size="params.pageSize"
               :item-count="total"
@@ -1251,7 +1252,7 @@ function handleAvatarUpdate(newAvatarUrl: string) {
             </div>
           </div>
           <div class="pagination-box">
-            <NPagination
+            <AppPagination
               :page="params.pageNum"
               :page-size="params.pageSize"
               :item-count="total"
@@ -1281,7 +1282,7 @@ function handleAvatarUpdate(newAvatarUrl: string) {
             </div>
           </div>
           <div class="pagination-box">
-            <NPagination
+            <AppPagination
               :page="params.pageNum"
               :page-size="params.pageSize"
               :item-count="total"
@@ -1323,7 +1324,7 @@ function handleAvatarUpdate(newAvatarUrl: string) {
             </div>
           </div>
           <div class="pagination-box">
-            <NPagination
+            <AppPagination
               :page="params.pageNum"
               :page-size="params.pageSize"
               :item-count="total"
@@ -1468,7 +1469,7 @@ function handleAvatarUpdate(newAvatarUrl: string) {
                   </div>
                 </div>
                 <div class="pagination-box">
-                  <NPagination
+                  <AppPagination
                     :page="params.pageNum"
                     :page-size="params.pageSize"
                     :item-count="total"
@@ -1999,40 +2000,6 @@ function handleAvatarUpdate(newAvatarUrl: string) {
   display: flex;
   justify-content: center;
   margin-top: $spacing-lg;
-
-  // 复刻原 el-pagination.is-background 观感：圆角页码、激活主色
-  :deep(.n-pagination-item) {
-    color: var(--text-secondary);
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 999px;
-    transition: all 0.3s ease;
-
-    &:hover {
-      color: $primary;
-      border-color: $primary;
-    }
-
-    &.n-pagination-item--active {
-      background: $primary;
-      color: #fff;
-      border-color: $primary;
-      font-weight: bold;
-
-      &:hover {
-        color: #fff;
-      }
-    }
-
-    &.n-pagination-item--disabled {
-      cursor: not-allowed;
-
-      &:hover {
-        color: var(--text-secondary);
-        border-color: var(--border-color);
-      }
-    }
-  }
 }
 
 .feedback-item {

@@ -6,6 +6,7 @@ import {
   markAllNotificationsAsReadApi,
   markNotificationAsReadApi
 } from '@/api/message'
+import AppPagination from '@/components/Common/AppPagination.vue'
 import { useNoIndexSeo } from '@/composables/useSeo'
 import type { NotificationItem } from '@/types/article'
 import { dialog, message } from '@/utils/feedback'
@@ -367,7 +368,7 @@ function renderTime(time?: string | number) {
           </article>
 
           <div class="pagination-box">
-            <NPagination
+            <AppPagination
               v-if="total > 0"
               :page="params.pageNum"
               :page-size="params.pageSize"
@@ -660,39 +661,6 @@ function renderTime(time?: string | number) {
   display: flex;
   justify-content: center;
   padding: 20px;
-
-  :deep(.n-pagination-item) {
-    color: var(--text-secondary);
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 999px;
-    transition: all 0.3s ease;
-
-    &:hover {
-      color: $primary;
-      border-color: $primary;
-    }
-
-    &.n-pagination-item--active {
-      background: $primary;
-      color: #fff;
-      border-color: $primary;
-      font-weight: bold;
-
-      &:hover {
-        color: #fff;
-      }
-    }
-
-    &.n-pagination-item--disabled {
-      cursor: not-allowed;
-
-      &:hover {
-        color: var(--text-secondary);
-        border-color: var(--border-color);
-      }
-    }
-  }
 }
 
 .empty-state {
