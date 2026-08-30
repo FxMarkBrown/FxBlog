@@ -95,6 +95,11 @@
         </el-table-column>
         <el-table-column label="作者" align="center" prop="nickname" show-overflow-tooltip />
         <el-table-column label="分类" align="center" prop="categoryName" />
+        <el-table-column label="系列" align="center" prop="seriesName">
+          <template #default="scope">
+            {{ scope.row.seriesName || '-' }}
+          </template>
+        </el-table-column>
         <el-table-column label="标签" align="center" width="200">
           <template #default="scope">
             <el-tag v-for="tag in scope.row.tags" :key="tag.id" class="mx-1" size="small">

@@ -154,6 +154,42 @@
         </div>
       </template>
     </el-dialog>
+
+    <el-dialog
+      v-model="uploadRenameDialogVisible"
+      title="上传前重命名"
+      width="min(92vw, 520px)"
+      append-to-body
+      :close-on-click-modal="false"
+    >
+      <div class="upload-rename-list">
+        <div v-for="item in uploadRenameItems" :key="item.id" class="upload-rename-item">
+          <img v-if="item.previewUrl" :src="item.previewUrl" class="upload-rename-thumb" alt="" />
+          <span v-else class="upload-rename-thumb upload-rename-thumb--file">
+            {{ item.ext || 'FILE' }}
+          </span>
+          <el-input
+            v-model="item.name"
+            :placeholder="`可留空，默认 ${item.defaultName}`"
+            maxlength="60"
+            clearable
+          >
+            <template #append>{{ item.ext }}</template>
+          </el-input>
+        </div>
+      </div>
+      <div class="upload-rename-tip">
+        微信 / QQ 粘贴的图片多为无意义 UUID 文件名，改个名字方便日后在文件管理中检索。
+      </div>
+      <template #footer>
+        <div class="video-dialog-footer">
+          <el-button @click="uploadRenameDialogVisible = false">取 消</el-button>
+          <el-button type="primary" :loading="uploadRenaming" @click="handleUploadRenameConfirm">
+            上 传
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -432,19 +468,106 @@ const handleInsertInternalLink = () => {
 
 /**
  * 上传 Markdown 内插入的图片并回填地址。
+ * 先弹窗让用户重命名（微信/QQ 粘贴的图片名多为无意义 UUID），确认后再上传。
  */
-const handleUploadImg = async (files: File[], callback: (urls: string[]) => void) => {
-  const urls = await Promise.all(
-    files.map(async (file) => {
-      const formData = new FormData()
-      formData.append('file', file)
-      const res = await uploadApi(formData, props.uploadType)
-      return normalizeMarkdownUrl(resolveUploadedFileUrl(res.data))
-    })
-  )
+const uploadRenameDialogVisible = ref(false)
+const uploadRenaming = ref(false)
+const uploadRenameItems = ref<UploadRenameItem[]>([])
+let uploadRenameSeq = 0
+let pendingUploadCallback: ((urls: string[]) => void) | null = null
 
-  callback(urls)
+interface UploadRenameItem {
+  id: number
+  file: File
+  name: string
+  defaultName: string
+  ext: string
+  previewUrl: string
 }
+
+// 无意义文件名（UUID、纯数字、image/截图等）不预填，引导用户起个可检索的名字
+const meaninglessNameRegex =
+  /^(?:[0-9a-f]{8,}(?:-[0-9a-f]+)*|\d+|img_?\d*|image_?\d*|picture_?\d*|screenshot[\w-]*|clipboard[\w-]*|屏幕截图[\w-]*|截图[\w-]*)$/i
+
+const sanitizeFileName = (name: string) =>
+  name
+    .trim()
+    .replace(/[/\\:*?"<>|]/g, '')
+    .slice(0, 60)
+
+const handleUploadImg = async (files: File[], callback: (urls: string[]) => void) => {
+  if (!files.length) {
+    callback([])
+    return
+  }
+
+  uploadRenameItems.value = files.map((file) => {
+    const dotIndex = file.name.lastIndexOf('.')
+    const base = dotIndex > 0 ? file.name.slice(0, dotIndex) : file.name
+    const ext = dotIndex > 0 ? file.name.slice(dotIndex).toLowerCase() : ''
+    return {
+      id: ++uploadRenameSeq,
+      file,
+      name: meaninglessNameRegex.test(base.trim()) ? '' : base,
+      defaultName: base || '图片',
+      ext,
+      previewUrl: URL.createObjectURL(file)
+    }
+  })
+  pendingUploadCallback = callback
+  uploadRenameDialogVisible.value = true
+}
+
+const releaseUploadRenamePreviews = () => {
+  uploadRenameItems.value.forEach((item) => URL.revokeObjectURL(item.previewUrl))
+}
+
+const handleUploadRenameConfirm = async () => {
+  if (uploadRenaming.value || !pendingUploadCallback) {
+    return
+  }
+
+  uploadRenaming.value = true
+  const callback = pendingUploadCallback
+  try {
+    const results = await Promise.allSettled(
+      uploadRenameItems.value.map(async (item) => {
+        const base = sanitizeFileName(item.name) || sanitizeFileName(item.defaultName) || '图片'
+        const renamed = new File([item.file], `${base}${item.ext}`, {
+          type: item.file.type,
+          lastModified: item.file.lastModified
+        })
+        return await uploadSingleFile(renamed)
+      })
+    )
+
+    const urls = results
+      .filter((result): result is PromiseFulfilledResult<string> => result.status === 'fulfilled')
+      .map((result) => result.value)
+    const failedCount = results.length - urls.length
+    if (failedCount > 0) {
+      ElMessage.error(`${failedCount} 张图片上传失败`)
+    }
+    pendingUploadCallback = null
+    callback(urls)
+  } finally {
+    uploadRenaming.value = false
+    releaseUploadRenamePreviews()
+    uploadRenameItems.value = []
+    uploadRenameDialogVisible.value = false
+  }
+}
+
+// 对话框无论经何种途径关闭（取消/X/Esc），都要回调空数组，否则 md-editor 会一直显示上传中
+watch(uploadRenameDialogVisible, (visible) => {
+  if (!visible && pendingUploadCallback) {
+    const callback = pendingUploadCallback
+    pendingUploadCallback = null
+    releaseUploadRenamePreviews()
+    uploadRenameItems.value = []
+    callback([])
+  }
+})
 
 /**
  * 缓存当前 Markdown 渲染后的 HTML。
@@ -633,6 +756,44 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.upload-rename-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.upload-rename-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.upload-rename-thumb {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid var(--el-border-color);
+}
+
+.upload-rename-thumb--file {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  text-transform: uppercase;
+}
+
+.upload-rename-tip {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 
 .markdown-editor {

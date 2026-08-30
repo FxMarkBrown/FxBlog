@@ -140,6 +140,23 @@
               <el-input v-model="form.originalUrl" placeholder="请输入转载地址" />
             </el-form-item>
 
+            <el-form-item label="所属系列" prop="seriesName">
+              <el-select
+                v-model="form.seriesName"
+                placeholder="请选择所属系列"
+                filterable
+                allow-create
+                clearable
+              >
+                <el-option
+                  v-for="item in seriesOptions"
+                  :key="item.id"
+                  :label="item.name"
+                  :value="item.name"
+                />
+              </el-select>
+            </el-form-item>
+
             <div class="switch-group">
               <el-form-item label="置顶" prop="isStick">
                 <el-switch
@@ -205,6 +222,7 @@ import dayjs from 'dayjs'
 import UploadImage from '@/components/Upload/Image.vue'
 import MarkdownEditor from '@/components/Common/MarkdownEditor.vue'
 import { getCategoryListApi } from '@/api/article/category'
+import { getSeriesListApi } from '@/api/article/series'
 import { getTagListApi } from '@/api/article/tag'
 import { addArticleApi, getDetailApi, updateArticleApi } from '@/api/article'
 import { useArticleDraft } from '@/composables/useArticleDraft'
@@ -217,6 +235,7 @@ const isEdit = computed(() => articleId.value > 0)
 
 const categoryOptions = ref<any>([])
 const tagOptions = ref<any>([])
+const seriesOptions = ref<any>([])
 
 const pageLoading = ref(false)
 const submitLoading = ref(false)
@@ -230,6 +249,7 @@ const form = reactive<any>({
   cover: '',
   summary: '',
   categoryName: '',
+  seriesName: '',
   tags: [],
   content: '',
   contentMd: '',
@@ -351,6 +371,13 @@ const loadOptions = () => {
     })
     .catch(() => {
       tagOptions.value = []
+    })
+  getSeriesListApi({ pageNum: 1, pageSize: 1000 })
+    .then((res) => {
+      seriesOptions.value = res.data.records
+    })
+    .catch(() => {
+      seriesOptions.value = []
     })
 }
 
