@@ -21,6 +21,10 @@ spring:
       database: ${BLOG_REDIS_DATABASE:8}
 
 blog:
+  indexnow:
+    enabled: ${BLOG_INDEXNOW_ENABLED:true}
+    key: ${BLOG_INDEXNOW_KEY:9900ff0526f7eb6814f2e8c85bf105da}
+    site-url: ${BLOG_INDEXNOW_SITE_URL:https://blog.fxmarkbrown.top}
   ai:
     enabled: true
     max-history-messages: 8

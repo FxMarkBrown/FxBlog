@@ -17,6 +17,7 @@ import top.fxmarkbrown.blog.dto.article.ArticleQueryDto;
 import top.fxmarkbrown.blog.entity.SysArticle;
 import top.fxmarkbrown.blog.entity.SysCategory;
 import top.fxmarkbrown.blog.entity.SysTag;
+import top.fxmarkbrown.blog.event.IndexNowArticleEvent;
 import top.fxmarkbrown.blog.event.ai.AiArticleIndexRemoveEvent;
 import top.fxmarkbrown.blog.event.ai.AiArticleIndexSyncEvent;
 import top.fxmarkbrown.blog.exception.ServiceException;
@@ -94,6 +95,7 @@ public class SysArticleServiceImpl extends ServiceImpl<SysArticleMapper, SysArti
 
         addTags(sysArticle, obj);
         eventPublisher.publishEvent(new AiArticleIndexSyncEvent(obj.getId()));
+        eventPublisher.publishEvent(new IndexNowArticleEvent(List.of(obj.getId())));
 
         return true;
     }
@@ -144,6 +146,7 @@ public class SysArticleServiceImpl extends ServiceImpl<SysArticleMapper, SysArti
         sysTagMapper.deleteArticleTagsByArticleIds(Collections.singletonList(obj.getId()));
         addTags(sysArticle, obj);
         eventPublisher.publishEvent(new AiArticleIndexSyncEvent(obj.getId()));
+        eventPublisher.publishEvent(new IndexNowArticleEvent(List.of(obj.getId())));
         return true;
     }
 
@@ -186,6 +189,7 @@ public class SysArticleServiceImpl extends ServiceImpl<SysArticleMapper, SysArti
         sysTagMapper.deleteArticleTagsByArticleIds(ids);
         if (!removedArticleIds.isEmpty()) {
             eventPublisher.publishEvent(new AiArticleIndexRemoveEvent(removedArticleIds));
+            eventPublisher.publishEvent(new IndexNowArticleEvent(removedArticleIds));
         }
         return true;
     }
