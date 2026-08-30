@@ -13,7 +13,12 @@
         </el-form-item>
         <el-form-item label="登录方式" prop="loginType">
           <el-select v-model="queryParams.loginType" placeholder="请选择登录方式" clearable>
-            <el-option v-for="item in loginTypes" :label="item.label" :value="item.value" />
+            <el-option
+              v-for="item in loginTypes"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="状态" prop="status">
@@ -34,19 +39,17 @@
       <template #header>
         <div class="card-header">
           <ButtonGroup>
+            <el-button v-permission="['sys:user:add']" type="primary" icon="Plus" @click="handleAdd"
+              >新增</el-button
+            >
             <el-button
-              v-permission="['sys:user:add']"
-              type="primary"
-              icon="Plus"
-              @click="handleAdd"
-            >新增</el-button>
-            <el-button
-             v-permission="['sys:user:delete']"
+              v-permission="['sys:user:delete']"
               type="danger"
               icon="Delete"
               :disabled="selectedIds.length === 0"
               @click="handleBatchDelete"
-            >批量删除</el-button>
+              >批量删除</el-button
+            >
           </ButtonGroup>
         </div>
       </template>
@@ -58,18 +61,18 @@
         style="width: 100%"
         @selection-change="handleSelectionChange"
       >
-        <el-table-column type="selection"  width="55" align="center" />
-        <el-table-column label="头像"  prop="avatar" align="center">
+        <el-table-column type="selection" width="55" align="center" />
+        <el-table-column label="头像" prop="avatar" align="center">
           <template #default="{ row }">
-            <el-image :src="row.avatar" style="width: 40px; height: 40px; border-radius: 5px;" />
+            <el-image :src="row.avatar" style="width: 40px; height: 40px; border-radius: 5px" />
           </template>
         </el-table-column>
         <el-table-column label="昵称" align="center" prop="nickname" show-overflow-tooltip />
-        <el-table-column label="登录方式" align="center" prop="ipLocation" >
+        <el-table-column label="登录方式" align="center" prop="ipLocation">
           <template #default="{ row }">
-            <span v-for="item in loginTypes">
-                <el-tag :type="item.style" v-if="row.loginType === item.value">
-                  {{ item.label}}
+            <span v-for="item in loginTypes" :key="item.value">
+              <el-tag v-if="row.loginType === item.value" :type="item.style">
+                {{ item.label }}
               </el-tag>
             </span>
           </template>
@@ -93,21 +96,24 @@
               link
               icon="Edit"
               @click="handleUpdate(scope.row)"
-            >修改</el-button>
+              >修改</el-button
+            >
             <el-button
-            v-permission="['sys:user:reset']"
+              v-permission="['sys:user:reset']"
               type="info"
               link
               icon="Key"
               @click="handleResetPwd(scope.row)"
-            >重置密码</el-button>
+              >重置密码</el-button
+            >
             <el-button
               v-permission="['sys:user:delete']"
               type="danger"
               link
               icon="Delete"
               @click="handleDelete(scope.row)"
-            >删除</el-button>
+              >删除</el-button
+            >
           </template>
         </el-table-column>
       </el-table>
@@ -129,8 +135,8 @@
 
     <!-- 添加或修改用户对话框 -->
     <el-dialog
-      :title="dialog.title"
       v-model="dialog.visible"
+      :title="dialog.title"
       width="600px"
       append-to-body
       destroy-on-close
@@ -146,9 +152,9 @@
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="用户名" prop="username">
-              <el-input 
-                v-model="userForm.username" 
-                placeholder="请输入用户名" 
+              <el-input
+                v-model="userForm.username"
+                placeholder="请输入用户名"
                 :disabled="dialog.type === 'edit'"
                 clearable
               />
@@ -156,11 +162,7 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="昵称" prop="nickname">
-              <el-input 
-                v-model="userForm.nickname" 
-                placeholder="请输入昵称"
-                clearable 
-              />
+              <el-input v-model="userForm.nickname" placeholder="请输入昵称" clearable />
             </el-form-item>
           </el-col>
         </el-row>
@@ -168,20 +170,12 @@
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="手机号" prop="mobile">
-              <el-input 
-                v-model="userForm.mobile" 
-                placeholder="请输入手机号"
-                clearable 
-              />
+              <el-input v-model="userForm.mobile" placeholder="请输入手机号" clearable />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="邮箱" prop="email">
-              <el-input 
-                v-model="userForm.email" 
-                placeholder="请输入邮箱"
-                clearable 
-              />
+              <el-input v-model="userForm.email" placeholder="请输入邮箱" clearable />
             </el-form-item>
           </el-col>
         </el-row>
@@ -197,10 +191,10 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="密码" prop="password" v-if="dialog.type === 'add'">
-              <el-input 
-                v-model="userForm.password" 
-                type="password" 
+            <el-form-item v-if="dialog.type === 'add'" label="密码" prop="password">
+              <el-input
+                v-model="userForm.password"
+                type="password"
                 placeholder="请输入密码"
                 show-password
                 clearable
@@ -217,7 +211,6 @@
             style="width: 100%"
             :disabled="userForm.username === 'admin'"
             clearable
-      
           >
             <el-option
               v-for="role in roleOptions"
@@ -246,8 +239,8 @@
 
     <!-- 添加重置密码弹窗 -->
     <el-dialog
-      title="重置密码"
       v-model="resetPwdDialog.visible"
+      title="重置密码"
       width="500px"
       append-to-body
       destroy-on-close
@@ -281,7 +274,9 @@
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="resetPwdDialog.visible = false">取 消</el-button>
-          <el-button type="primary" :loading="submitLoading" @click="submitResetPwd">确 定</el-button>
+          <el-button type="primary" :loading="submitLoading" @click="submitResetPwd"
+            >确 定</el-button
+          >
         </div>
       </template>
     </el-dialog>
@@ -289,11 +284,17 @@
 </template>
 
 <script setup lang="ts">
-import type {FormInstance, FormRules} from 'element-plus'
-import {ElMessage, ElMessageBox} from 'element-plus'
-import {createUserApi, deleteUserApi, getUserListApi, resetPasswordApi, updateUserApi} from '@/api/system/user'
-import {getAllRoleList} from '@/api/system/role'
-import {getDictDataByDictTypesApi} from '@/api/system/dict'
+import type { FormInstance, FormRules } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  createUserApi,
+  deleteUserApi,
+  getUserListApi,
+  resetPasswordApi,
+  updateUserApi
+} from '@/api/system/user'
+import { getAllRoleList } from '@/api/system/role'
+import { getDictDataByDictTypesApi } from '@/api/system/dict'
 import ButtonGroup from '@/components/ButtonGroup/index.vue'
 
 // 查询参数
@@ -348,25 +349,15 @@ const rules = reactive<FormRules>({
     { required: true, message: '请输入用户名', trigger: 'blur' },
     { min: 3, max: 20, message: '长度在 3 到 20 个字符', trigger: 'blur' }
   ],
-  nickname: [
-    { required: true, message: '请输入昵称', trigger: 'blur' }
-  ],
+  nickname: [{ required: true, message: '请输入昵称', trigger: 'blur' }],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
     { min: 6, max: 20, message: '长度在 6 到 20 个字符', trigger: 'blur' }
   ],
-  mobile: [
-    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
-  ],
-  email: [
-    { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
-  ],
-  roleIds: [
-    { required: true, message: '请选择角色', trigger: 'change' }
-  ],
-  sex: [
-    { required: true, message: '请选择性别', trigger: 'change' }
-  ]
+  mobile: [{ pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }],
+  email: [{ type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }],
+  roleIds: [{ required: true, message: '请选择角色', trigger: 'change' }],
+  sex: [{ required: true, message: '请选择性别', trigger: 'change' }]
 })
 
 // 重置密码弹窗控制
@@ -447,13 +438,13 @@ const getList = async () => {
 
 // 表格选择项变化
 const handleSelectionChange = (selection: any[]) => {
-  selectedIds.value = selection.map(item => item.id)
+  selectedIds.value = selection.map((item) => item.id)
 }
 
 // 批量删除
 const handleBatchDelete = async () => {
   if (selectedIds.value.length === 0) return
-  
+
   try {
     await ElMessageBox.confirm('是否确认批量删除选中的用户?', '警告', {
       confirmButtonText: '确定',
@@ -464,8 +455,7 @@ const handleBatchDelete = async () => {
     ElMessage.success('批量删除成功')
     selectedIds.value = []
     getList()
-  } catch (error) {
-  }
+  } catch (error) {}
 }
 
 // 搜索
@@ -510,10 +500,10 @@ const submitForm = async () => {
   if (!userFormRef.value) return
   const valid = await userFormRef.value.validate().catch(() => false)
   if (!valid) return
-  
+
   submitLoading.value = true
   try {
-    const data = {user: userForm, roleIds: userForm.roleIds}
+    const data = { user: userForm, roleIds: userForm.roleIds }
     if (dialog.type === 'add') {
       await createUserApi(data)
       ElMessage.success('新增成功')
@@ -541,8 +531,7 @@ const handleDelete = async (row: any) => {
     await deleteUserApi(row.id)
     ElMessage.success('删除成功')
     getList()
-  } catch (error) {
-  }
+  } catch (error) {}
 }
 
 // 修改重置密码方法
@@ -561,7 +550,7 @@ const submitResetPwd = async () => {
   if (!resetPwdFormRef.value) return
   const valid = await resetPwdFormRef.value.validate().catch(() => false)
   if (!valid) return
-  
+
   submitLoading.value = true
   try {
     await resetPasswordApi({
@@ -614,7 +603,6 @@ const getDicts = async () => {
   }
 }
 
-
 // 初始化
 onMounted(() => {
   getList()
@@ -622,23 +610,29 @@ onMounted(() => {
   getDicts()
 })
 
-watch(() => dialog.visible, (visible) => {
-  if (!visible) {
-    submitLoading.value = false
-    resetUserForm()
-    nextTick(() => {
-      userFormRef.value?.clearValidate()
-    })
+watch(
+  () => dialog.visible,
+  (visible) => {
+    if (!visible) {
+      submitLoading.value = false
+      resetUserForm()
+      nextTick(() => {
+        userFormRef.value?.clearValidate()
+      })
+    }
   }
-})
+)
 
-watch(() => resetPwdDialog.visible, (visible) => {
-  if (!visible) {
-    submitLoading.value = false
-    resetResetPwdForm()
-    nextTick(() => {
-      resetPwdFormRef.value?.clearValidate()
-    })
+watch(
+  () => resetPwdDialog.visible,
+  (visible) => {
+    if (!visible) {
+      submitLoading.value = false
+      resetResetPwdForm()
+      nextTick(() => {
+        resetPwdFormRef.value?.clearValidate()
+      })
+    }
   }
-})
+)
 </script>

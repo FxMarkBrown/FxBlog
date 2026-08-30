@@ -5,7 +5,7 @@
     </el-aside>
     <el-container>
       <el-header class="header">
-        <Navbar 
+        <Navbar
           :is-collapse="isCollapse"
           @toggle-collapse="toggleCollapse"
           @lock="handleLock"
@@ -16,28 +16,18 @@
       <tags-view v-if="settingsStore.showTags" />
 
       <el-main class="main-container">
- 
         <router-view v-slot="{ Component }">
-          <transition 
-            :name="settingsStore.pageAnimation" 
-            mode="out-in"
-            appear
-          >
+          <transition :name="settingsStore.pageAnimation" mode="out-in" appear>
             <keep-alive :include="cachedViews">
-              <component 
-                :is="Component" 
-                :key="$route.fullPath" 
-              />
+              <component :is="Component" :key="$route.fullPath" />
             </keep-alive>
           </transition>
-
         </router-view>
-
       </el-main>
 
       <!-- 主题切换按钮 -->
       <div class="theme-icon-container" @click="handleThemeClick">
-        <el-icon class="theme-icon" >
+        <el-icon class="theme-icon">
           <Setting />
         </el-icon>
       </div>
@@ -47,10 +37,7 @@
   </el-container>
 
   <!-- 设置抽屉 -->
-  <setting-drawer
-    v-model:visible="drawerVisible"
-    v-model:isCollapse="isCollapse"
-  />
+  <setting-drawer v-model:visible="drawerVisible" v-model:is-collapse="isCollapse" />
 
   <!-- 添加锁屏组件 -->
   <lock-screen ref="lockScreenRef" />
@@ -68,9 +55,9 @@ import LockScreen from '@/components/LockScreen/index.vue'
 import Watermark from '@/components/Watermark/index.vue'
 import Footer from '@/components/Footer/index.vue'
 
-import {useSettingsStore} from "@/store";
-import {useTagsViewStore} from '@/store/modules/tagsView'
-import {Setting} from "@element-plus/icons-vue";
+import { useSettingsStore } from '@/store'
+import { useTagsViewStore } from '@/store/modules/tagsView'
+import { Setting } from '@element-plus/icons-vue'
 
 const settingsStore = useSettingsStore()
 const tagsViewStore = useTagsViewStore()
@@ -98,7 +85,6 @@ const handleLock = () => {
 onMounted(() => {
   tagsViewStore.initTags()
 })
-
 </script>
 
 <style scoped>
@@ -127,7 +113,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 0 16px;
-  box-shadow: 0 1px 4px rgba(0,21,41,.08);
+  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
 }
 
 .main-container {
@@ -149,10 +135,9 @@ onMounted(() => {
   border-bottom-left-radius: 10px;
   z-index: 1000;
 
-  
   .theme-icon {
     font-size: 20px;
     color: #fff;
   }
 }
-</style> 
+</style>

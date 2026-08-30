@@ -1,7 +1,7 @@
-import {defineStore} from 'pinia'
-import {ref} from 'vue'
-import type {RouteLocationNormalized} from 'vue-router'
-import {useRouter} from 'vue-router'
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
+import type { RouteLocationNormalized } from 'vue-router'
+import { useRouter } from 'vue-router'
 
 export interface TagView extends Partial<RouteLocationNormalized> {
   title?: string
@@ -39,7 +39,9 @@ export const useTagsViewStore = defineStore('tagsView', () => {
   // 初始化固定标签
   const initTags = () => {
     // 首先添加仪表盘
-    const dashboardRoute = router.getRoutes().find(route => route.path === '/dashboard' || route.path === '/')
+    const dashboardRoute = router
+      .getRoutes()
+      .find((route) => route.path === '/dashboard' || route.path === '/')
     if (dashboardRoute) {
       addVisitedView(dashboardRoute)
     }
@@ -47,8 +49,8 @@ export const useTagsViewStore = defineStore('tagsView', () => {
     // 然后添加其他固定标签
     const affixTags = filterAffixTags(router.getRoutes())
     affixTags
-      .filter(tag => tag.path !== '/dashboard' && tag.path !== '/') // 排除仪表盘
-      .forEach(tag => {
+      .filter((tag) => tag.path !== '/dashboard' && tag.path !== '/') // 排除仪表盘
+      .forEach((tag) => {
         addVisitedView(tag)
       })
   }
@@ -56,7 +58,7 @@ export const useTagsViewStore = defineStore('tagsView', () => {
   // 过滤固定标签
   const filterAffixTags = (routes: any[], basePath = '/') => {
     let tags: any[] = []
-    routes.forEach(route => {
+    routes.forEach((route) => {
       if (route.meta?.affix) {
         const tagPath = resolveRoutePath(basePath, route.path)
         tags.push({
@@ -79,10 +81,10 @@ export const useTagsViewStore = defineStore('tagsView', () => {
 
     // 不添加 redirect 路由的标签
     if (viewPath.includes('/redirect')) return
-    
+
     // 如果已经存在相同路径的标签，则不添加
-    if (visitedViews.value.some(v => v.path === viewPath)) return
-    
+    if (visitedViews.value.some((v) => v.path === viewPath)) return
+
     // 创建新标签
     const newTag = Object.assign({}, view, {
       path: viewPath,
@@ -115,8 +117,8 @@ export const useTagsViewStore = defineStore('tagsView', () => {
   const delVisitedView = (view: TagView) => {
     // 不能删除固定标签
     if (view.meta?.affix) return
-    
-    const i = visitedViews.value.findIndex(v => v.path === view.path)
+
+    const i = visitedViews.value.findIndex((v) => v.path === view.path)
     if (i > -1) {
       visitedViews.value.splice(i, 1)
     }
@@ -130,19 +132,19 @@ export const useTagsViewStore = defineStore('tagsView', () => {
   }
 
   const delOthersViews = (view: TagView) => {
-    visitedViews.value = visitedViews.value.filter(v => {
+    visitedViews.value = visitedViews.value.filter((v) => {
       return v.meta?.affix || v.path === view.path
     })
   }
 
   const delAllViews = () => {
     // 保留固定的标签
-    visitedViews.value = visitedViews.value.filter(tag => tag.meta?.affix)
+    visitedViews.value = visitedViews.value.filter((tag) => tag.meta?.affix)
     cachedViews.value = []
   }
 
   const delLeftViews = (view: TagView) => {
-    const index = visitedViews.value.findIndex(v => v.path === view.path)
+    const index = visitedViews.value.findIndex((v) => v.path === view.path)
     if (index > -1) {
       visitedViews.value = visitedViews.value.filter((v, i) => {
         return v.meta?.affix || i >= index
@@ -151,7 +153,7 @@ export const useTagsViewStore = defineStore('tagsView', () => {
   }
 
   const delRightViews = (view: TagView) => {
-    const index = visitedViews.value.findIndex(v => v.path === view.path)
+    const index = visitedViews.value.findIndex((v) => v.path === view.path)
     if (index > -1) {
       visitedViews.value = visitedViews.value.filter((v, i) => {
         return v.meta?.affix || i <= index
@@ -172,4 +174,4 @@ export const useTagsViewStore = defineStore('tagsView', () => {
     delRightViews,
     initTags
   }
-}) 
+})

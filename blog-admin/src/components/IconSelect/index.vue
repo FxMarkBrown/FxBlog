@@ -1,18 +1,8 @@
 <template>
-  <el-dialog
-    v-model="dialogVisible"
-    title="选择图标"
-    width="800px"
-    append-to-body
-    top="5vh"
-  >
+  <el-dialog v-model="dialogVisible" title="选择图标" width="800px" append-to-body top="5vh">
     <div class="icon-container">
       <div class="search-bar">
-        <el-input
-          v-model="searchText"
-          placeholder="搜索图标"
-          clearable
-        >
+        <el-input v-model="searchText" placeholder="搜索图标" clearable>
           <template #prefix>
             <el-icon><Search /></el-icon>
           </template>
@@ -39,9 +29,9 @@
 </template>
 
 <script setup lang="ts">
-import {computed, ref} from 'vue'
+import { computed, ref } from 'vue'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
-import {Search} from '@element-plus/icons-vue'
+import { Search } from '@element-plus/icons-vue'
 
 const props = defineProps<{
   modelValue: string
@@ -63,11 +53,9 @@ const icons = ElementPlusIconsVue
 const filteredIcons = computed(() => {
   const iconEntries = Object.entries(icons)
   if (!searchText.value) return icons
-  
+
   return Object.fromEntries(
-    iconEntries.filter(([name]) => 
-      name.toLowerCase().includes(searchText.value.toLowerCase())
-    )
+    iconEntries.filter(([name]) => name.toLowerCase().includes(searchText.value.toLowerCase()))
   )
 })
 
@@ -107,13 +95,13 @@ const selectIcon = (iconName: string) => {
 
 .icon-item:hover {
   background-color: #ecf5ff;
-  border-color: #409EFF;
+  border-color: #409eff;
 }
 
 .icon-item.active {
   background-color: #ecf5ff;
-  border-color: #409EFF;
-  color: #409EFF;
+  border-color: #409eff;
+  color: #409eff;
 }
 
 .icon-item {
@@ -129,6 +117,6 @@ const selectIcon = (iconName: string) => {
 }
 
 .icon-item.active .icon-name {
-  color: #409EFF;
+  color: #409eff;
 }
-</style> 
+</style>

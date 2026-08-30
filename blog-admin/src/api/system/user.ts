@@ -64,7 +64,6 @@ export function resetPasswordApi(data: any) {
   })
 }
 
-
 // 获取用户个人信息
 export function getUserProfileApi() {
   return request({
@@ -127,5 +126,3 @@ export function forceLogoutApi(token: string) {
     method: 'get'
   })
 }
-
-

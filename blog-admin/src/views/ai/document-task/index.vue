@@ -3,7 +3,12 @@
     <div class="search-wrapper">
       <el-form :inline="true" :model="queryParams" class="filter-form">
         <el-form-item label="用户">
-          <el-input v-model="queryParams.userKeyword" placeholder="昵称 / 用户名" clearable @keyup.enter="handleQuery" />
+          <el-input
+            v-model="queryParams.userKeyword"
+            placeholder="昵称 / 用户名"
+            clearable
+            @keyup.enter="handleQuery"
+          />
         </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="queryParams.status" placeholder="全部" clearable style="width: 140px">
@@ -14,12 +19,22 @@
           </el-select>
         </el-form-item>
         <el-form-item label="供应方">
-          <el-select v-model="queryParams.provider" placeholder="全部" clearable style="width: 160px">
+          <el-select
+            v-model="queryParams.provider"
+            placeholder="全部"
+            clearable
+            style="width: 160px"
+          >
             <el-option label="MinerU" value="mineru" />
           </el-select>
         </el-form-item>
         <el-form-item label="关键词">
-          <el-input v-model="queryParams.keyword" placeholder="标题 / 文件名 / 远端任务号" clearable @keyup.enter="handleQuery" />
+          <el-input
+            v-model="queryParams.keyword"
+            placeholder="标题 / 文件名 / 远端任务号"
+            clearable
+            @keyup.enter="handleQuery"
+          />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
@@ -54,10 +69,14 @@
         <el-table-column label="用户" min-width="180">
           <template #default="scope">
             <div class="user-cell">
-              <el-avatar :src="scope.row.userAvatar" :size="34">{{ getUserInitial(scope.row.userNickname) }}</el-avatar>
+              <el-avatar :src="scope.row.userAvatar" :size="34">{{
+                getUserInitial(scope.row.userNickname)
+              }}</el-avatar>
               <div class="user-meta">
                 <span class="user-name">{{ scope.row.userNickname || '-' }}</span>
-                <span class="user-id">@{{ scope.row.username || '-' }} / UID {{ scope.row.userId }}</span>
+                <span class="user-id"
+                  >@{{ scope.row.username || '-' }} / UID {{ scope.row.userId }}</span
+                >
               </div>
             </div>
           </template>
@@ -133,7 +152,9 @@
           <el-table-column label="节点" min-width="220">
             <template #default="scope">
               <div class="thread-node">
-                <span class="thread-node__title">{{ scope.row.nodeTitle || scope.row.nodeId }}</span>
+                <span class="thread-node__title">{{
+                  scope.row.nodeTitle || scope.row.nodeId
+                }}</span>
                 <span class="thread-node__id">{{ scope.row.nodeId }}</span>
               </div>
             </template>
@@ -161,7 +182,12 @@
     <el-drawer v-model="messageDrawerVisible" :title="messageDrawerTitle" size="42%">
       <div v-loading="messageLoading" class="drawer-body">
         <div v-if="messageList.length" class="message-list">
-          <div v-for="message in messageList" :key="message.id" class="message-item" :class="message.role">
+          <div
+            v-for="message in messageList"
+            :key="message.id"
+            class="message-item"
+            :class="message.role"
+          >
             <div class="message-head">
               <el-tag size="small" :type="getRoleTagType(message.role)" effect="light">
                 {{ getRoleLabel(message.role) }}
@@ -171,7 +197,9 @@
             <div class="message-content">{{ message.content }}</div>
             <div class="message-meta">
               <span v-if="message.modelId">模型 {{ message.modelId }}</span>
-              <span v-if="message.tokensIn || message.tokensOut">Token {{ (message.tokensIn || 0) + (message.tokensOut || 0) }}</span>
+              <span v-if="message.tokensIn || message.tokensOut"
+                >Token {{ (message.tokensIn || 0) + (message.tokensOut || 0) }}</span
+              >
             </div>
           </div>
         </div>
@@ -182,7 +210,7 @@
 </template>
 
 <script setup lang="ts">
-import {ElMessage, ElMessageBox} from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   deleteAiDocumentTaskApi,
   getAiDocumentTaskListApi,
@@ -278,7 +306,10 @@ const loadMessages = async () => {
   }
   messageLoading.value = true
   try {
-    const { data } = await getAiDocumentTaskMessagesApi(currentThread.value.threadId, { pageNum: 1, pageSize: 200 })
+    const { data } = await getAiDocumentTaskMessagesApi(currentThread.value.threadId, {
+      pageNum: 1,
+      pageSize: 200
+    })
     messageList.value = data.records || []
   } catch (error) {
     messageList.value = []
@@ -383,8 +414,7 @@ const handleDelete = async (row: any) => {
       type: 'warning'
     })
     await doDelete([row.taskId])
-  } catch (error) {
-  }
+  } catch (error) {}
 }
 
 /**
@@ -392,14 +422,17 @@ const handleDelete = async (row: any) => {
  */
 const handleBatchDelete = async () => {
   try {
-    await ElMessageBox.confirm(`是否确认删除选中的 ${selectedIds.value.length} 个文档任务?`, '警告', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
+    await ElMessageBox.confirm(
+      `是否确认删除选中的 ${selectedIds.value.length} 个文档任务?`,
+      '警告',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
     await doDelete(selectedIds.value)
-  } catch (error) {
-  }
+  } catch (error) {}
 }
 
 /**

@@ -1,13 +1,12 @@
 import axios from 'axios'
-import {ElMessage} from 'element-plus'
-import {getToken} from '@/utils/auth'
-import {useUserStore} from '@/store/modules/user'
-
+import { ElMessage } from 'element-plus'
+import { getToken } from '@/utils/auth'
+import { useUserStore } from '@/store/modules/user'
 
 const service = axios.create({
   baseURL: import.meta.env.VITE_APP_BASE_API,
   timeout: 5000,
-  headers: { "Content-Type": "application/json;charset=utf-8" },
+  headers: { 'Content-Type': 'application/json;charset=utf-8' }
 })
 
 service.interceptors.request.use(
@@ -42,7 +41,7 @@ service.interceptors.response.use(
       }
       return Promise.reject(new Error(res.message || '请求错误'))
     }
-    
+
     return res
   },
   (error) => {
@@ -53,11 +52,11 @@ service.interceptors.response.use(
       })
     } else if (error.response?.status === 500) {
       ElMessage.error('后端接口连接异常')
-    }else{
+    } else {
       ElMessage.error('请求错误')
     }
     return Promise.reject(error)
   }
 )
 
-export default service 
+export default service

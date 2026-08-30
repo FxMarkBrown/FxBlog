@@ -5,11 +5,15 @@
         <div class="card-header">
           <div>
             <div class="card-title">RAG 控制面板</div>
-            <div class="card-tip">这里专门管理文章向量索引重建。启动自动全量已关闭，平时靠文章增量同步，只有需要时再手动触发。</div>
+            <div class="card-tip">
+              这里专门管理文章向量索引重建。启动自动全量已关闭，平时靠文章增量同步，只有需要时再手动触发。
+            </div>
           </div>
           <div class="header-actions">
             <el-button :loading="statusLoading" @click="loadStatus">刷新状态</el-button>
-            <el-button type="primary" :loading="submitLoading" @click="handleSubmitRebuild">提交重建</el-button>
+            <el-button type="primary" :loading="submitLoading" @click="handleSubmitRebuild"
+              >提交重建</el-button
+            >
           </div>
         </div>
       </template>
@@ -71,9 +75,9 @@
 </template>
 
 <script setup lang="ts">
-import {ElMessage, ElMessageBox} from 'element-plus'
-import {onBeforeUnmount, onMounted} from 'vue'
-import {getAiRagStatusApi, submitAiRagRebuildApi} from '@/api/ai/rag'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { onBeforeUnmount, onMounted } from 'vue'
+import { getAiRagStatusApi, submitAiRagRebuildApi } from '@/api/ai/rag'
 
 interface AiRagStatusForm {
   enabled: boolean

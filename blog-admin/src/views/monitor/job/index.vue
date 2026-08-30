@@ -2,7 +2,7 @@
   <div class="app-container">
     <div class="search-wrapper">
       <!-- 搜索工具栏 -->
-      <el-form :model="queryParams" ref="queryFormRef" :inline="true">
+      <el-form ref="queryFormRef" :model="queryParams" :inline="true">
         <el-form-item label="任务名称" prop="jobName">
           <el-input
             v-model="queryParams.jobName"
@@ -41,44 +41,49 @@
       <!-- 操作工具栏 -->
       <template #header>
         <div class="card-header">
-          <el-button
-            v-permission="['sys:job:add']"
-            type="primary"
-            icon="Plus"
-            @click="handleAdd"
-            >新增</el-button>
+          <el-button v-permission="['sys:job:add']" type="primary" icon="Plus" @click="handleAdd"
+            >新增</el-button
+          >
           <el-button
             v-permission="['sys:job:deleteBatch']"
             type="danger"
             icon="Delete"
             :disabled="!selectedIds.length"
             @click="handleBatcheDelete"
-          >批量删除</el-button>
-          <el-button
-            type="info"
-            icon="Document"
-            @click="handleLog"
-          >日志</el-button>
+            >批量删除</el-button
+          >
+          <el-button type="info" icon="Document" @click="handleLog">日志</el-button>
         </div>
       </template>
 
       <!-- 数据表格 -->
-      <el-table
-        v-loading="loading"
-        :data="jobList"
-        @selection-change="handleSelectionChange"
-      >
+      <el-table v-loading="loading" :data="jobList" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" align="center" />
         <el-table-column label="任务编号" align="center" prop="jobId" />
-        <el-table-column label="任务名称" align="center" prop="jobName" :show-overflow-tooltip="true" />
+        <el-table-column
+          label="任务名称"
+          align="center"
+          prop="jobName"
+          :show-overflow-tooltip="true"
+        />
         <el-table-column label="任务组名" align="center" prop="jobGroup">
           <template #default="{ row }">
             {{ jobGroupFormat(row) }}
           </template>
         </el-table-column>
-        <el-table-column label="调用目标字符串" align="center" prop="invokeTarget" :show-overflow-tooltip="true" />
-        <el-table-column label="cron执行表达式" align="center" prop="cronExpression" :show-overflow-tooltip="true" />
-        <el-table-column label="状态" align="center" v-permission="['sys:job:update']">
+        <el-table-column
+          label="调用目标字符串"
+          align="center"
+          prop="invokeTarget"
+          :show-overflow-tooltip="true"
+        />
+        <el-table-column
+          label="cron执行表达式"
+          align="center"
+          prop="cronExpression"
+          :show-overflow-tooltip="true"
+        />
+        <el-table-column v-permission="['sys:job:update']" label="状态" align="center">
           <template #default="{ row }">
             <el-switch
               v-model="row.status"
@@ -96,21 +101,24 @@
               link
               icon="VideoPlay"
               @click="handleRun(row)"
-            >执行一次</el-button>
+              >执行一次</el-button
+            >
             <el-button
               v-permission="['sys:job:update']"
               type="primary"
               link
               icon="Edit"
               @click="handleUpdate(row)"
-            >修改</el-button>
+              >修改</el-button
+            >
             <el-button
               v-permission="['sys:job:delete']"
               link
               type="danger"
               icon="Delete"
               @click="handleDelete(row)"
-            >删除</el-button>
+              >删除</el-button
+            >
           </template>
         </el-table-column>
       </el-table>
@@ -118,24 +126,19 @@
       <!-- 分页 -->
       <div class="pagination-container">
         <el-pagination
-          background
           v-model:current-page="queryParams.pageNum"
           v-model:page-size="queryParams.pageSize"
+          background
           :total="total"
           :page-sizes="[10, 20, 30, 50]"
           layout="total, sizes, prev, pager, next, jumper"
           @size-change="handleSizeChange"
-        @current-change="handleCurrentChange"
+          @current-change="handleCurrentChange"
         />
       </div>
 
       <!-- 添加或修改定时任务对话框 -->
-      <el-dialog
-        :title="title"
-        v-model="open"
-        width="700px"
-        append-to-body
-      >
+      <el-dialog v-model="open" :title="title" width="700px" append-to-body>
         <el-form ref="jobFormRef" :model="form" :rules="rules" label-width="120px">
           <el-row>
             <el-col :span="12">
@@ -158,15 +161,15 @@
           </el-row>
           <el-row>
             <el-col :span="24">
-              <el-form-item label="调用方法" prop="invokeTarget" >
+              <el-form-item label="调用方法" prop="invokeTarget">
                 <el-input v-model="form.invokeTarget" placeholder="请输入调用目标字符串">
                   <template #append>
-                    <el-tooltip  placement="top">
-                        <template #content>
-                            Bean调用示例:neatTask.neatParams('neat')
-                            <br />Class类调用示例:com.neat.quartz.taskQuartz.neatParams('neat')
-                            <br />参数说明：支持字符串，布尔类型，长整型，浮点型，整型
-                        </template>
+                    <el-tooltip placement="top">
+                      <template #content>
+                        Bean调用示例:neatTask.neatParams('neat')
+                        <br />Class类调用示例:com.neat.quartz.taskQuartz.neatParams('neat')
+                        <br />参数说明：支持字符串，布尔类型，长整型，浮点型，整型
+                      </template>
                       <el-icon><QuestionFilled /></el-icon>
                     </el-tooltip>
                   </template>
@@ -215,13 +218,18 @@
           <div class="dialog-footer">
             <el-button @click="cancel">取 消</el-button>
             <el-button type="primary" @click="submitForm">确 定</el-button>
-
           </div>
         </template>
       </el-dialog>
 
       <!-- Cron表达式生成器 -->
-      <el-dialog top="5vh" title="Cron表达式生成器" v-model="cronVisible" width="700px" append-to-body>
+      <el-dialog
+        v-model="cronVisible"
+        top="5vh"
+        title="Cron表达式生成器"
+        width="700px"
+        append-to-body
+      >
         <CronTab
           v-model="form.cronExpression"
           :visible="cronVisible"
@@ -233,8 +241,8 @@
 </template>
 
 <script lang="ts" setup>
-import {useRouter} from 'vue-router'
-import {ElMessage, ElMessageBox} from 'element-plus'
+import { useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   addJobApi,
   changeJobStatusApi,
@@ -245,7 +253,7 @@ import {
   updateJobApi
 } from '@/api/monitor/job'
 import CronTab from './components/CronTab.vue'
-import {QuestionFilled, Timer} from "@element-plus/icons-vue";
+import { QuestionFilled, Timer } from '@element-plus/icons-vue'
 
 // 在这里初始化 router
 const router = useRouter()
@@ -291,18 +299,10 @@ const form = reactive({
 
 // 表单校验
 const rules = {
-  jobName: [
-    { required: true, message: '任务名称不能为空', trigger: 'blur' }
-  ],
-  jobGroup: [
-    { required: true, message: '任务组名不能为空', trigger: 'change' }
-  ],
-  invokeTarget: [
-    { required: true, message: '调用目标字符串不能为空', trigger: 'blur' }
-  ],
-  cronExpression: [
-    { required: true, message: 'cron执行表达式不能为空', trigger: 'blur' }
-  ]
+  jobName: [{ required: true, message: '任务名称不能为空', trigger: 'blur' }],
+  jobGroup: [{ required: true, message: '任务组名不能为空', trigger: 'change' }],
+  invokeTarget: [{ required: true, message: '调用目标字符串不能为空', trigger: 'blur' }],
+  cronExpression: [{ required: true, message: 'cron执行表达式不能为空', trigger: 'blur' }]
 }
 
 // 任务组名字典
@@ -319,7 +319,7 @@ const statusOptions = [
 
 // 任务组名格式化
 const jobGroupFormat = (row: any) => {
-  return jobGroupOptions.find(item => item.value === row.jobGroup)?.label
+  return jobGroupOptions.find((item) => item.value === row.jobGroup)?.label
 }
 
 /** 查询定时任务列表 */
@@ -370,7 +370,7 @@ const resetQuery = () => {
 
 /** 多选框选中数据 */
 const handleSelectionChange = (selection: any[]) => {
-  selectedIds.value = selection.map(item => item.jobId)
+  selectedIds.value = selection.map((item) => item.jobId)
 }
 
 /** 任务状态修改 */
@@ -390,8 +390,7 @@ const handleRun = async (row: any) => {
   try {
     await runJobApi(row)
     ElMessage.success('执行成功')
-  } catch (error) {
-  }
+  } catch (error) {}
 }
 
 /** 显示Cron表达式生成器 */
@@ -420,8 +419,7 @@ const handleUpdate = async (row: any) => {
     await nextTick(() => {
       jobFormRef.value?.clearValidate()
     })
-  } catch (error) {
-  }
+  } catch (error) {}
 }
 
 /** 提交按钮 */
@@ -441,10 +439,8 @@ const submitForm = async () => {
     open.value = false
     reset()
     await getList()
-  } catch (error) {
-  }
+  } catch (error) {}
 }
-
 
 /** 删除按钮操作 */
 const handleDelete = async (row?: any) => {
@@ -453,8 +449,7 @@ const handleDelete = async (row?: any) => {
     await delJobApi(row.jobId)
     await getList()
     ElMessage.success('删除成功')
-  } catch (error) {
-  }
+  } catch (error) {}
 }
 
 /** 批量删除按钮操作 */
@@ -467,8 +462,7 @@ const handleBatcheDelete = async () => {
     await delJobApi(selectedIds.value)
     await getList()
     ElMessage.success('删除成功')
-  } catch (error) {
-  }
+  } catch (error) {}
 }
 
 /** 跳转任务日志页面 */
@@ -497,4 +491,4 @@ onMounted(() => {
 .mb8 {
   margin-bottom: 8px;
 }
-</style> 
+</style>

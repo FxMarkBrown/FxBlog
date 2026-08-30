@@ -49,24 +49,20 @@
           </div>
         </el-card>
       </el-col>
-      
+
       <el-col :span="12">
-        <el-card style="height: 100%;">
+        <el-card style="height: 100%">
           <template #header>
             <div class="card-header">
               <span>内存信息</span>
-              <el-button type="primary" @click="getMemoryInfo" v-permission="['monitor:cache']">
+              <el-button v-permission="['monitor:cache']" type="primary" @click="getMemoryInfo">
                 <el-icon><Refresh /></el-icon>
                 刷新
               </el-button>
             </div>
           </template>
           <div class="chart-box">
-            <el-progress
-              type="dashboard"
-              :percentage="memoryUsage"
-              :color="memoryColor"
-            >
+            <el-progress type="dashboard" :percentage="memoryUsage" :color="memoryColor">
               <template #default="{ percentage }">
                 <div class="progress-content">
                   <h3>{{ percentage }}%</h3>
@@ -84,7 +80,7 @@
     </el-row>
 
     <!-- 缓存列表 -->
-    <el-card style="margin-top: 20px;">
+    <el-card style="margin-top: 20px">
       <template #header>
         <div class="card-header">
           <span>缓存列表</span>
@@ -92,7 +88,7 @@
             <el-input
               v-model="queryParams.key"
               placeholder="请输入键名"
-              style="width: 200px;"
+              style="width: 200px"
               clearable
               @keyup.enter="handleQuery"
             >
@@ -100,18 +96,14 @@
                 <el-icon><Search /></el-icon>
               </template>
             </el-input>
-            <el-button type="primary" @click="handleQuery" style="margin-left: 10px;">
+            <el-button type="primary" style="margin-left: 10px" @click="handleQuery">
               搜索
             </el-button>
           </div>
         </div>
       </template>
-      
-      <el-table
-        v-loading="loading"
-        :data="keyList"
-        style="width: 100%"
-      >
+
+      <el-table v-loading="loading" :data="keyList" style="width: 100%">
         <el-table-column label="序号" type="index" width="60" align="center" />
         <el-table-column label="键名" prop="key" :show-overflow-tooltip="true" />
         <el-table-column label="类型" prop="type" width="100" align="center" />
@@ -126,7 +118,7 @@
           </template>
         </el-table-column>
       </el-table>
-      
+
       <el-pagination
         v-model:current-page="queryParams.pageNum"
         v-model:page-size="queryParams.pageSize"
@@ -141,9 +133,14 @@
 </template>
 
 <script lang="ts" setup>
-import {ElMessage, ElMessageBox} from 'element-plus'
-import {clearCacheApi, getCacheInfoApi, getCacheKeyListApi, getCacheMemoryApi} from '@/api/monitor/cache'
-import {Delete, Refresh, Search} from "@element-plus/icons-vue";
+import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  clearCacheApi,
+  getCacheInfoApi,
+  getCacheKeyListApi,
+  getCacheMemoryApi
+} from '@/api/monitor/cache'
+import { Delete, Refresh, Search } from '@element-plus/icons-vue'
 
 // 数据定义
 const loading = ref(false)
@@ -241,8 +238,7 @@ const handleClear = async () => {
     await getList()
     await getInfo()
     await getMemoryInfo()
-  } catch (error) {
-  }
+  } catch (error) {}
 }
 
 // 查询操作
@@ -290,7 +286,6 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-
 .card-header {
   display: flex;
   justify-content: space-between;
@@ -308,23 +303,23 @@ onMounted(() => {
   justify-content: space-around;
   align-items: center;
   padding: 20px;
-  
+
   .progress-content {
     text-align: center;
-    
+
     h3 {
       margin: 0;
       font-size: 24px;
       color: #303133;
     }
-    
+
     p {
       margin: 5px 0 0;
       font-size: 14px;
       color: #909399;
     }
   }
-  
+
   .memory-info {
     p {
       margin: 10px 0;
@@ -333,4 +328,4 @@ onMounted(() => {
     }
   }
 }
-</style> 
+</style>

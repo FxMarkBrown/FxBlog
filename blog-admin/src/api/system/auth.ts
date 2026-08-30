@@ -3,7 +3,7 @@ import request from '@/utils/request'
 export function logoutApi() {
   return request({
     url: '/auth/logout',
-    method: 'post',
+    method: 'post'
   })
 }
 

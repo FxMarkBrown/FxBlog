@@ -1,4 +1,4 @@
-import {defineStore} from 'pinia'
+import { defineStore } from 'pinia'
 
 export interface SettingsState {
   theme: 'light' | 'dark'
@@ -48,7 +48,7 @@ export const useSettingsStore = defineStore('settings', {
         '--el-color-primary-light-8': this.lighten(primary, 0.8),
         '--el-color-primary-light-9': this.lighten(primary, 0.9),
         '--el-color-primary-dark-1': this.darken(primary, 0.1),
-        '--el-color-primary-dark-2': this.darken(primary, 0.2),
+        '--el-color-primary-dark-2': this.darken(primary, 0.2)
       }
     },
 
@@ -84,21 +84,22 @@ export const useSettingsStore = defineStore('settings', {
     // 十六进制转 RGB
     hexToRgb(hex: string) {
       const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
-      return result ? {
-        r: parseInt(result[1], 16),
-        g: parseInt(result[2], 16),
-        b: parseInt(result[3], 16)
-      } : null
+      return result
+        ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+          }
+        : null
     },
 
     // 保存设置
     saveSettings(settings: any) {
-
       // 更新状态
       Object.assign(this, settings)
       // 保存到 sessionStorage
       sessionStorage.setItem('settings', JSON.stringify(this.$state))
-      
+
       // 应用灰色模式
       if ('greyMode' in settings) {
         if (settings.greyMode) {
@@ -107,7 +108,7 @@ export const useSettingsStore = defineStore('settings', {
           document.documentElement.classList.remove('grey-mode')
         }
       }
-      
+
       // 初始化深色模式
       if (settings.theme) {
         document.documentElement.setAttribute('data-theme', settings.theme)
@@ -164,7 +165,6 @@ export const useSettingsStore = defineStore('settings', {
         document.documentElement.setAttribute('data-theme', this.theme)
         document.documentElement.classList.toggle('dark', this.theme === 'dark')
       }
-    },
-
+    }
   }
-}) 
+})

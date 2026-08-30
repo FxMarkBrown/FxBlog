@@ -1,57 +1,119 @@
 <template>
   <div class="app-container">
-
     <!-- 操作按钮区域 -->
     <el-card class="box-card">
       <template #header>
         <div class="card-header">
           <ButtonGroup>
-            <el-button v-permission="['sys:moment:add']" type="primary" icon="Plus" @click="handleAdd">新增</el-button>
-            <el-button v-permission="['sys:moment:delete']" type="danger" icon="Delete"
-              :disabled="selectedIds.length === 0" @click="handleBatchDelete">批量删除</el-button>
+            <el-button
+              v-permission="['sys:moment:add']"
+              type="primary"
+              icon="Plus"
+              @click="handleAdd"
+              >新增</el-button
+            >
+            <el-button
+              v-permission="['sys:moment:delete']"
+              type="danger"
+              icon="Delete"
+              :disabled="selectedIds.length === 0"
+              @click="handleBatchDelete"
+              >批量删除</el-button
+            >
           </ButtonGroup>
         </div>
       </template>
 
       <!-- 数据表格 -->
-      <el-table v-loading="loading" :data="momentList" style="width: 100%" @selection-change="handleSelectionChange">
+      <el-table
+        v-loading="loading"
+        :data="momentList"
+        style="width: 100%"
+        @selection-change="handleSelectionChange"
+      >
         <el-table-column type="selection" width="55" align="center" />
         <el-table-column label="内容" align="center" prop="content" show-overflow-tooltip />
         <el-table-column label="图片" align="center" prop="content">
           <template #default="scope">
-            <el-image v-for="item in parseImage(scope.row.images)" :src="item" style="width: 50px; height: 50px" />
+            <el-image
+              v-for="item in parseImage(scope.row.images)"
+              :key="item"
+              :src="item"
+              style="width: 50px; height: 50px"
+            />
           </template>
         </el-table-column>
         <el-table-column label="创建时间" align="center" prop="createTime" width="180" />
         <el-table-column label="操作" align="center" width="280" fixed="right">
           <template #default="scope">
-            <el-button v-permission="['sys:moment:update']" type="primary" link icon="Edit"
-              @click="handleUpdate(scope.row)">修改</el-button>
-            <el-button v-permission="['sys:moment:delete']" type="danger" link icon="Delete"
-              @click="handleDelete(scope.row)">删除</el-button>
+            <el-button
+              v-permission="['sys:moment:update']"
+              type="primary"
+              link
+              icon="Edit"
+              @click="handleUpdate(scope.row)"
+              >修改</el-button
+            >
+            <el-button
+              v-permission="['sys:moment:delete']"
+              type="danger"
+              link
+              icon="Delete"
+              @click="handleDelete(scope.row)"
+              >删除</el-button
+            >
           </template>
         </el-table-column>
       </el-table>
 
       <!-- 分页组件 -->
       <div class="pagination-container">
-        <el-pagination v-model:current-page="queryParams.pageNum" v-model:page-size="queryParams.pageSize"
-          :page-sizes="[10, 20, 30, 50]" :total="total" :background="true"
-          layout="total, sizes, prev, pager, next, jumper" @size-change="handleSizeChange"
-          @current-change="handleCurrentChange" />
+        <el-pagination
+          v-model:current-page="queryParams.pageNum"
+          v-model:page-size="queryParams.pageSize"
+          :page-sizes="[10, 20, 30, 50]"
+          :total="total"
+          :background="true"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+        />
       </div>
     </el-card>
 
     <!-- 添加或修改对话框 -->
-    <el-dialog :title="dialog.title" v-model="dialog.visible" width="min(92vw, 860px)" append-to-body destroy-on-close
-      class="custom-dialog">
-      <el-form ref="momentFormRef" :model="momentForm" :rules="rules" label-width="80px" class="custom-form">
+    <el-dialog
+      v-model="dialog.visible"
+      :title="dialog.title"
+      width="min(92vw, 860px)"
+      append-to-body
+      destroy-on-close
+      class="custom-dialog"
+    >
+      <el-form
+        ref="momentFormRef"
+        :model="momentForm"
+        :rules="rules"
+        label-width="80px"
+        class="custom-form"
+      >
         <el-form-item label="内容" prop="content">
-            <div class="fx-wang-editor fx-wang-editor--compact">
-                <Toolbar class="fx-wang-editor__toolbar" :editor="editorRef" :defaultConfig="toolbarConfig" :mode="mode" />
-                <Editor class="fx-wang-editor__content" style="height: 320px; overflow-y: hidden" v-model="momentForm.content" :defaultConfig="editorConfig" :mode="mode"
-                @onCreated="handleCreated"/>
-            </div>
+          <div class="fx-wang-editor fx-wang-editor--compact">
+            <Toolbar
+              class="fx-wang-editor__toolbar"
+              :editor="editorRef"
+              :default-config="toolbarConfig"
+              :mode="mode"
+            />
+            <Editor
+              v-model="momentForm.content"
+              class="fx-wang-editor__content"
+              style="height: 320px; overflow-y: hidden"
+              :default-config="editorConfig"
+              :mode="mode"
+              @on-created="handleCreated"
+            />
+          </div>
         </el-form-item>
         <el-form-item label="图片" prop="images">
           <UploadImage v-model="momentForm.images" :source="'moment'" :limit="9" :multiple="true" />
@@ -69,37 +131,41 @@
 </template>
 
 <script setup lang="ts">
-import type {FormInstance, FormRules} from 'element-plus'
-import {ElMessage, ElMessageBox} from 'element-plus'
-import {addSysMomentApi, deleteSysMomentApi, getSysMomentListApi, updateSysMomentApi} from '@/api/article/moment'
+import type { FormInstance, FormRules } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  addSysMomentApi,
+  deleteSysMomentApi,
+  getSysMomentListApi,
+  updateSysMomentApi
+} from '@/api/article/moment'
 import UploadImage from '@/components/Upload/Image.vue'
 
-
-import {Editor, Toolbar} from '@wangeditor-next/editor-for-vue'
+import { Editor, Toolbar } from '@wangeditor-next/editor-for-vue'
 import '@wangeditor-next/editor/dist/css/style.css'
 
 const editorRef = shallowRef()
 const mode = 'default'
 const toolbarConfig = {}
 const editorConfig = {
-  placeholder: "请输入内容...",
+  placeholder: '请输入内容...',
   MENU_CONF: {
     codeSelectLang: {
       // 代码语言
       codeLangs: [
-        { text: "CSS", value: "css" },
-        { text: "HTML", value: "html" },
-        { text: "XML", value: "xml" },
-        { text: "Java", value: "java" },
-      ],
-    },
-  },
+        { text: 'CSS', value: 'css' },
+        { text: 'HTML', value: 'html' },
+        { text: 'XML', value: 'xml' },
+        { text: 'Java', value: 'java' }
+      ]
+    }
+  }
 }
 
 // 查询参数
 const queryParams = reactive({
   pageNum: 1,
-  pageSize: 10,
+  pageSize: 10
 })
 
 const loading = ref(false)
@@ -122,14 +188,12 @@ const dialog = reactive({
 const momentForm = reactive<any>({
   id: undefined,
   content: '',
-  images: '',
+  images: ''
 })
 
 // 表单校验规则
 const rules = reactive<FormRules>({
-  content: [
-    { required: true, message: '请输入内容', trigger: 'blur' }
-  ],
+  content: [{ required: true, message: '请输入内容', trigger: 'blur' }]
 })
 
 const parseImage = (images?: string | null) => {
@@ -160,7 +224,7 @@ const getList = async () => {
 
 // 表格选择项变化
 const handleSelectionChange = (selection: any[]) => {
-  selectedIds.value = selection.map(item => item.id)
+  selectedIds.value = selection.map((item) => item.id)
 }
 
 // 批量删除
@@ -177,8 +241,7 @@ const handleBatchDelete = async () => {
     ElMessage.success('批量删除成功')
     await getList()
     selectedIds.value = []
-  } catch (error) {
-  }
+  } catch (error) {}
 }
 
 // 删除
@@ -192,10 +255,8 @@ const handleDelete = async (row: any) => {
     await deleteSysMomentApi(row.id)
     ElMessage.success('删除成功')
     await getList()
-  } catch (error) {
-  }
+  } catch (error) {}
 }
-
 
 // 新增说说
 const handleAdd = () => {
@@ -223,7 +284,7 @@ const handleUpdate = (row: any) => {
 }
 
 // 富文本编辑器创建完成
-const handleCreated = (editor:any) => {
+const handleCreated = (editor: any) => {
   editorRef.value = editor // 记录 editor 实例，重要！
 }
 
@@ -235,7 +296,7 @@ const submitForm = async () => {
 
   submitLoading.value = true
   try {
-    if (momentForm.images && momentForm.images.length > 0) { 
+    if (momentForm.images && momentForm.images.length > 0) {
       momentForm.images = momentForm.images.join(',')
     }
     if (dialog.type === 'add') {
@@ -279,15 +340,18 @@ onMounted(() => {
   getList()
 })
 
-watch(() => dialog.visible, (visible) => {
-  if (!visible) {
-    submitLoading.value = false
-    momentForm.id = undefined
-    momentForm.content = ''
-    momentForm.images = ''
-    nextTick(() => {
-      momentFormRef.value?.clearValidate()
-    })
+watch(
+  () => dialog.visible,
+  (visible) => {
+    if (!visible) {
+      submitLoading.value = false
+      momentForm.id = undefined
+      momentForm.content = ''
+      momentForm.images = ''
+      nextTick(() => {
+        momentFormRef.value?.clearValidate()
+      })
+    }
   }
-})
+)
 </script>

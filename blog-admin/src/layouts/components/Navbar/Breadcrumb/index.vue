@@ -2,32 +2,25 @@
   <el-breadcrumb separator="/">
     <transition-group name="breadcrumb">
       <el-breadcrumb-item v-for="(item, index) in breadcrumbs" :key="item.path">
-        <span 
-          v-if="index === breadcrumbs.length - 1" 
-          class="no-redirect breadcrumb-item"
-        >
-        <el-icon>
-          <component :is="item.meta?.icon" /> 
-        </el-icon>
-        {{ item.meta?.title }}
-      </span>
-        <a 
-          v-else 
-          class="redirect breadcrumb-item" 
-          @click.prevent="handleLink(item)"
-        >
-        <el-icon>
-          <component :is="item.meta?.icon" /> 
-        </el-icon>
-        {{ item.meta?.title }}
-      </a>
+        <span v-if="index === breadcrumbs.length - 1" class="no-redirect breadcrumb-item">
+          <el-icon>
+            <component :is="item.meta?.icon" />
+          </el-icon>
+          {{ item.meta?.title }}
+        </span>
+        <a v-else class="redirect breadcrumb-item" @click.prevent="handleLink(item)">
+          <el-icon>
+            <component :is="item.meta?.icon" />
+          </el-icon>
+          {{ item.meta?.title }}
+        </a>
       </el-breadcrumb-item>
     </transition-group>
   </el-breadcrumb>
 </template>
 
 <script setup lang="ts">
-import {RouteLocationMatched, useRoute, useRouter} from 'vue-router'
+import { RouteLocationMatched, useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
 const router = useRouter()
@@ -35,10 +28,15 @@ const router = useRouter()
 const breadcrumbs = ref<RouteLocationMatched[]>([])
 
 const getBreadcrumb = () => {
-  let matched = route.matched.filter(item => item.meta && item.meta.title)
+  let matched = route.matched.filter((item) => item.meta && item.meta.title)
   const first = matched[0]
   if (first && first.path !== '/dashboard') {
-    matched = [{ path: '/dashboard', meta: { title: '首页',icon: 'Orange' } } as RouteLocationMatched].concat(matched)
+    matched = [
+      {
+        path: '/dashboard',
+        meta: { title: '首页', icon: 'Orange' }
+      } as unknown as RouteLocationMatched
+    ].concat(matched)
   }
   breadcrumbs.value = matched
 }
@@ -61,7 +59,7 @@ watch(
 }
 
 .redirect:hover {
-  color: #409EFF;
+  color: #409eff;
 }
 
 .no-redirect {
@@ -84,11 +82,11 @@ watch(
   position: absolute;
 }
 
-.breadcrumb-item{
+.breadcrumb-item {
   display: flex;
   align-items: center;
-  .el-icon{
+  .el-icon {
     margin-right: 3px;
   }
 }
-</style> 
+</style>

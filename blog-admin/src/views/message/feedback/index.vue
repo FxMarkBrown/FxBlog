@@ -1,125 +1,175 @@
 <template>
-    <div class="app-container">
-        <!-- 搜索表单 -->
-        <div class="search-wrapper">
-            <el-form :model="queryParams" ref="queryFormRef" inline>
-                <el-form-item label="反馈类型" prop="type">
-                    <el-select v-model="queryParams.type" placeholder="请选择反馈类型" clearable @keyup.enter="handleQuery">
-                        <el-option v-for="item in feedbackTypes" :key="item.value" :label="item.label"
-                            :value="item.value" />
-                    </el-select>
-                </el-form-item>
-                <el-form-item label="状态" prop="status">
-                    <el-select v-model="queryParams.status" placeholder="请选择状态" clearable @keyup.enter="handleQuery">
-                        <el-option v-for="item in feedbackStatus" :key="item.value" :label="item.label"
-                            :value="item.value" />
-                    </el-select>
-                </el-form-item>
-                <el-form-item>
-                    <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
-                    <el-button icon="Refresh" @click="resetQuery">重置</el-button>
-                </el-form-item>
-            </el-form>
-
-        </div>
-        <el-card class="box-card">
-            <!-- 操作工具栏 -->
-            <template #header>
-                <!-- <el-button type="primary" plain icon="Plus" @click="handleAdd">新增
-                </el-button> -->
-                <el-button type="danger" v-permission="['sys:feedback:delete']" plain icon="Delete" :disabled="selectedIds.length === 0"
-                    @click="handleBatchDelete">批量删除
-                </el-button>
-            </template>
-
-            <!-- 数据表格 -->
-            <el-table v-loading="loading" :data="dataList" @selection-change="handleSelectionChange">
-                <el-table-column type="selection" width="55" align="center" />
-                <el-table-column label="反馈人头像" align="center" prop="avatar" width="100">
-                    <template #default="scope">
-                        <el-avatar :src="scope.row.avatar" alt="Avatar" width="50" height="50" />
-                    </template>
-                </el-table-column>
-                <el-table-column label="反馈人昵称" align="center" prop="nickname" />
-                <el-table-column label="反馈类型" align="center" prop="type">
-                    <template #default="scope">
-                        <span v-for="item in feedbackTypes">
-                            <el-tag v-if="item.value === scope.row.type" :key="item.value" :type="item.style">
-                                {{ item.label }}
-                            </el-tag>
-                        </span>
-                    </template>
-                </el-table-column>
-                <el-table-column label="反馈内容" align="center" prop="content" show-overflow-tooltip />
-                <el-table-column label="联系邮箱" align="center" prop="email" />
-                <el-table-column label="回复内容" align="center" prop="replyContent" show-overflow-tooltip/>
-                <el-table-column label="状态" align="center" prop="status">
-                    <template #default="scope">
-                        <span v-for="item in feedbackStatus">
-                            <el-tag v-if="item.value === String(scope.row.status)" :key="item.value" :type="item.style">
-                                {{ item.label }}
-                            </el-tag>
-                        </span>
-                    </template>
-                </el-table-column>
-                <el-table-column label="创建时间" align="center" prop="createTime" width="170"/>
-                <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
-                    <template #default="scope">
-                        <el-button type="primary" link icon="Edit" v-permission="['sys:feedback:update']"  @click="handleUpdate(scope.row)">修改
-                        </el-button>
-                        <el-button type="danger" link icon="Delete" v-permission="['sys:feedback:delete']"  @click="handleDelete(scope.row)">删除
-                        </el-button>
-                    </template>
-                </el-table-column>
-            </el-table>
-
-            <!-- 分页工具栏 -->
-            <div class="pagination-container">
-                <el-pagination
-                    background
-                    v-model:current-page="queryParams.pageNum"
-                    v-model:page-size="queryParams.pageSize"
-                    :page-sizes="[10, 20, 30, 50]"
-                    :total="total"
-                    layout="total, sizes, prev, pager, next, jumper"
-                    @size-change="handleSizeChange"
-                    @current-change="handleCurrentChange"
-                />
-            </div>
-
-            <!-- 添加或修改对话框 -->
-            <el-dialog
-                v-model="open"
-                :title="title"
-                width="500px"
-                append-to-body
-                destroy-on-close
-                @closed="handleDialogClosed"
-            >
-                <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
-                    <el-form-item label="回复内容" prop="replyContent">
-                        <el-input type="textarea" :rows="5" v-model="form.replyContent" placeholder="请输入回复内容" />
-                    </el-form-item>
-                    <el-form-item label="状态" prop="status">
-                        <el-radio-group v-model="form.status">
-                            <el-radio v-for="item in feedbackStatus" :value="Number(item.value)">{{item.label}}</el-radio>
-                        </el-radio-group>
-                    </el-form-item>
-                </el-form>
-                <template #footer>
-                    <div class="dialog-footer">
-                        <el-button type="primary" :loading="submitLoading" @click="submitForm">确 定</el-button>
-                        <el-button @click="cancel">取 消</el-button>
-                    </div>
-                </template>
-            </el-dialog>
-        </el-card>
+  <div class="app-container">
+    <!-- 搜索表单 -->
+    <div class="search-wrapper">
+      <el-form ref="queryFormRef" :model="queryParams" inline>
+        <el-form-item label="反馈类型" prop="type">
+          <el-select
+            v-model="queryParams.type"
+            placeholder="请选择反馈类型"
+            clearable
+            @keyup.enter="handleQuery"
+          >
+            <el-option
+              v-for="item in feedbackTypes"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="状态" prop="status">
+          <el-select
+            v-model="queryParams.status"
+            placeholder="请选择状态"
+            clearable
+            @keyup.enter="handleQuery"
+          >
+            <el-option
+              v-for="item in feedbackStatus"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
+          <el-button icon="Refresh" @click="resetQuery">重置</el-button>
+        </el-form-item>
+      </el-form>
     </div>
+    <el-card class="box-card">
+      <!-- 操作工具栏 -->
+      <template #header>
+        <!-- <el-button type="primary" plain icon="Plus" @click="handleAdd">新增
+                </el-button> -->
+        <el-button
+          v-permission="['sys:feedback:delete']"
+          type="danger"
+          plain
+          icon="Delete"
+          :disabled="selectedIds.length === 0"
+          @click="handleBatchDelete"
+          >批量删除
+        </el-button>
+      </template>
+
+      <!-- 数据表格 -->
+      <el-table v-loading="loading" :data="dataList" @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="55" align="center" />
+        <el-table-column label="反馈人头像" align="center" prop="avatar" width="100">
+          <template #default="scope">
+            <el-avatar :src="scope.row.avatar" alt="Avatar" width="50" height="50" />
+          </template>
+        </el-table-column>
+        <el-table-column label="反馈人昵称" align="center" prop="nickname" />
+        <el-table-column label="反馈类型" align="center" prop="type">
+          <template #default="scope">
+            <span v-for="item in feedbackTypes" :key="item.value">
+              <el-tag v-if="item.value === scope.row.type" :type="item.style">
+                {{ item.label }}
+              </el-tag>
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="反馈内容" align="center" prop="content" show-overflow-tooltip />
+        <el-table-column label="联系邮箱" align="center" prop="email" />
+        <el-table-column
+          label="回复内容"
+          align="center"
+          prop="replyContent"
+          show-overflow-tooltip
+        />
+        <el-table-column label="状态" align="center" prop="status">
+          <template #default="scope">
+            <span v-for="item in feedbackStatus" :key="item.value">
+              <el-tag v-if="item.value === String(scope.row.status)" :type="item.style">
+                {{ item.label }}
+              </el-tag>
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="创建时间" align="center" prop="createTime" width="170" />
+        <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
+          <template #default="scope">
+            <el-button
+              v-permission="['sys:feedback:update']"
+              type="primary"
+              link
+              icon="Edit"
+              @click="handleUpdate(scope.row)"
+              >修改
+            </el-button>
+            <el-button
+              v-permission="['sys:feedback:delete']"
+              type="danger"
+              link
+              icon="Delete"
+              @click="handleDelete(scope.row)"
+              >删除
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 分页工具栏 -->
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="queryParams.pageNum"
+          v-model:page-size="queryParams.pageSize"
+          background
+          :page-sizes="[10, 20, 30, 50]"
+          :total="total"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+        />
+      </div>
+
+      <!-- 添加或修改对话框 -->
+      <el-dialog
+        v-model="open"
+        :title="title"
+        width="500px"
+        append-to-body
+        destroy-on-close
+        @closed="handleDialogClosed"
+      >
+        <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
+          <el-form-item label="回复内容" prop="replyContent">
+            <el-input
+              v-model="form.replyContent"
+              type="textarea"
+              :rows="5"
+              placeholder="请输入回复内容"
+            />
+          </el-form-item>
+          <el-form-item label="状态" prop="status">
+            <el-radio-group v-model="form.status">
+              <el-radio
+                v-for="item in feedbackStatus"
+                :key="item.value"
+                :value="Number(item.value)"
+                >{{ item.label }}</el-radio
+              >
+            </el-radio-group>
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <div class="dialog-footer">
+            <el-button type="primary" :loading="submitLoading" @click="submitForm">确 定</el-button>
+            <el-button @click="cancel">取 消</el-button>
+          </div>
+        </template>
+      </el-dialog>
+    </el-card>
+  </div>
 </template>
 
 <script setup lang="ts">
-import type {FormInstance, FormRules} from 'element-plus'
-import {ElMessage, ElMessageBox} from 'element-plus'
+import type { FormInstance, FormRules } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   addSysFeedbackApi,
   deleteSysFeedbackApi,
@@ -128,7 +178,7 @@ import {
   updateSysFeedbackApi
 } from '@/api/message/feedback'
 
-import {getDictDataByDictTypesApi} from '@/api/system/dict'
+import { getDictDataByDictTypesApi } from '@/api/system/dict'
 
 // 遮罩层
 const loading = ref(true)
@@ -145,34 +195,30 @@ const open = ref(false)
 const submitLoading = ref(false)
 // 查询参数
 const queryParams = reactive({
-    pageNum: 1,
-    pageSize: 10,
-    type: undefined,
-    status: undefined,
-    source: 'admin'
+  pageNum: 1,
+  pageSize: 10,
+  type: undefined,
+  status: undefined,
+  source: 'admin'
 })
 
 // 表单参数
 const createForm = () => ({
-    id: undefined,
-    userId: undefined,
-    type: undefined,
-    content: undefined,
-    email: undefined,
-    replyContent: '',
-    status: undefined,
-    createTime: undefined
+  id: undefined,
+  userId: undefined,
+  type: undefined,
+  content: undefined,
+  email: undefined,
+  replyContent: '',
+  status: undefined,
+  createTime: undefined
 })
 
 const form = reactive<any>(createForm())
 // 表单校验
 const rules = reactive<FormRules>({
-    replyContent: [
-        { required: false, message: "回复内容不能为空", trigger: "blur" }
-    ],
-    status: [
-        { required: true, message: "状态不能为空", trigger: "blur" }
-    ]
+  replyContent: [{ required: false, message: '回复内容不能为空', trigger: 'blur' }],
+  status: [{ required: true, message: '状态不能为空', trigger: 'blur' }]
 })
 
 const queryFormRef = ref<FormInstance>()
@@ -181,154 +227,148 @@ const formRef = ref<FormInstance>()
 const feedbackTypes = ref<any[]>([])
 const feedbackStatus = ref<any[]>([])
 
-
-
 /** 查询列表 */
 const getList = async () => {
-    loading.value = true
-    try {
-        const response = await listSysFeedbackApi(queryParams)
-        dataList.value = response.data.records
-        total.value = response.data.total
-    } catch (error) {
-        dataList.value = []
-        total.value = 0
-        selectedIds.value = []
-    } finally {
-        loading.value = false
-    }
+  loading.value = true
+  try {
+    const response = await listSysFeedbackApi(queryParams)
+    dataList.value = response.data.records
+    total.value = response.data.total
+  } catch (error) {
+    dataList.value = []
+    total.value = 0
+    selectedIds.value = []
+  } finally {
+    loading.value = false
+  }
 }
 
 const getDicts = async () => {
-    try {
-        const res = await getDictDataByDictTypesApi(['feedback_type', 'feedback_status'])
-        feedbackTypes.value = res.data.feedback_type.list
-        feedbackStatus.value = res.data.feedback_status.list
-    } catch (error) {
-        feedbackTypes.value = []
-        feedbackStatus.value = []
-    }
+  try {
+    const res = await getDictDataByDictTypesApi(['feedback_type', 'feedback_status'])
+    feedbackTypes.value = res.data.feedback_type.list
+    feedbackStatus.value = res.data.feedback_status.list
+  } catch (error) {
+    feedbackTypes.value = []
+    feedbackStatus.value = []
+  }
 }
 
 /** 取消按钮 */
 const cancel = () => {
-    open.value = false
+  open.value = false
 }
 
 /** 表单重置 */
 const reset = () => {
-    Object.assign(form, createForm())
+  Object.assign(form, createForm())
 }
 
 /** 搜索按钮操作 */
 const handleQuery = () => {
-    queryParams.pageNum = 1
-    getList()
+  queryParams.pageNum = 1
+  getList()
 }
 
 /** 重置按钮操作 */
 const resetQuery = () => {
-    queryFormRef.value?.resetFields()
-    handleQuery()
+  queryFormRef.value?.resetFields()
+  handleQuery()
 }
 
 /** 多选框选中数据 */
 const handleSelectionChange = (selection: { id: any }[]) => {
-    selectedIds.value = selection.map(item => item.id)
+  selectedIds.value = selection.map((item) => item.id)
 }
 
 /** 修改按钮操作 */
-const handleUpdate = async (row : any) => {
-    reset()
-    try {
-        const response = await detailSysFeedbackApi(row.id)
-        Object.assign(form, response.data)
-        open.value = true
-        title.value = "修改反馈"
-        await nextTick(() => {
-            formRef.value?.clearValidate()
-        })
-    } catch (error) {
-    }
+const handleUpdate = async (row: any) => {
+  reset()
+  try {
+    const response = await detailSysFeedbackApi(row.id)
+    Object.assign(form, response.data)
+    open.value = true
+    title.value = '修改反馈'
+    await nextTick(() => {
+      formRef.value?.clearValidate()
+    })
+  } catch (error) {}
 }
 
 /** 提交按钮 */
 const submitForm = async () => {
-    if (!formRef.value) return
-    const valid = await formRef.value?.validate().catch(() => false)
-    if (!valid) return
+  if (!formRef.value) return
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) return
 
-    submitLoading.value = true
-    try {
-        if (form.id !== undefined) {
-            await updateSysFeedbackApi(form)
-            ElMessage.success("修改成功")
-        } else {
-            await addSysFeedbackApi(form)
-            ElMessage.success("新增成功")
-        }
-        open.value = false
-        await getList()
-    } catch (error) {
-    } finally {
-        submitLoading.value = false
+  submitLoading.value = true
+  try {
+    if (form.id !== undefined) {
+      await updateSysFeedbackApi(form)
+      ElMessage.success('修改成功')
+    } else {
+      await addSysFeedbackApi(form)
+      ElMessage.success('新增成功')
     }
+    open.value = false
+    await getList()
+  } catch (error) {
+  } finally {
+    submitLoading.value = false
+  }
 }
 
 /** 批量删除按钮操作 */
 const handleBatchDelete = async () => {
-    if (!selectedIds.value.length) {
-        return
-    }
-    try {
-        await ElMessageBox.confirm(`是否确认删除${selectedIds.value.length}条数据项?`, "警告", {
-            confirmButtonText: "确定",
-            cancelButtonText: "取消",
-            type: "warning"
-        })
-        await deleteSysFeedbackApi(selectedIds.value)
-        selectedIds.value = []
-        await getList()
-        ElMessage.success("删除成功")
-    } catch (error) {
-    }
+  if (!selectedIds.value.length) {
+    return
+  }
+  try {
+    await ElMessageBox.confirm(`是否确认删除${selectedIds.value.length}条数据项?`, '警告', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await deleteSysFeedbackApi(selectedIds.value)
+    selectedIds.value = []
+    await getList()
+    ElMessage.success('删除成功')
+  } catch (error) {}
 }
 
 /** 删除按钮操作 */
-const handleDelete = async (row : any) =>  {
-    try {
-        await ElMessageBox.confirm('是否确认删除内容为"' + row.content + '"的数据项?', "警告", {
-            confirmButtonText: "确定",
-            cancelButtonText: "取消",
-            type: "warning"
-        })
-        await deleteSysFeedbackApi(row.id)
-        selectedIds.value = selectedIds.value.filter(id => id !== row.id)
-        await getList()
-        ElMessage.success("删除成功")
-    } catch (error) {
-    }
+const handleDelete = async (row: any) => {
+  try {
+    await ElMessageBox.confirm('是否确认删除内容为"' + row.content + '"的数据项?', '警告', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await deleteSysFeedbackApi(row.id)
+    selectedIds.value = selectedIds.value.filter((id) => id !== row.id)
+    await getList()
+    ElMessage.success('删除成功')
+  } catch (error) {}
 }
 
 const handleDialogClosed = () => {
-    reset()
-    formRef.value?.clearValidate()
+  reset()
+  formRef.value?.clearValidate()
 }
 
-
 // 添加分页方法
-const handleSizeChange = (val : any) => {
+const handleSizeChange = (val: any) => {
   queryParams.pageSize = val
   getList()
 }
 
-const handleCurrentChange = (val : any) => {
+const handleCurrentChange = (val: any) => {
   queryParams.pageNum = val
   getList()
 }
 
 onMounted(() => {
-    getList()
-    getDicts()
+  getList()
+  getDicts()
 })
 </script>

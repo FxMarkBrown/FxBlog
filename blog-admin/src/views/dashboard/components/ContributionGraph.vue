@@ -14,26 +14,21 @@
         <span>周六</span>
       </div>
       <div class="graph">
-        <div v-for="(week, weekIndex) in weeklyData" 
-             :key="weekIndex" 
-             class="week">
-          <div v-for="(day, dayIndex) in week" 
-               :key="dayIndex" 
-               class="day"
-               :data-level="day.count"
-               :data-empty="day.count === -1"
-               :title="day.date ? `${formatDate(day.date)} · ${day.count} 次贡献` : ''">
-          </div>
+        <div v-for="(week, weekIndex) in weeklyData" :key="weekIndex" class="week">
+          <div
+            v-for="(day, dayIndex) in week"
+            :key="dayIndex"
+            class="day"
+            :data-level="day.count"
+            :data-empty="day.count === -1"
+            :title="day.date ? `${formatDate(day.date)} · ${day.count} 次贡献` : ''"
+          ></div>
         </div>
       </div>
     </div>
     <div class="legend">
       <span>较少</span>
-        <div v-for="level in 5" 
-             :key="level" 
-             class="day"
-             :data-level="level - 1">
-        </div>
+      <div v-for="level in 5" :key="level" class="day" :data-level="level - 1"></div>
       <span>较多</span>
     </div>
   </div>
@@ -41,8 +36,8 @@
 
 <script setup lang="ts">
 interface DayData {
-  date: string;
-  count: number;
+  date: string
+  count: number
 }
 
 import dayjs from 'dayjs'
@@ -54,13 +49,12 @@ const props = defineProps<{
   data: any
 }>()
 
-
 // 生成过去一年的空数据结构
 const generateEmptyYear = () => {
   const data: DayData[] = []
   const endDate = dayjs()
   let currentDate = dayjs().subtract(1, 'year').add(1, 'day')
-  
+
   while (currentDate.isBefore(endDate) || currentDate.isSame(endDate, 'day')) {
     data.push({
       date: currentDate.format('YYYY-MM-DD'),
@@ -75,15 +69,28 @@ const generateEmptyYear = () => {
 const mergedData = computed(() => {
   const emptyYear = generateEmptyYear()
   const dataMap = new Map(props.data?.map((item: DayData) => [item.date, item.count]))
-  
-  return emptyYear.map(day => ({
+
+  return emptyYear.map((day) => ({
     date: day.date,
     count: dataMap.get(day.date) ?? 0
   })) as DayData[]
 })
 
 // 固定显示12个月份
-const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
+const months = [
+  '1月',
+  '2月',
+  '3月',
+  '4月',
+  '5月',
+  '6月',
+  '7月',
+  '8月',
+  '9月',
+  '10月',
+  '11月',
+  '12月'
+]
 
 // 计算每个月开始的位置
 const weeklyData = computed(() => {
@@ -95,7 +102,7 @@ const weeklyData = computed(() => {
   for (let i = 0; i < startDayOfWeek; i++) {
     week.push({ date: '', count: -1 }) // -1 表示空格子
   }
-  
+
   // 填充实际数据
   mergedData.value.forEach((day) => {
     week.push(day)
@@ -104,7 +111,7 @@ const weeklyData = computed(() => {
       week = []
     }
   })
-  
+
   // 补充最后一周的空格子
   if (week.length > 0) {
     while (week.length < 7) {
@@ -112,14 +119,13 @@ const weeklyData = computed(() => {
     }
     weeks.push(week)
   }
-  
+
   return weeks
 })
 
 const formatDate = (dateStr: string) => {
   return dayjs(dateStr).format('YYYY年M月D日 dddd')
 }
-
 </script>
 
 <style scoped>
@@ -192,7 +198,7 @@ const formatDate = (dateStr: string) => {
   background-color: var(--contribution-empty-bg);
   cursor: pointer;
   transition: transform 0.1s ease;
-  &[data-empty="true"] {
+  &[data-empty='true'] {
     visibility: hidden;
   }
 }
@@ -201,11 +207,21 @@ const formatDate = (dateStr: string) => {
   transform: scale(1.2);
 }
 
-.day[data-level="0"] { background-color: var(--contribution-empty-bg); }
-.day[data-level="1"] { background-color: var(--contribution-level-1); }
-.day[data-level="2"] { background-color: var(--contribution-level-2); }
-.day[data-level="3"] { background-color: var(--contribution-level-3); }
-.day[data-level="4"] { background-color: var(--contribution-level-4); }
+.day[data-level='0'] {
+  background-color: var(--contribution-empty-bg);
+}
+.day[data-level='1'] {
+  background-color: var(--contribution-level-1);
+}
+.day[data-level='2'] {
+  background-color: var(--contribution-level-2);
+}
+.day[data-level='3'] {
+  background-color: var(--contribution-level-3);
+}
+.day[data-level='4'] {
+  background-color: var(--contribution-level-4);
+}
 
 .legend {
   display: flex;

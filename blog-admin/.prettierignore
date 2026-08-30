@@ -1,0 +1,6 @@
+node_modules
+dist
+bun.lock
+# unplugin-auto-import / unplugin-vue-components 自动生成的声明文件
+src/auto-imports.d.ts
+src/components.d.ts

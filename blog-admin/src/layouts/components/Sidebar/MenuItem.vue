@@ -1,9 +1,6 @@
 <template>
   <template v-if="isLeafOrDashboard">
-    <app-link 
-      v-if="route.meta" 
-      :to="resolvePath(route.path)"
-    >
+    <app-link v-if="route.meta" :to="resolvePath(route.path)">
       <el-menu-item :index="resolvePath(route.path)">
         <el-icon v-if="route.meta?.icon">
           <component :is="route.meta.icon" />
@@ -21,20 +18,16 @@
         <span>{{ route.meta?.title }}</span>
       </template>
       <template v-for="child in route.children" :key="child.path">
-        <menu-item
-          v-if="!child.meta?.hidden"
-          :route="child"
-          :base-path="resolvePath(route.path)"
-        />
+        <menu-item v-if="!child.meta?.hidden" :route="child" :base-path="resolvePath(route.path)" />
       </template>
     </el-sub-menu>
   </template>
 </template>
 
 <script setup lang="ts">
-import {computed} from 'vue'
+import { computed } from 'vue'
 import AppLink from './Link.vue'
-import {isExternal} from '@/utils/validate'
+import { isExternal } from '@/utils/validate'
 
 const props = defineProps<{
   route: any
@@ -42,9 +35,9 @@ const props = defineProps<{
 }>()
 
 const isLeafOrDashboard = computed(() => {
-  return !props.route.children || 
-         props.route.children.length === 0 || 
-         props.route.path === '/dashboard'
+  return (
+    !props.route.children || props.route.children.length === 0 || props.route.path === '/dashboard'
+  )
 })
 
 const resolvePath = (routePath: string) => {
@@ -52,28 +45,26 @@ const resolvePath = (routePath: string) => {
   if (isExternal(routePath)) {
     return routePath
   }
-  
+
   // 如果是根路径，直接返回
   if (routePath === '/') {
     return routePath
   }
-  
+
   // 如果是绝对路径（以/开头），直接返回
   if (routePath.startsWith('/')) {
     return routePath
   }
-  
+
   // 如果是仪表盘路径，特殊处理
   if (routePath === 'dashboard') {
     return '/dashboard'
   }
-  
+
   // 处理相对路径
-  const path = props.basePath === '/' 
-    ? `/${routePath}` 
-    : `${props.basePath}/${routePath}`
-  
+  const path = props.basePath === '/' ? `/${routePath}` : `${props.basePath}/${routePath}`
+
   // 规范化路径，去除多余的斜杠
   return path.replace(/\/+/g, '/')
 }
-</script> 
+</script>

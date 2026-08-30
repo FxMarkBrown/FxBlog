@@ -10,7 +10,6 @@ export interface UploadedFileDetail {
   [key: string]: unknown
 }
 
-
 // 获取文件列表
 export function getFileListApi(params: any) {
   return request({
@@ -70,7 +69,7 @@ export function deleteFileApi(url: string) {
   return request({
     url: `/file/delete`,
     method: 'get',
-    params: { url:url }
+    params: { url: url }
   })
 }
 
@@ -86,7 +85,7 @@ export function getOssConfigApi() {
 export function addOssApi(data: any) {
   return request({
     url: '/file/addOss',
-    method: 'post', 
+    method: 'post',
     data
   })
 }
@@ -94,11 +93,7 @@ export function addOssApi(data: any) {
 export function updateOssApi(data: any) {
   return request({
     url: '/file/updateOss',
-    method: 'put', 
+    method: 'put',
     data
   })
 }
-
-
-
-

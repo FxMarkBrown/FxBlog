@@ -2,9 +2,9 @@
   <div class="dashboard-container">
     <!-- 数据卡片 -->
     <el-row :gutter="20">
-      <el-col :span="6" v-for="(item, index) in statistics" :key="item.title">
-        <el-card 
-          shadow="hover" 
+      <el-col v-for="(item, index) in statistics" :key="item.title" :span="6">
+        <el-card
+          shadow="hover"
           :body-style="{ padding: '20px' }"
           class="data-card"
           :style="{ animationDelay: `${index * 0.1}s` }"
@@ -14,12 +14,7 @@
               <el-icon><component :is="item.icon" /></el-icon>
             </div>
             <div class="data-wrapper">
-              <count-to
-                :start-val="0"
-                :end-val="item.value"
-                :duration="2000"
-                class="card-value"
-              />
+              <count-to :start-val="0" :end-val="item.value" :duration="2000" class="card-value" />
               <div class="card-title">{{ item.title }}</div>
             </div>
           </div>
@@ -27,7 +22,6 @@
       </el-col>
     </el-row>
 
-    
     <el-row :gutter="20" class="chart-row">
       <el-col :span="24">
         <el-card shadow="hover" class="chart-card">
@@ -44,7 +38,7 @@
       <el-col :span="16">
         <el-card shadow="hover" class="chart-card">
           <template #header>
-              <span>访问趋势</span>
+            <span>访问趋势</span>
           </template>
           <div ref="lineChartRef" class="chart"></div>
         </el-card>
@@ -60,18 +54,24 @@
         </el-card>
       </el-col>
     </el-row>
-
   </div>
 </template>
 
 <script setup lang="ts">
-import type {EChartsOption} from 'echarts'
+import type { EChartsOption } from 'echarts'
 import * as echarts from 'echarts'
-import {CaretBottom, CaretTop, ChatLineRound, Collection, Document, View} from '@element-plus/icons-vue'
+import {
+  CaretBottom,
+  CaretTop,
+  ChatLineRound,
+  Collection,
+  Document,
+  View
+} from '@element-plus/icons-vue'
 import CountTo from '@/views/dashboard/components/CountTo.vue'
 import ContributionGraph from './components/ContributionGraph.vue'
-import {getBottomDataApi, getDashboardDataApi} from '@/api/system'
-import {useSettingsStore} from '@/store/modules/settings'
+import { getBottomDataApi, getDashboardDataApi } from '@/api/system'
+import { useSettingsStore } from '@/store/modules/settings'
 
 const icons = {
   Document: markRaw(Document),
@@ -83,27 +83,27 @@ const icons = {
 }
 
 const statistics = ref([
-  { 
-    title: '文章总数', 
-    value: 0, 
+  {
+    title: '文章总数',
+    value: 0,
     type: 'primary',
     icon: icons.Document
   },
-  { 
-    title: '用户总数', 
-    value: 0, 
+  {
+    title: '用户总数',
+    value: 0,
     type: 'success',
     icon: icons.Collection
   },
-  { 
-    title: '留言总数', 
-    value: 0, 
+  {
+    title: '留言总数',
+    value: 0,
     type: 'warning',
     icon: icons.ChatLineRound
   },
-  { 
-    title: '访问量', 
-    value: 0, 
+  {
+    title: '访问量',
+    value: 0,
     type: 'info',
     icon: icons.View
   }
@@ -246,33 +246,35 @@ const getPieChartOption = (): EChartsOption => {
         color: colors.textSecondary
       }
     },
-    series: [{
-      name: '分类统计',
-      type: 'pie',
-      radius: ['40%', '70%'],
-      avoidLabelOverlap: false,
-      itemStyle: {
-        borderRadius: 10,
-        borderColor: colors.cardColor,
-        borderWidth: 2
-      },
-      label: {
-        show: false,
-        position: 'center'
-      },
-      emphasis: {
+    series: [
+      {
+        name: '分类统计',
+        type: 'pie',
+        radius: ['40%', '70%'],
+        avoidLabelOverlap: false,
+        itemStyle: {
+          borderRadius: 10,
+          borderColor: colors.cardColor,
+          borderWidth: 2
+        },
         label: {
-          show: true,
-          fontSize: 20,
-          fontWeight: 'bold',
-          color: colors.textPrimary
-        }
-      },
-      labelLine: {
-        show: false
-      },
-      data: [] as any[]
-    }]
+          show: false,
+          position: 'center'
+        },
+        emphasis: {
+          label: {
+            show: true,
+            fontSize: 20,
+            fontWeight: 'bold',
+            color: colors.textPrimary
+          }
+        },
+        labelLine: {
+          show: false
+        },
+        data: [] as any[]
+      }
+    ]
   }
 }
 
@@ -293,7 +295,7 @@ const renderCharts = () => {
     lineChart.value = echarts.init(lineChartRef.value)
     lineChart.value.setOption(getLineChartOption())
   }
-  
+
   if (pieChartRef.value) {
     pieChart.value = echarts.init(pieChartRef.value)
     const option = getPieChartOption()
@@ -323,7 +325,6 @@ const handleResize = () => {
   pieChart.value?.resize()
 }
 
-
 onMounted(() => {
   window.addEventListener('resize', handleResize)
   loadStatistics()
@@ -346,7 +347,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-
 /* 数据卡片样式 */
 .data-card {
   animation: slideUp 0.5s ease-out forwards;
@@ -413,4 +413,4 @@ onUnmounted(() => {
   height: auto;
   margin-bottom: 20px;
 }
-</style> 
+</style>

@@ -1,115 +1,137 @@
-import {createRouter, createWebHistory, RouteRecordRaw} from "vue-router";
+import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
 
-export const Layout = () => import("@/layouts/index.vue");
-const SiteRedirect = () => import("@/views/redirect/site.vue");
+export const Layout = () => import('@/layouts/index.vue')
+const SiteRedirect = () => import('@/views/redirect/site.vue')
 
 // 静态路由
 export const constantRoutes: RouteRecordRaw[] = [
   {
-    path: "/redirect",
+    path: '/redirect',
     component: Layout,
     meta: { hidden: true },
     children: [
       {
-        path: "/redirect/:path(.*)",
-        component: () => import("@/views/redirect/index.vue"),
+        path: '/redirect/:path(.*)',
+        component: () => import('@/views/redirect/index.vue'),
         meta: { hidden: true }
       }
     ]
   },
   {
-    path: "/auth/:pathMatch(.*)*",
+    path: '/auth/:pathMatch(.*)*',
     component: SiteRedirect,
-    meta: { hidden: true },
+    meta: { hidden: true }
   },
   {
-    path: "/:pathMatch(.*)*",
+    path: '/:pathMatch(.*)*',
     component: SiteRedirect,
-    meta: { hidden: true },
+    meta: { hidden: true }
   },
   {
-    path: "/",
-    name: "/",
+    path: '/',
+    name: '/',
     component: Layout,
-    redirect: "/dashboard",
+    redirect: '/dashboard',
     children: [
       {
-        path: "dashboard",
-        component: () => import("@/views/dashboard/index.vue"),
-        name: "Dashboard",
+        path: 'dashboard',
+        component: () => import('@/views/dashboard/index.vue'),
+        name: 'Dashboard',
         meta: {
-          title: "仪表盘",
-          icon: "Orange",
+          title: '仪表盘',
+          icon: 'Orange',
           affix: true,
           keepAlive: true,
-          alwaysShow: false,
-        },
+          alwaysShow: false
+        }
       },
-    ],
+      {
+        path: 'article/publish',
+        component: () => import('@/views/article/edit/index.vue'),
+        name: 'ArticlePublish',
+        meta: {
+          title: '新增文章',
+          hidden: true,
+          keepAlive: false,
+          activeMenu: '/article/index'
+        }
+      },
+      {
+        path: 'article/edit/:id(\\d+)',
+        component: () => import('@/views/article/edit/index.vue'),
+        name: 'ArticleEdit',
+        meta: {
+          title: '修改文章',
+          hidden: true,
+          keepAlive: false,
+          activeMenu: '/article/index'
+        }
+      }
+    ]
   },
   {
-    path: "/ai",
+    path: '/ai',
     component: Layout,
-    redirect: "/ai/conversation",
+    redirect: '/ai/conversation',
     meta: {
-      title: "AI 对话",
-      icon: "ChatDotRound",
-      alwaysShow: true,
+      title: 'AI 对话',
+      icon: 'ChatDotRound',
+      alwaysShow: true
     },
     children: [
       {
-        path: "conversation",
-        component: () => import("@/views/ai/conversation/index.vue"),
-        name: "AiConversation",
+        path: 'conversation',
+        component: () => import('@/views/ai/conversation/index.vue'),
+        name: 'AiConversation',
         meta: {
-          title: "对话管理",
-          icon: "ChatDotRound",
-          keepAlive: true,
-        },
+          title: '对话管理',
+          icon: 'ChatDotRound',
+          keepAlive: true
+        }
       },
       {
-        path: "document-task",
-        component: () => import("@/views/ai/document-task/index.vue"),
-        name: "AiDocumentTask",
+        path: 'document-task',
+        component: () => import('@/views/ai/document-task/index.vue'),
+        name: 'AiDocumentTask',
         meta: {
-          title: "文档任务",
-          icon: "Document",
-          keepAlive: true,
-        },
+          title: '文档任务',
+          icon: 'Document',
+          keepAlive: true
+        }
       },
       {
-        path: "quota",
-        component: () => import("@/views/ai/quota/index.vue"),
-        name: "AiQuota",
+        path: 'quota',
+        component: () => import('@/views/ai/quota/index.vue'),
+        name: 'AiQuota',
         meta: {
-          title: "额度管理",
-          icon: "Coin",
-          keepAlive: true,
-        },
+          title: '额度管理',
+          icon: 'Coin',
+          keepAlive: true
+        }
       },
       {
-        path: "quota-log",
-        component: () => import("@/views/ai/quota-log/index.vue"),
-        name: "AiQuotaLog",
+        path: 'quota-log',
+        component: () => import('@/views/ai/quota-log/index.vue'),
+        name: 'AiQuotaLog',
         meta: {
-          title: "额度流水",
-          icon: "Tickets",
-          keepAlive: true,
-        },
+          title: '额度流水',
+          icon: 'Tickets',
+          keepAlive: true
+        }
       },
       {
-        path: "rag",
-        component: () => import("@/views/ai/rag/index.vue"),
-        name: "AiRag",
+        path: 'rag',
+        component: () => import('@/views/ai/rag/index.vue'),
+        name: 'AiRag',
         meta: {
-          title: "RAG 控制",
-          icon: "Connection",
-          keepAlive: true,
-        },
-      },
-    ],
+          title: 'RAG 控制',
+          icon: 'Connection',
+          keepAlive: true
+        }
+      }
+    ]
   }
-];
+]
 
 /**
  * 创建路由
@@ -118,6 +140,6 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: constantRoutes,
   // 刷新时，滚动条位置还原
-  scrollBehavior: () => ({ left: 0, top: 0 }),
-});
-export default router;
+  scrollBehavior: () => ({ left: 0, top: 0 })
+})
+export default router

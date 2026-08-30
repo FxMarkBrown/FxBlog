@@ -52,10 +52,9 @@ export function deleteMenuApi(id: string) {
   })
 }
 
-
 export function listRoutes() {
   return request({
     url: '/sys/menu',
-    method: 'post',
+    method: 'post'
   })
 }

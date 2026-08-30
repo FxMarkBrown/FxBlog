@@ -6,4 +6,4 @@ export function getServerInfoApi() {
     url: '/monitor/server',
     method: 'get'
   })
-} 
+}

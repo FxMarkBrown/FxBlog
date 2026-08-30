@@ -3,7 +3,12 @@
     <div class="search-wrapper">
       <el-form :inline="true" :model="queryParams" class="filter-form">
         <el-form-item label="用户">
-          <el-input v-model="queryParams.userKeyword" placeholder="昵称 / 用户名" clearable @keyup.enter="handleQuery" />
+          <el-input
+            v-model="queryParams.userKeyword"
+            placeholder="昵称 / 用户名"
+            clearable
+            @keyup.enter="handleQuery"
+          />
         </el-form-item>
         <el-form-item label="类型">
           <el-select v-model="queryParams.type" placeholder="全部" clearable style="width: 140px">
@@ -12,7 +17,12 @@
           </el-select>
         </el-form-item>
         <el-form-item label="关键词">
-          <el-input v-model="queryParams.keyword" placeholder="标题 / 摘要" clearable @keyup.enter="handleQuery" />
+          <el-input
+            v-model="queryParams.keyword"
+            placeholder="标题 / 摘要"
+            clearable
+            @keyup.enter="handleQuery"
+          />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
@@ -103,7 +113,12 @@
     <el-drawer v-model="messageDrawerVisible" :title="drawerTitle" size="42%">
       <div v-loading="messageLoading" class="message-drawer">
         <div v-if="messageList.length" class="message-list">
-          <div v-for="message in messageList" :key="message.id" class="message-item" :class="message.role">
+          <div
+            v-for="message in messageList"
+            :key="message.id"
+            class="message-item"
+            :class="message.role"
+          >
             <div class="message-head">
               <el-tag size="small" :type="getRoleTagType(message.role)" effect="light">
                 {{ getRoleLabel(message.role) }}
@@ -120,8 +135,12 @@
 </template>
 
 <script setup lang="ts">
-import {ElMessage, ElMessageBox} from 'element-plus'
-import {deleteAiConversationApi, getAiConversationListApi, getAiConversationMessagesApi} from '@/api/ai/conversation'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  deleteAiConversationApi,
+  getAiConversationListApi,
+  getAiConversationMessagesApi
+} from '@/api/ai/conversation'
 
 const queryParams = reactive({
   pageNum: 1,
@@ -252,8 +271,7 @@ const handleDelete = async (row: any) => {
       type: 'warning'
     })
     await doDelete([row.id])
-  } catch (error) {
-  }
+  } catch (error) {}
 }
 
 /**
@@ -268,8 +286,7 @@ const handleBatchDelete = async () => {
       type: 'warning'
     })
     await doDelete(selectedIds.value)
-  } catch (error) {
-  }
+  } catch (error) {}
 }
 
 /**

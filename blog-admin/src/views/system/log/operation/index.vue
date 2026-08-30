@@ -1,8 +1,8 @@
 <template>
   <div class="app-container">
-     <!-- 搜索表单 -->
-     <div class="search-wrapper">
-        <el-form :model="queryParams" ref="queryFormRef" :inline="true">
+    <!-- 搜索表单 -->
+    <div class="search-wrapper">
+      <el-form ref="queryFormRef" :model="queryParams" :inline="true">
         <el-form-item label="用户名" prop="username">
           <el-input
             v-model="queryParams.username"
@@ -38,7 +38,7 @@
           </el-button>
         </el-form-item>
       </el-form>
-     </div>
+    </div>
 
     <el-card class="box-card">
       <!-- 操作按钮区域 -->
@@ -51,26 +51,21 @@
               icon="Delete"
               :disabled="selectedIds.length === 0"
               @click="handleBatchDelete"
-            >批量删除</el-button>
+              >批量删除</el-button
+            >
           </ButtonGroup>
         </div>
       </template>
 
       <!-- 表格区域 -->
-      <el-table
-        v-loading="loading"
-        :data="logList"
-        @selection-change="handleSelectionChange"
-      >
-      <el-table-column type="expand">
+      <el-table v-loading="loading" :data="logList" @selection-change="handleSelectionChange">
+        <el-table-column type="expand">
           <template #default="scope">
             <el-scrollbar max-height="400px">
               <el-form label-position="left" inline class="demo-table-expand">
                 <el-row>
                   <el-form-item label="请求接口">
-                    <span>{{
-                      scope.row.classPath + scope.row.requestUrl
-                    }}</span>
+                    <span>{{ scope.row.classPath + scope.row.requestUrl }}</span>
                   </el-form-item>
                 </el-row>
                 <el-row>
@@ -83,24 +78,9 @@
           </template>
         </el-table-column>
         <el-table-column align="center" type="selection" width="55" />
-        <el-table-column
-          prop="username"
-          align="center"
-          width="100"
-          label="操作人"
-        />
-        <el-table-column
-          prop="requestUrl"
-          align="center"
-          width="250"
-          label="请求接口"
-        />
-        <el-table-column
-          prop="type"
-          align="center"
-          width="100"
-          label="请求方式"
-        >
+        <el-table-column prop="username" align="center" width="100" label="操作人" />
+        <el-table-column prop="requestUrl" align="center" width="250" label="请求接口" />
+        <el-table-column prop="type" align="center" width="100" label="请求方式">
           <template #default="scope">
             <span v-for="item in methodStyle" :key="item.name">
               <el-tag v-if="scope.row.type === item.name" :type="item.type">{{
@@ -111,7 +91,7 @@
         </el-table-column>
         <el-table-column prop="operationName" align="center" label="接口名" />
         <el-table-column prop="ip" width="100" align="center" label="IP" />
-        <el-table-column prop="source" align="center" label="IP来源"  width="200"/>
+        <el-table-column prop="source" align="center" label="IP来源" width="200" />
         <el-table-column align="center" label="请求耗时" width="150">
           <template #default="scope">
             <span
@@ -119,15 +99,15 @@
             >
           </template>
         </el-table-column>
-        <el-table-column
-          prop="createTime"
-          align="center"
-          width="200"
-          label="创建时间"
-        />
+        <el-table-column prop="createTime" align="center" width="200" label="创建时间" />
         <el-table-column label="操作" width="100" align="center">
           <template #default="{ row }">
-            <el-button type="danger" link @click="handleDelete(row)" v-permission="['sys:operateLog:delete']">
+            <el-button
+              v-permission="['sys:operateLog:delete']"
+              type="danger"
+              link
+              @click="handleDelete(row)"
+            >
               <el-icon><Delete /></el-icon>删除
             </el-button>
           </template>
@@ -137,9 +117,9 @@
       <!-- 分页区域 -->
       <div class="pagination-container">
         <el-pagination
-          background
           v-model:current-page="queryParams.pageNum"
           v-model:page-size="queryParams.pageSize"
+          background
           :page-sizes="[10, 20, 30, 50]"
           :total="total"
           layout="total, sizes, prev, pager, next, jumper"
@@ -152,9 +132,9 @@
 </template>
 
 <script setup lang="ts">
-import {ElMessage, ElMessageBox} from 'element-plus'
-import {deleteOperationLogsApi, getOperationLogsApi,} from '@/api/system/operLog'
-import {Delete, Refresh, Search} from "@element-plus/icons-vue";
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { deleteOperationLogsApi, getOperationLogsApi } from '@/api/system/operLog'
+import { Delete, Refresh, Search } from '@element-plus/icons-vue'
 
 const loading = ref(false)
 const total = ref(0)
@@ -162,25 +142,24 @@ const logList = ref<any[]>([])
 const selectedIds = ref<number[]>([])
 const dateRange = ref<[string, string]>()
 
-
 const methodStyle = ref<any[]>([
   {
-    name: "POST",
-    type: "success",
+    name: 'POST',
+    type: 'success'
   },
   {
-    name: "GET",
-    type: "primary",
+    name: 'GET',
+    type: 'primary'
   },
   {
-    name: "DELETE",
-    type: "danger",
+    name: 'DELETE',
+    type: 'danger'
   },
   {
-    name: "PUT",
-    type: "warning",
-  },
-]);
+    name: 'PUT',
+    type: 'warning'
+  }
+])
 
 // 查询参数
 const queryParams = reactive<any>({
@@ -237,7 +216,7 @@ const resetQuery = () => {
 
 // 选择变化
 const handleSelectionChange = (selection: any[]) => {
-  selectedIds.value = selection.map(item => item.id)
+  selectedIds.value = selection.map((item) => item.id)
 }
 
 // 批量删除
@@ -246,20 +225,20 @@ const handleBatchDelete = () => {
     ElMessage.warning('请选择要删除的记录')
     return
   }
-  
+
   ElMessageBox.confirm(`是否确认删除 ${selectedIds.value.length} 个操作日志?`, '警告', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(async () => {
-    try {
-      await deleteOperationLogsApi(selectedIds.value)
-      ElMessage.success('删除成功')
-      await getList()
-    } catch (error) {
-    }
-  }).catch(() => {
   })
+    .then(async () => {
+      try {
+        await deleteOperationLogsApi(selectedIds.value)
+        ElMessage.success('删除成功')
+        await getList()
+      } catch (error) {}
+    })
+    .catch(() => {})
 }
 
 // 删除
@@ -268,15 +247,15 @@ const handleDelete = (row: any) => {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(async () => {
-    try {
-      await deleteOperationLogsApi(row.id)
-      ElMessage.success('删除成功')
-      await getList()
-    } catch (error) {
-    }
-  }).catch(() => {
   })
+    .then(async () => {
+      try {
+        await deleteOperationLogsApi(row.id)
+        ElMessage.success('删除成功')
+        await getList()
+      } catch (error) {}
+    })
+    .catch(() => {})
 }
 
 // 分页大小变化

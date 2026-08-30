@@ -7,11 +7,7 @@
           <div class="profile-header">
             <div class="header-backdrop"></div>
             <div class="header-content">
-              <el-avatar 
-                :size="100" 
-                :src="userInfo.sysUser.avatar" 
-                class="profile-avatar"
-              />
+              <el-avatar :size="100" :src="userInfo.sysUser.avatar" class="profile-avatar" />
               <h2 class="profile-name">{{ userInfo.sysUser.nickname }}</h2>
             </div>
           </div>
@@ -71,25 +67,17 @@
                 class="profile-form"
               >
                 <el-form-item label="用户昵称" prop="nickname">
-                  <el-input 
-                    v-model="userForm.nickname" 
+                  <el-input
+                    v-model="userForm.nickname"
                     maxlength="30"
                     placeholder="请输入用户昵称"
                   />
                 </el-form-item>
                 <el-form-item label="手机号码" prop="mobile">
-                  <el-input 
-                    v-model="userForm.mobile" 
-                    maxlength="11"
-                    placeholder="请输入手机号码"
-                  />
+                  <el-input v-model="userForm.mobile" maxlength="11" placeholder="请输入手机号码" />
                 </el-form-item>
                 <el-form-item label="邮箱" prop="email">
-                  <el-input 
-                    v-model="userForm.email" 
-                    maxlength="50"
-                    placeholder="请输入邮箱地址"
-                  />
+                  <el-input v-model="userForm.email" maxlength="50" placeholder="请输入邮箱地址" />
                 </el-form-item>
                 <el-form-item label="性别">
                   <el-radio-group v-model="userForm.sex">
@@ -98,11 +86,7 @@
                   </el-radio-group>
                 </el-form-item>
                 <el-form-item>
-                  <el-button 
-                    type="primary" 
-                    @click="submitUserForm"
-                    :loading="submitLoading"
-                  >
+                  <el-button type="primary" :loading="submitLoading" @click="submitUserForm">
                     <el-icon><Check /></el-icon>
                     保存更改
                   </el-button>
@@ -144,11 +128,7 @@
                   />
                 </el-form-item>
                 <el-form-item>
-                  <el-button 
-                    type="primary" 
-                    @click="submitPwdForm"
-                    :loading="pwdLoading"
-                  >
+                  <el-button type="primary" :loading="pwdLoading" @click="submitPwdForm">
                     <el-icon><Key /></el-icon>
                     修改密码
                   </el-button>
@@ -163,9 +143,9 @@
 </template>
 
 <script lang="ts" setup>
-import {ElMessage} from 'element-plus'
-import {getUserProfileApi, updateUserProfileApi, updateUserPwdApi} from '@/api/system/user'
-import {Calendar, Check, Iphone, Key, Message, User, UserFilled} from "@element-plus/icons-vue";
+import { ElMessage } from 'element-plus'
+import { getUserProfileApi, updateUserProfileApi, updateUserPwdApi } from '@/api/system/user'
+import { Calendar, Check, Iphone, Key, Message, User, UserFilled } from '@element-plus/icons-vue'
 
 const activeTab = ref('basic')
 const userFormRef = ref()
@@ -213,7 +193,7 @@ const pwdRules = reactive<any>({
   confirmPassword: [
     { required: true, message: '请确认新密码', trigger: 'blur' },
     {
-      validator: (_rule: any, value: string, callback: Function) => {
+      validator: (_rule: any, value: string, callback: (error?: Error) => void) => {
         if (value !== pwdForm.newPassword) {
           callback(new Error('两次输入的密码不一致'))
         } else {
@@ -304,13 +284,11 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-
-
 .profile-card {
   border-radius: 8px;
   overflow: hidden;
   transition: all 0.3s;
-  
+
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -320,7 +298,7 @@ onMounted(() => {
 .profile-header {
   position: relative;
   height: 200px;
-  
+
   .header-backdrop {
     position: absolute;
     top: 0;
@@ -329,7 +307,7 @@ onMounted(() => {
     bottom: 0;
     background: linear-gradient(135deg, #1890ff 0%, #36cfc9 100%);
   }
-  
+
   .header-content {
     position: relative;
     height: 100%;
@@ -339,12 +317,12 @@ onMounted(() => {
     justify-content: center;
     color: white;
     padding: 20px;
-    
+
     .profile-avatar {
       border: 4px solid rgba(255, 255, 255, 0.8);
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
     }
-    
+
     .profile-name {
       margin: 15px 0 10px;
       font-size: 24px;
@@ -355,34 +333,34 @@ onMounted(() => {
 
 .profile-info {
   padding: 20px;
-  
+
   .profile-list {
     padding: 0;
     margin: 0;
     list-style: none;
-    
+
     li {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 15px 0;
       border-bottom: 1px solid #f0f0f0;
-      
+
       &:last-child {
         border-bottom: none;
       }
-      
+
       .info-label {
         display: flex;
         align-items: center;
         color: #666;
-        
+
         .el-icon {
           margin-right: 8px;
           font-size: 16px;
         }
       }
-      
+
       .info-content {
         color: #333;
         font-weight: 500;
@@ -393,7 +371,7 @@ onMounted(() => {
 
 .tab-card {
   border-radius: 8px;
-  
+
   :deep(.el-tabs__nav-wrap) {
     padding: 0 20px;
   }
@@ -403,11 +381,11 @@ onMounted(() => {
   max-width: 500px;
   margin: 20px auto;
   padding: 20px;
-  
+
   .el-form-item:last-child {
     margin-bottom: 0;
     text-align: center;
-    
+
     .el-button {
       width: 120px;
     }
@@ -417,7 +395,7 @@ onMounted(() => {
 .profile-tabs {
   :deep(.el-tabs__item) {
     font-size: 15px;
-    
+
     &.is-active {
       font-weight: 600;
     }

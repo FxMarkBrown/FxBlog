@@ -5,10 +5,20 @@
         <div class="toolbar">
           <el-form :inline="true" :model="queryParams" class="filter-form">
             <el-form-item label="用户">
-              <el-input v-model="queryParams.userKeyword" placeholder="昵称 / 用户名" clearable @keyup.enter="handleQuery" />
+              <el-input
+                v-model="queryParams.userKeyword"
+                placeholder="昵称 / 用户名"
+                clearable
+                @keyup.enter="handleQuery"
+              />
             </el-form-item>
             <el-form-item label="类型">
-              <el-select v-model="queryParams.bizType" placeholder="全部" clearable style="width: 140px">
+              <el-select
+                v-model="queryParams.bizType"
+                placeholder="全部"
+                clearable
+                style="width: 140px"
+              >
                 <el-option label="签到" value="sign" />
                 <el-option label="发文" value="article" />
                 <el-option label="点赞" value="like" />
@@ -30,10 +40,14 @@
         <el-table-column label="用户" min-width="190">
           <template #default="scope">
             <div class="user-cell">
-              <el-avatar :src="scope.row.userAvatar" :size="34">{{ getUserInitial(scope.row.userNickname) }}</el-avatar>
+              <el-avatar :src="scope.row.userAvatar" :size="34">{{
+                getUserInitial(scope.row.userNickname)
+              }}</el-avatar>
               <div class="user-meta">
                 <span class="user-name">{{ scope.row.userNickname || '-' }}</span>
-                <span class="user-id">@{{ scope.row.username || '-' }} / UID {{ scope.row.userId }}</span>
+                <span class="user-id"
+                  >@{{ scope.row.username || '-' }} / UID {{ scope.row.userId }}</span
+                >
               </div>
             </div>
           </template>
@@ -47,7 +61,13 @@
         </el-table-column>
         <el-table-column label="额度变化" width="140" align="center">
           <template #default="scope">
-            <span class="delta" :class="{ positive: Number(scope.row.tokenDelta) > 0, negative: Number(scope.row.tokenDelta) < 0 }">
+            <span
+              class="delta"
+              :class="{
+                positive: Number(scope.row.tokenDelta) > 0,
+                negative: Number(scope.row.tokenDelta) < 0
+              }"
+            >
               {{ formatDelta(scope.row.tokenDelta) }}
             </span>
           </template>
@@ -74,7 +94,7 @@
 </template>
 
 <script setup lang="ts">
-import {getAiQuotaLogListApi} from '@/api/ai/quota'
+import { getAiQuotaLogListApi } from '@/api/ai/quota'
 
 const queryParams = reactive({
   pageNum: 1,

@@ -15,26 +15,28 @@
     >
       <el-icon><Plus /></el-icon>
       <template #tip>
-        <div class="upload-tip">
-          只能上传jpg/png/gif文件，且不超过{{ fileSize }}MB
-        </div>
+        <div class="upload-tip">只能上传jpg/png/gif文件，且不超过{{ fileSize }}MB</div>
       </template>
     </el-upload>
 
     <!-- 图片预览对话框 -->
     <el-dialog v-model="dialogVisible" top="5vh" title="预览图片">
-      <img :src="dialogImageUrl" alt="Preview Image" style="width: 100%; height: 500px; object-fit: contain;" />
+      <img
+        :src="dialogImageUrl"
+        alt="Preview Image"
+        style="width: 100%; height: 500px; object-fit: contain"
+      />
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import type {UploadProps, UploadUserFile} from 'element-plus'
-import {ElMessage} from 'element-plus'
-import {Plus} from '@element-plus/icons-vue'
-import {getToken} from '@/utils/auth'
-import type {UploadedFileDetail} from '@/api/file'
-import {deleteFileApi} from '@/api/file'
+import type { UploadProps, UploadUserFile } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import { Plus } from '@element-plus/icons-vue'
+import { getToken } from '@/utils/auth'
+import type { UploadedFileDetail } from '@/api/file'
+import { deleteFileApi } from '@/api/file'
 
 const props = defineProps({
   modelValue: {
@@ -80,14 +82,16 @@ const initFileList = () => {
     fileList.value = []
     return
   }
-  
+
   if (typeof props.modelValue === 'string') {
-    fileList.value = [{
-      name: props.modelValue.substring(props.modelValue.lastIndexOf('/') + 1),
-      url: props.modelValue
-    }]
+    fileList.value = [
+      {
+        name: props.modelValue.substring(props.modelValue.lastIndexOf('/') + 1),
+        url: props.modelValue
+      }
+    ]
   } else if (Array.isArray(props.modelValue)) {
-    fileList.value = (props.modelValue as string[]).map(url => ({
+    fileList.value = (props.modelValue as string[]).map((url) => ({
       name: url.substring(url.lastIndexOf('/') + 1),
       url: url
     }))
@@ -105,7 +109,7 @@ const handleRemove: UploadProps['onRemove'] = async (uploadFile: any) => {
   try {
     await deleteFileApi(uploadFile.url)
     if (props.multiple) {
-      const urls = (props.modelValue as string[]).filter(url => url !== uploadFile.url)
+      const urls = (props.modelValue as string[]).filter((url) => url !== uploadFile.url)
       emit('update:modelValue', urls)
     } else {
       emit('update:modelValue', '')
@@ -129,16 +133,18 @@ const handleSuccess: UploadProps['onSuccess'] = async (response) => {
       const urls = props.modelValue ? [...(props.modelValue as string[])] : []
       urls.push(url)
       emit('update:modelValue', urls)
-      fileList.value = urls.map(u => ({
+      fileList.value = urls.map((u) => ({
         name: u.substring(u.lastIndexOf('/') + 1),
         url: u
       }))
     } else {
       emit('update:modelValue', url)
-      fileList.value = [{
-        name: url.substring(url.lastIndexOf('/') + 1),
-        url: url
-      }]
+      fileList.value = [
+        {
+          name: url.substring(url.lastIndexOf('/') + 1),
+          url: url
+        }
+      ]
     }
     ElMessage.success('上传成功')
   } else {
@@ -168,9 +174,13 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
 }
 
 // 监听modelValue变化
-watch(() => props.modelValue, () => {
-  initFileList()
-}, { immediate: true })
+watch(
+  () => props.modelValue,
+  () => {
+    initFileList()
+  },
+  { immediate: true }
+)
 </script>
 
 <style scoped>
@@ -189,4 +199,4 @@ watch(() => props.modelValue, () => {
 :deep(.el-upload-list--picture-card) {
   --el-upload-list-picture-card-size: 100px;
 }
-</style> 
+</style>

@@ -5,11 +5,15 @@
         <div class="card-header">
           <div>
             <div class="card-title">额度规则</div>
-            <div class="card-tip">把门槛和奖励收口到后台，默认按“签到保底、点赞收藏做主增量、发文给明显跃迁”来平衡。</div>
+            <div class="card-tip">
+              把门槛和奖励收口到后台，默认按“签到保底、点赞收藏做主增量、发文给明显跃迁”来平衡。
+            </div>
           </div>
           <div class="header-actions">
             <el-button :loading="ruleLoading" @click="loadRule">刷新</el-button>
-            <el-button type="primary" :loading="saveLoading" @click="handleSaveRule">保存规则</el-button>
+            <el-button type="primary" :loading="saveLoading" @click="handleSaveRule"
+              >保存规则</el-button
+            >
           </div>
         </div>
       </template>
@@ -23,37 +27,72 @@
           </el-col>
           <el-col :xs="24" :md="12" :xl="8">
             <el-form-item label="起聊门槛">
-              <el-input-number v-model="ruleForm.minRequestTokens" :min="1" :step="100" :controls-position="'right'" />
+              <el-input-number
+                v-model="ruleForm.minRequestTokens"
+                :min="1"
+                :step="100"
+                :controls-position="'right'"
+              />
             </el-form-item>
           </el-col>
           <el-col :xs="24" :md="12" :xl="8">
             <el-form-item label="签到奖励">
-              <el-input-number v-model="ruleForm.signRewardTokens" :min="0" :step="200" :controls-position="'right'" />
+              <el-input-number
+                v-model="ruleForm.signRewardTokens"
+                :min="0"
+                :step="200"
+                :controls-position="'right'"
+              />
             </el-form-item>
           </el-col>
           <el-col :xs="24" :md="12" :xl="8">
             <el-form-item label="发文奖励">
-              <el-input-number v-model="ruleForm.articleRewardTokens" :min="0" :step="1000" :controls-position="'right'" />
+              <el-input-number
+                v-model="ruleForm.articleRewardTokens"
+                :min="0"
+                :step="1000"
+                :controls-position="'right'"
+              />
             </el-form-item>
           </el-col>
           <el-col :xs="24" :md="12" :xl="8">
             <el-form-item label="点赞奖励">
-              <el-input-number v-model="ruleForm.likeRewardTokens" :min="0" :step="100" :controls-position="'right'" />
+              <el-input-number
+                v-model="ruleForm.likeRewardTokens"
+                :min="0"
+                :step="100"
+                :controls-position="'right'"
+              />
             </el-form-item>
           </el-col>
           <el-col :xs="24" :md="12" :xl="8">
             <el-form-item label="收藏奖励">
-              <el-input-number v-model="ruleForm.favoriteRewardTokens" :min="0" :step="100" :controls-position="'right'" />
+              <el-input-number
+                v-model="ruleForm.favoriteRewardTokens"
+                :min="0"
+                :step="100"
+                :controls-position="'right'"
+              />
             </el-form-item>
           </el-col>
           <el-col :xs="24" :md="12" :xl="8">
             <el-form-item label="每日点赞上限">
-              <el-input-number v-model="ruleForm.likeDailyLimit" :min="0" :step="1" :controls-position="'right'" />
+              <el-input-number
+                v-model="ruleForm.likeDailyLimit"
+                :min="0"
+                :step="1"
+                :controls-position="'right'"
+              />
             </el-form-item>
           </el-col>
           <el-col :xs="24" :md="12" :xl="8">
             <el-form-item label="单篇每日上限">
-              <el-input-number v-model="ruleForm.likeDailyPerArticleLimit" :min="0" :step="1" :controls-position="'right'" />
+              <el-input-number
+                v-model="ruleForm.likeDailyPerArticleLimit"
+                :min="0"
+                :step="1"
+                :controls-position="'right'"
+              />
             </el-form-item>
           </el-col>
         </el-row>
@@ -65,14 +104,21 @@
         <div class="list-toolbar">
           <el-form :inline="true" :model="queryParams" class="filter-form">
             <el-form-item label="用户">
-              <el-input v-model="queryParams.userKeyword" placeholder="昵称 / 用户名" clearable @keyup.enter="handleQuery" />
+              <el-input
+                v-model="queryParams.userKeyword"
+                placeholder="昵称 / 用户名"
+                clearable
+                @keyup.enter="handleQuery"
+              />
             </el-form-item>
             <el-form-item>
               <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
               <el-button icon="Refresh" @click="handleReset">重置</el-button>
             </el-form-item>
           </el-form>
-          <div class="toolbar-tip">点赞/收藏统计的是“用户对他人已发布文章的互动”，今天的点赞用量也会一起显示，方便直接看限额是否合适。</div>
+          <div class="toolbar-tip">
+            点赞/收藏统计的是“用户对他人已发布文章的互动”，今天的点赞用量也会一起显示，方便直接看限额是否合适。
+          </div>
         </div>
       </template>
 
@@ -80,10 +126,14 @@
         <el-table-column label="用户" min-width="200">
           <template #default="scope">
             <div class="user-cell">
-              <el-avatar :src="scope.row.userAvatar" :size="36">{{ getUserInitial(scope.row.userNickname) }}</el-avatar>
+              <el-avatar :src="scope.row.userAvatar" :size="36">{{
+                getUserInitial(scope.row.userNickname)
+              }}</el-avatar>
               <div class="user-meta">
                 <span class="user-name">{{ scope.row.userNickname || '-' }}</span>
-                <span class="user-id">@{{ scope.row.username || '-' }} / UID {{ scope.row.userId }}</span>
+                <span class="user-id"
+                  >@{{ scope.row.username || '-' }} / UID {{ scope.row.userId }}</span
+                >
               </div>
             </div>
           </template>
@@ -100,28 +150,37 @@
           <template #default="scope">{{ formatToken(scope.row.usedTokens) }}</template>
         </el-table-column>
         <el-table-column label="签到" min-width="130" align="center">
-          <template #default="scope">{{ scope.row.cumulativeSignDays || 0 }} 天 / {{ formatToken(scope.row.signRewardTokens) }}</template>
+          <template #default="scope"
+            >{{ scope.row.cumulativeSignDays || 0 }} 天 /
+            {{ formatToken(scope.row.signRewardTokens) }}</template
+          >
         </el-table-column>
         <el-table-column label="发文" min-width="130" align="center">
-          <template #default="scope">{{ scope.row.articleCount || 0 }} 篇 / {{ formatToken(scope.row.articleRewardTokens) }}</template>
+          <template #default="scope"
+            >{{ scope.row.articleCount || 0 }} 篇 /
+            {{ formatToken(scope.row.articleRewardTokens) }}</template
+          >
         </el-table-column>
         <el-table-column label="点赞" min-width="130" align="center">
-          <template #default="scope">{{ scope.row.likedArticleCount || 0 }} 次 / {{ formatToken(scope.row.likeRewardTokens) }}</template>
+          <template #default="scope"
+            >{{ scope.row.likedArticleCount || 0 }} 次 /
+            {{ formatToken(scope.row.likeRewardTokens) }}</template
+          >
         </el-table-column>
         <el-table-column label="收藏" min-width="130" align="center">
-          <template #default="scope">{{ scope.row.favoriteArticleCount || 0 }} 篇 / {{ formatToken(scope.row.favoriteRewardTokens) }}</template>
+          <template #default="scope"
+            >{{ scope.row.favoriteArticleCount || 0 }} 篇 /
+            {{ formatToken(scope.row.favoriteRewardTokens) }}</template
+          >
         </el-table-column>
         <el-table-column label="今日点赞" min-width="170" align="center">
           <template #default="scope">
             <span>
               {{ scope.row.todayLikeCount || 0 }}
               <template v-if="scope.row.likeDailyLimit > 0">
-                / {{ scope.row.likeDailyLimit }}
-                ，剩 {{ scope.row.todayLikeRemainingCount || 0 }}
+                / {{ scope.row.likeDailyLimit }} ，剩 {{ scope.row.todayLikeRemainingCount || 0 }}
               </template>
-              <template v-else>
-                / 不限
-              </template>
+              <template v-else> / 不限 </template>
             </span>
           </template>
         </el-table-column>
@@ -157,8 +216,13 @@
 </template>
 
 <script setup lang="ts">
-import {ElMessage, ElMessageBox} from 'element-plus'
-import {getAiQuotaListApi, getAiQuotaRuleApi, updateAiQuotaManualApi, updateAiQuotaRuleApi} from '@/api/ai/quota'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  getAiQuotaListApi,
+  getAiQuotaRuleApi,
+  updateAiQuotaManualApi,
+  updateAiQuotaRuleApi
+} from '@/api/ai/quota'
 
 /**
  * 生成额度规则默认值，便于回填与重置表单。

@@ -2,18 +2,33 @@
   <div class="app-container">
     <div class="search-wrapper">
       <!-- 搜索工具栏 -->
-      <el-form :model="queryParams" ref="queryFormRef" :inline="true">
+      <el-form ref="queryFormRef" :model="queryParams" :inline="true">
         <el-form-item label="任务名称" prop="jobName">
-          <el-input v-model="queryParams.jobName" placeholder="请输入任务名称" clearable @keyup.enter="handleQuery" />
+          <el-input
+            v-model="queryParams.jobName"
+            placeholder="请输入任务名称"
+            clearable
+            @keyup.enter="handleQuery"
+          />
         </el-form-item>
         <el-form-item label="任务组名" prop="jobGroup">
           <el-select v-model="queryParams.jobGroup" placeholder="请选择任务组名" clearable>
-            <el-option v-for="dict in jobGroupOptions" :key="dict.value" :label="dict.label" :value="dict.value" />
+            <el-option
+              v-for="dict in jobGroupOptions"
+              :key="dict.value"
+              :label="dict.label"
+              :value="dict.value"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="执行状态" prop="status">
           <el-select v-model="queryParams.status" placeholder="请选择执行状态" clearable>
-            <el-option v-for="dict in statusOptions" :key="dict.value" :label="dict.label" :value="dict.value" />
+            <el-option
+              v-for="dict in statusOptions"
+              :key="dict.value"
+              :label="dict.label"
+              :value="dict.value"
+            />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -27,24 +42,50 @@
       <!-- 操作工具栏 -->
       <template #header>
         <div class="card-header">
-          <el-button v-permission="['sys:jobLog:delete']" type="danger" icon="Delete" :disabled="!selectedIds.length"
-            @click="handleBatchDelete">批量删除</el-button>
-          <el-button v-permission="['sys:jobLog:clean']" type="danger" icon="Delete"
-            @click="handleClean">清空日志</el-button>
+          <el-button
+            v-permission="['sys:jobLog:delete']"
+            type="danger"
+            icon="Delete"
+            :disabled="!selectedIds.length"
+            @click="handleBatchDelete"
+            >批量删除</el-button
+          >
+          <el-button
+            v-permission="['sys:jobLog:clean']"
+            type="danger"
+            icon="Delete"
+            @click="handleClean"
+            >清空日志</el-button
+          >
         </div>
       </template>
 
       <!-- 数据表格 -->
       <el-table v-loading="loading" :data="logList" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" align="center" />
-        <el-table-column label="任务名称" align="center" prop="jobName" :show-overflow-tooltip="true" />
+        <el-table-column
+          label="任务名称"
+          align="center"
+          prop="jobName"
+          :show-overflow-tooltip="true"
+        />
         <el-table-column label="任务组名" align="center" prop="jobGroup">
           <template #default="{ row }">
             {{ jobGroupFormat(row) }}
           </template>
         </el-table-column>
-        <el-table-column label="调用目标字符串" align="center" prop="invokeTarget" :show-overflow-tooltip="true" />
-        <el-table-column label="日志信息" align="center" prop="jobMessage" :show-overflow-tooltip="true" />
+        <el-table-column
+          label="调用目标字符串"
+          align="center"
+          prop="invokeTarget"
+          :show-overflow-tooltip="true"
+        />
+        <el-table-column
+          label="日志信息"
+          align="center"
+          prop="jobMessage"
+          :show-overflow-tooltip="true"
+        />
         <el-table-column label="执行状态" align="center">
           <template #default="{ row }">
             <el-tag :type="row.status === 0 ? 'success' : 'danger'">
@@ -55,18 +96,33 @@
         <el-table-column label="执行时间" align="center" prop="createTime" width="180" />
         <el-table-column label="操作" align="center" width="150">
           <template #default="{ row }">
-            <el-button link type="primary" icon="Document" @click="handleDetail(row)">详情</el-button>
-            <el-button v-permission="['sys:jobLog:delete']" link type="danger" icon="Delete"
-              @click="handleDelete(row)">删除</el-button>
+            <el-button link type="primary" icon="Document" @click="handleDetail(row)"
+              >详情</el-button
+            >
+            <el-button
+              v-permission="['sys:jobLog:delete']"
+              link
+              type="danger"
+              icon="Delete"
+              @click="handleDelete(row)"
+              >删除</el-button
+            >
           </template>
         </el-table-column>
       </el-table>
 
       <!-- 分页 -->
       <div class="pagination-container">
-        <el-pagination background v-model:current-page="queryParams.pageNum" v-model:page-size="queryParams.pageSize"
-          :total="total" :page-sizes="[10, 20, 30, 50]" layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange" @current-change="handleCurrentChange" />
+        <el-pagination
+          v-model:current-page="queryParams.pageNum"
+          v-model:page-size="queryParams.pageSize"
+          background
+          :total="total"
+          :page-sizes="[10, 20, 30, 50]"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+        />
       </div>
     </el-card>
 
@@ -90,8 +146,8 @@
         </el-descriptions-item>
         <el-descriptions-item label="执行状态">
           <el-tag :type="form.status === 0 ? 'success' : 'danger'">
-              {{ statusFormat(form) }}
-            </el-tag>
+            {{ statusFormat(form) }}
+          </el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="开始时间">
           {{ form.startTime }}
@@ -100,8 +156,16 @@
           {{ form.stopTime }}
         </el-descriptions-item>
         <el-descriptions-item label="异常信息">
-          <pre style="white-space: pre-wrap; word-wrap: break-word; max-height: 300px;
-           max-width: 500px; overflow-y: auto; margin: 0;">{{ form.exceptionInfo }}</pre>
+          <pre
+            style="
+              white-space: pre-wrap;
+              word-wrap: break-word;
+              max-height: 300px;
+              max-width: 500px;
+              overflow-y: auto;
+              margin: 0;
+            "
+            >{{ form.exceptionInfo }}</pre>
         </el-descriptions-item>
       </el-descriptions>
     </el-drawer>
@@ -109,8 +173,8 @@
 </template>
 
 <script setup lang="ts">
-import {ElMessage, ElMessageBox} from 'element-plus'
-import {cleanJobLogApi, delleteJobLogApi, listJobLogApi} from '@/api/monitor/jobLog'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { cleanJobLogApi, delleteJobLogApi, listJobLogApi } from '@/api/monitor/jobLog'
 
 // 遍历器
 const queryFormRef = ref()
@@ -152,12 +216,12 @@ const form = ref<any>({})
 
 // 任务组名格式化
 const jobGroupFormat = (row: any) => {
-  return jobGroupOptions.find(item => item.value === row.jobGroup)?.label
+  return jobGroupOptions.find((item) => item.value === row.jobGroup)?.label
 }
 
 // 状态格式化
 const statusFormat = (row: any) => {
-  return statusOptions.find(item => item.value === row.status)?.label
+  return statusOptions.find((item) => item.value === row.status)?.label
 }
 
 /** 查询调度日志列表 */
@@ -189,7 +253,7 @@ const resetQuery = () => {
 
 /** 多选框选中数据 */
 const handleSelectionChange = (selection: any[]) => {
-  selectedIds.value = selection.map(item => item.id)
+  selectedIds.value = selection.map((item) => item.id)
 }
 
 /** 详情按钮操作 */
@@ -205,13 +269,11 @@ const handleDelete = async (row: any) => {
     await delleteJobLogApi(row.id)
     await getList()
     ElMessage.success('删除成功')
-  } catch (error) {
-  }
+  } catch (error) {}
 }
 
 /** 批量删除按钮操作 */
 const handleBatchDelete = async () => {
-
   if (!selectedIds.value?.length) {
     return ElMessage.warning('请选择要删除的数据')
   }
@@ -221,8 +283,7 @@ const handleBatchDelete = async () => {
     selectedIds.value = []
     await getList()
     ElMessage.success('删除成功')
-  } catch (error) {
-  }
+  } catch (error) {}
 }
 
 /** 清空按钮操作 */
@@ -232,8 +293,7 @@ const handleClean = async () => {
     await cleanJobLogApi()
     await getList()
     ElMessage.success('清空成功')
-  } catch (error) {
-  }
+  } catch (error) {}
 }
 
 /** 分页大小改变 */

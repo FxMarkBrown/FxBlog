@@ -11,11 +11,11 @@ export function listJobLogApi(query: any) {
 
 // 删除调度日志
 export function delleteJobLogApi(id: any) {
-    return request({
-      url: `/monitor/jobLog/delete/${id}`,
-      method: 'delete'
-    })
-  }
+  return request({
+    url: `/monitor/jobLog/delete/${id}`,
+    method: 'delete'
+  })
+}
 
 // 清空调度日志
 export function cleanJobLogApi() {
@@ -23,4 +23,4 @@ export function cleanJobLogApi() {
     url: '/monitor/jobLog/clean',
     method: 'delete'
   })
-} 
+}

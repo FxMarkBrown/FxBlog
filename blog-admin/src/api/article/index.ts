@@ -13,7 +13,7 @@ export function getArticleListApi(params: any) {
 export function getDetailApi(id: any) {
   return request({
     url: `/sys/article/detail/${id}`,
-    method: 'get',
+    method: 'get'
   })
 }
 
@@ -35,7 +35,6 @@ export function updateArticleApi(data: any) {
   })
 }
 
-
 // 修改文章状态
 export function updateStatusApi(data: any) {
   return request({
@@ -51,4 +50,3 @@ export function deleteArticleApi(ids: any) {
     method: 'delete'
   })
 }
-

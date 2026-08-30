@@ -1,7 +1,7 @@
 interface Settings {
-  title: string;
-  shortTitle: string;
-  description: string;
+  title: string
+  shortTitle: string
+  description: string
 }
 
 const settings: Settings = {
@@ -10,4 +10,4 @@ const settings: Settings = {
   description: "FxMarkBrown's Blog"
 }
 
-export default settings 
+export default settings

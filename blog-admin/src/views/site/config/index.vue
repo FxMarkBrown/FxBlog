@@ -78,20 +78,19 @@
                 <Toolbar
                   class="fx-wang-editor__toolbar"
                   :editor="editorRef"
-                  :defaultConfig="toolbarConfig"
+                  :default-config="toolbarConfig"
                   :mode="mode"
                 />
                 <Editor
                   v-model="form.aboutMe"
                   class="fx-wang-editor__content"
                   style="height: 420px; overflow-y: hidden"
-                  :defaultConfig="editorConfig"
+                  :default-config="editorConfig"
                   :mode="mode"
-                  @onCreated="handleCreated"
+                  @on-created="handleCreated"
                 />
               </div>
             </el-form-item>
-
           </el-form>
         </el-tab-pane>
 
@@ -198,7 +197,12 @@
               <el-col :span="12">
                 <el-form-item label="登录方式" prop="loginTypeList">
                   <el-select v-model="loginTypeList" multiple placeholder="请选择登录方式">
-                    <el-option v-for="item in loginTypes" :label="item.label" :value="item.value" />
+                    <el-option
+                      v-for="item in loginTypes"
+                      :key="item.value"
+                      :label="item.label"
+                      :value="item.value"
+                    />
                   </el-select>
                 </el-form-item>
               </el-col>
@@ -248,9 +252,14 @@
             </el-row>
             <el-row :gutter="20">
               <el-col :span="8">
-                <el-form-item label="手动天气" v-if="form.weatherMode === 'manual'">
+                <el-form-item v-if="form.weatherMode === 'manual'" label="手动天气">
                   <el-select v-model="form.weatherManualType" placeholder="请选择天气类型">
-                    <el-option v-for="item in weatherTypes" :key="item.value" :label="item.label" :value="item.value" />
+                    <el-option
+                      v-for="item in weatherTypes"
+                      :key="item.value"
+                      :label="item.label"
+                      :value="item.value"
+                    />
                   </el-select>
                 </el-form-item>
               </el-col>
@@ -265,7 +274,12 @@
               </el-col>
               <el-col :span="8">
                 <el-form-item label="刷新间隔(分钟)">
-                  <el-input-number v-model="form.weatherRefreshMinutes" :min="10" :max="180" :step="10" />
+                  <el-input-number
+                    v-model="form.weatherRefreshMinutes"
+                    :min="10"
+                    :max="180"
+                    :step="10"
+                  />
                 </el-form-item>
               </el-col>
             </el-row>
@@ -292,23 +306,30 @@
 
       <!-- 底部按钮 -->
       <div class="bottom-buttons">
-        <el-button icon="Refresh" type="primary" :loading="submitLoading" v-permission="['sys:web:update']" @click="submitForm">保存配置</el-button>
+        <el-button
+          v-permission="['sys:web:update']"
+          icon="Refresh"
+          type="primary"
+          :loading="submitLoading"
+          @click="submitForm"
+          >保存配置</el-button
+        >
       </div>
     </el-card>
   </div>
 </template>
 
 <script setup lang="ts">
-import type {FormInstance} from 'element-plus'
-import {ElMessage} from 'element-plus'
+import type { FormInstance } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import UploadImage from '@/components/Upload/Image.vue'
-import {getWebConfigApi, updateWebConfigApi} from '@/api/site/config'
-import {getDictDataByDictTypesApi} from '@/api/system/dict'
-import type {UploadedFileDetail} from '@/api/file'
-import {uploadApi} from '@/api/file'
+import { getWebConfigApi, updateWebConfigApi } from '@/api/site/config'
+import { getDictDataByDictTypesApi } from '@/api/system/dict'
+import type { UploadedFileDetail } from '@/api/file'
+import { uploadApi } from '@/api/file'
 
-import {Editor, Toolbar} from '@wangeditor-next/editor-for-vue'
-import type {IDomEditor, IEditorConfig, IToolbarConfig} from '@wangeditor-next/editor'
+import { Editor, Toolbar } from '@wangeditor-next/editor-for-vue'
+import type { IDomEditor, IEditorConfig, IToolbarConfig } from '@wangeditor-next/editor'
 import '@wangeditor-next/editor/dist/css/style.css'
 import {
   ChatDotRound,
@@ -321,34 +342,33 @@ import {
   Share,
   Tools,
   User
-} from "@element-plus/icons-vue";
+} from '@element-plus/icons-vue'
 
 type WangEditorInsertFn = (url: string, alt?: string, href?: string) => void
 
-const editorRef = shallowRef<IDomEditor | null>(null)
+const editorRef = shallowRef<IDomEditor>()
 const mode = 'default'
 const toolbarConfig: Partial<IToolbarConfig> = {}
 const editorConfig: Partial<IEditorConfig> = {
-  placeholder: "请输入内容...",
+  placeholder: '请输入内容...',
   MENU_CONF: {
     // 配置上传图片
     uploadImage: {
-      customUpload: contentUpload,
+      customUpload: contentUpload
     },
 
     codeSelectLang: {
       // 代码语言
       codeLangs: [
-        { text: "CSS", value: "css" },
-        { text: "HTML", value: "html" },
-        { text: "XML", value: "xml" },
-        { text: "Java", value: "java" },
+        { text: 'CSS', value: 'css' },
+        { text: 'HTML', value: 'html' },
+        { text: 'XML', value: 'xml' },
+        { text: 'Java', value: 'java' }
         // 其他
-      ],
-    },
-  },
+      ]
+    }
+  }
 }
-
 
 const activeTab = ref('basic')
 const formRef = ref<FormInstance>()
@@ -460,44 +480,46 @@ const handleCreated = (editor: IDomEditor) => {
 //编辑器上传图片
 function contentUpload(file: File, insertFn: WangEditorInsertFn) {
   const formData = new FormData()
-  formData.append("file", file)
+  formData.append('file', file)
   uploadApi(formData).then((res: { data?: UploadedFileDetail }) => {
     const url = String(res?.data?.url || '')
-    insertFn(url, "", url)
+    insertFn(url, '', url)
   })
 }
 
 onMounted(() => {
-  getWebConfigApi().then((res) => {
-    form.value = {
-      ...form.value,
-      ...res.data,
-      weatherEnabled: Number(res.data.weatherEnabled ?? 1),
-      weatherCity: res.data.weatherCity || '北京',
-      weatherMode: res.data.weatherMode || 'auto',
-      weatherManualType: res.data.weatherManualType || '',
-      weatherIntensity: res.data.weatherIntensity || 'normal',
-      weatherRefreshMinutes: Number(res.data.weatherRefreshMinutes ?? 30),
-      weatherAdcode: res.data.weatherAdcode || '',
-      weatherLng: res.data.weatherLng || '',
-      weatherLat: res.data.weatherLat || ''
-    }
-    try {
-      showList.value = form.value.showList ? JSON.parse(form.value.showList) : []
-    } catch (error) {
+  getWebConfigApi()
+    .then((res) => {
+      form.value = {
+        ...form.value,
+        ...res.data,
+        weatherEnabled: Number(res.data.weatherEnabled ?? 1),
+        weatherCity: res.data.weatherCity || '北京',
+        weatherMode: res.data.weatherMode || 'auto',
+        weatherManualType: res.data.weatherManualType || '',
+        weatherIntensity: res.data.weatherIntensity || 'normal',
+        weatherRefreshMinutes: Number(res.data.weatherRefreshMinutes ?? 30),
+        weatherAdcode: res.data.weatherAdcode || '',
+        weatherLng: res.data.weatherLng || '',
+        weatherLat: res.data.weatherLat || ''
+      }
+      try {
+        showList.value = form.value.showList ? JSON.parse(form.value.showList) : []
+      } catch (error) {
+        showList.value = []
+      }
+      try {
+        loginTypeList.value = form.value.loginTypeList ? JSON.parse(form.value.loginTypeList) : []
+      } catch (error) {
+        loginTypeList.value = []
+      }
+    })
+    .catch(() => {
       showList.value = []
-    }
-    try {
-      loginTypeList.value = form.value.loginTypeList ? JSON.parse(form.value.loginTypeList) : []
-    } catch (error) {
       loginTypeList.value = []
-    }
-  }).catch(() => {
-    showList.value = []
-    loginTypeList.value = []
-  })
+    })
 
-  getDictDataByDictTypes();
+  getDictDataByDictTypes()
 })
 
 onBeforeUnmount(() => {

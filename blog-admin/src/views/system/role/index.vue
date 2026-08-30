@@ -23,19 +23,17 @@
       <template #header>
         <div class="card-header">
           <ButtonGroup>
-            <el-button
-              v-permission="['sys:role:add']"
-              type="primary"
-              icon="Plus"
-              @click="handleAdd"
-            >新增</el-button>
+            <el-button v-permission="['sys:role:add']" type="primary" icon="Plus" @click="handleAdd"
+              >新增</el-button
+            >
             <el-button
               v-permission="['sys:role:delete']"
               type="danger"
               icon="Delete"
               :disabled="selectedIds.length === 0"
               @click="handleBatchDelete"
-            >批量删除</el-button>
+              >批量删除</el-button
+            >
           </ButtonGroup>
         </div>
       </template>
@@ -50,8 +48,20 @@
         <el-table-column type="selection" width="55" align="center" />
         <el-table-column label="角色名称" align="center" prop="name" show-overflow-tooltip />
         <el-table-column label="角色编码" align="center" prop="code" show-overflow-tooltip />
-        <el-table-column label="备注" prop="remarks"  align="center" width="400" show-overflow-tooltip />
-        <el-table-column label="创建时间" align="center" prop="createTime" width="180" show-overflow-tooltip />
+        <el-table-column
+          label="备注"
+          prop="remarks"
+          align="center"
+          width="400"
+          show-overflow-tooltip
+        />
+        <el-table-column
+          label="创建时间"
+          align="center"
+          prop="createTime"
+          width="180"
+          show-overflow-tooltip
+        />
         <el-table-column label="操作" align="center" width="250" fixed="right">
           <template #default="scope">
             <el-button
@@ -60,21 +70,24 @@
               link
               icon="Edit"
               @click="handleUpdate(scope.row)"
-            >修改</el-button>
+              >修改</el-button
+            >
             <el-button
               v-permission="['sys:role:menus']"
               type="primary"
               link
               icon="Setting"
               @click="handlePermission(scope.row)"
-            >权限</el-button>
+              >权限</el-button
+            >
             <el-button
               v-permission="['sys:role:delete']"
               type="danger"
               link
               icon="Delete"
               @click="handleDelete(scope.row)"
-            >删除</el-button>
+              >删除</el-button
+            >
           </template>
         </el-table-column>
       </el-table>
@@ -96,18 +109,13 @@
 
     <!-- 添加或修改角色对话框 -->
     <el-dialog
-      :title="dialog.title"
       v-model="dialog.visible"
+      :title="dialog.title"
       width="580px"
       append-to-body
       destroy-on-close
     >
-      <el-form
-        ref="roleFormRef"
-        :model="roleForm"
-        :rules="rules"
-        label-width="100px"
-      >
+      <el-form ref="roleFormRef" :model="roleForm" :rules="rules" label-width="100px">
         <el-form-item label="角色名称" prop="name">
           <el-input v-model="roleForm.name" placeholder="请输入角色名称" />
         </el-form-item>
@@ -115,22 +123,26 @@
           <el-input v-model="roleForm.code" placeholder="请输入角色编码" />
         </el-form-item>
         <el-form-item label="备注">
-          <el-input v-model="roleForm.remarks" type="textarea" :rows="3" placeholder="请输入备注信息" />
+          <el-input
+            v-model="roleForm.remarks"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入备注信息"
+          />
         </el-form-item>
       </el-form>
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="cancel">取 消</el-button>
           <el-button type="primary" :loading="submitLoading" @click="submitForm">确 定</el-button>
-
         </div>
       </template>
     </el-dialog>
 
     <!-- 分配权限对话框 -->
     <el-dialog
-      title="分配权限"
       v-model="permissionDialog.visible"
+      title="分配权限"
       width="600px"
       append-to-body
       destroy-on-close
@@ -140,22 +152,24 @@
         <el-form-item label="角色名称">
           <el-input v-model="permissionDialog.roleInfo.name" disabled />
         </el-form-item>
-          <el-form-item label="权限设置">
-            <el-scrollbar height="400px">
-              <el-tree
-                ref="menuTreeRef"
-                node-key="id"
-                show-checkbox
-                :props="{ label: 'title', children: 'children' }"
-                :data="menuOptions"
-                :default-expand-all="true"
-              ></el-tree>
-            </el-scrollbar>
-          </el-form-item>
+        <el-form-item label="权限设置">
+          <el-scrollbar height="400px">
+            <el-tree
+              ref="menuTreeRef"
+              node-key="id"
+              show-checkbox
+              :props="{ label: 'title', children: 'children' }"
+              :data="menuOptions"
+              :default-expand-all="true"
+            ></el-tree>
+          </el-scrollbar>
+        </el-form-item>
       </el-form>
       <template #footer>
         <div class="dialog-footer">
-          <el-button type="primary" :loading="submitLoading" @click="submitPermission">确 定</el-button>
+          <el-button type="primary" :loading="submitLoading" @click="submitPermission"
+            >确 定</el-button
+          >
           <el-button @click="permissionDialog.visible = false">取 消</el-button>
         </div>
       </template>
@@ -164,8 +178,8 @@
 </template>
 
 <script setup lang="ts">
-import type {FormInstance, FormRules} from 'element-plus'
-import {ElMessage, ElMessageBox} from 'element-plus'
+import type { FormInstance, FormRules } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   createRoleApi,
   deleteRoleApi,
@@ -174,7 +188,7 @@ import {
   updateRoleApi,
   updateRoleMenusApi
 } from '@/api/system/role'
-import {getMenuListApi} from '@/api/system/menu'
+import { getMenuListApi } from '@/api/system/menu'
 import ButtonGroup from '@/components/ButtonGroup/index.vue'
 
 // 查询参数
@@ -209,12 +223,8 @@ const roleForm = reactive({
 
 // 表单校验规则
 const rules = reactive<FormRules>({
-  name: [
-    { required: true, message: '角色名称不能为空', trigger: 'blur' }
-  ],
-  code: [
-    { required: true, message: '角色编码不能为空', trigger: 'blur' }
-  ]
+  name: [{ required: true, message: '角色名称不能为空', trigger: 'blur' }],
+  code: [{ required: true, message: '角色编码不能为空', trigger: 'blur' }]
 })
 
 // 权限设置弹窗
@@ -233,7 +243,7 @@ const selectedIds = ref<number[]>([])
 
 // 表格选择项变化处理
 const handleSelectionChange = (selection: any[]) => {
-  selectedIds.value = selection.map(item => item.id)
+  selectedIds.value = selection.map((item) => item.id)
 }
 
 // 批量删除处理
@@ -241,7 +251,7 @@ const handleBatchDelete = async () => {
   if (selectedIds.value.length === 0) {
     return
   }
-  
+
   try {
     await ElMessageBox.confirm('是否确认批量删除选中的角色?', '警告', {
       confirmButtonText: '确定',
@@ -252,8 +262,7 @@ const handleBatchDelete = async () => {
     ElMessage.success('批量删除成功')
     getList()
     selectedIds.value = []
-  } catch (error) {
-  }
+  } catch (error) {}
 }
 
 // 获取角色列表
@@ -316,7 +325,7 @@ const submitForm = async () => {
   if (!roleFormRef.value) return
   const valid = await roleFormRef.value.validate().catch(() => false)
   if (!valid) return
-  
+
   try {
     submitLoading.value = true
     if (roleForm.id) {
@@ -345,16 +354,14 @@ const handleDelete = async (row: any) => {
     await deleteRoleApi(row.id)
     ElMessage.success('删除成功')
     getList()
-  } catch (error) {
-  }
+  } catch (error) {}
 }
-
 
 // 打开权限设置
 const handlePermission = async (row: any) => {
   permissionDialog.roleInfo = { ...row }
   permissionDialog.visible = true
-  
+
   try {
     const { data } = await getRoleMenusApi(row.id)
     await nextTick()
@@ -368,8 +375,8 @@ const handlePermission = async (row: any) => {
 // 提交权限设置
 const submitPermission = async () => {
   const checkedMenuIds: number[] = menuTreeRef.value
-      .getCheckedNodes(false, true)
-      .map((node: any) => node.id);
+    .getCheckedNodes(false, true)
+    .map((node: any) => node.id)
   submitLoading.value = true
   try {
     await updateRoleMenusApi(permissionDialog.roleInfo.id, checkedMenuIds)
@@ -413,38 +420,43 @@ onMounted(() => {
   getMenuList()
 })
 
-watch(() => dialog.visible, (visible) => {
-  if (!visible) {
-    submitLoading.value = false
-    Object.assign(roleForm, {
-      id: undefined,
-      name: '',
-      code: '',
-      sort: 0,
-      status: 1,
-      remarks: ''
-    })
-    nextTick(() => {
-      roleFormRef.value?.clearValidate()
-    })
-  }
-})
-
-watch(() => permissionDialog.visible, (visible) => {
-  if (!visible) {
-    submitLoading.value = false
-    permissionDialog.roleInfo = {
-      id: undefined,
-      name: ''
+watch(
+  () => dialog.visible,
+  (visible) => {
+    if (!visible) {
+      submitLoading.value = false
+      Object.assign(roleForm, {
+        id: undefined,
+        name: '',
+        code: '',
+        sort: 0,
+        status: 1,
+        remarks: ''
+      })
+      nextTick(() => {
+        roleFormRef.value?.clearValidate()
+      })
     }
-    menuTreeRef.value?.setCheckedKeys([])
   }
-})
+)
+
+watch(
+  () => permissionDialog.visible,
+  (visible) => {
+    if (!visible) {
+      submitLoading.value = false
+      permissionDialog.roleInfo = {
+        id: undefined,
+        name: ''
+      }
+      menuTreeRef.value?.setCheckedKeys([])
+    }
+  }
+)
 </script>
 
 <style lang="scss" scoped>
 :deep(.el-form-item__content) {
-    display: block !important;
-  }
-
-</style> 
+  display: block !important;
+}
+</style>

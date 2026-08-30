@@ -1,9 +1,9 @@
 import router from '@/router'
-import {usePermissionStore} from '@/store/modules/permission'
-import {useSettingsStore, useUserStore} from '@/store'
+import { usePermissionStore } from '@/store/modules/permission'
+import { useSettingsStore, useUserStore } from '@/store'
 import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'
-import {getToken, setToken} from '@/utils/auth'
+import { getToken, setToken } from '@/utils/auth'
 
 NProgress.configure({ showSpinner: false })
 
@@ -28,7 +28,7 @@ function createCleanRoute(to: any) {
     path: to.path,
     query,
     hash: to.hash,
-    replace: true,
+    replace: true
   }
 }
 

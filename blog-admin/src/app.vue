@@ -1,13 +1,13 @@
 <template>
-  <div :class="{ 'dark': settingsStore.theme === 'dark' }">
-    <router-view ></router-view>
+  <div :class="{ dark: settingsStore.theme === 'dark' }">
+    <router-view></router-view>
   </div>
 </template>
 
 <script setup lang="ts">
-import {onMounted} from 'vue'
-import {useSettingsStore} from '@/store/modules/settings'
-import {initTheme} from '@/utils/theme'
+import { onMounted } from 'vue'
+import { useSettingsStore } from '@/store/modules/settings'
+import { initTheme } from '@/utils/theme'
 
 const settingsStore = useSettingsStore()
 
@@ -19,10 +19,8 @@ onMounted(() => {
 </script>
 
 <style lang="scss">
-
-
-
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   height: 100%;
@@ -41,8 +39,8 @@ html, body {
 :root[data-theme='dark'] {
   --el-bg-color: #141414;
   --el-bg-color-overlay: #1d1e1f;
-  --el-text-color-primary: #E5EAF3;
-  --el-text-color-regular: #CFD3DC;
+  --el-text-color-primary: #e5eaf3;
+  --el-text-color-regular: #cfd3dc;
   --el-border-color-light: #363637;
   --el-bg-color-page: #0a0a0a;
   --el-bg-color-container: #141414;
@@ -50,11 +48,11 @@ html, body {
   --el-mask-color: rgba(0, 0, 0, 0.8);
   --el-border-color: #363637;
   --el-border-color-lighter: #414243;
-  --el-text-color-secondary: #A3A6AD;
-  --el-text-color-placeholder: #8D9095;
-  --el-text-color-disabled: #6C6E72;
+  --el-text-color-secondary: #a3a6ad;
+  --el-text-color-placeholder: #8d9095;
+  --el-text-color-disabled: #6c6e72;
   --el-disabled-bg-color: #2d2d2d;
-  --el-disabled-text-color: #6C6E72;
+  --el-disabled-text-color: #6c6e72;
   --el-box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.3);
   --el-box-shadow-light: 0 1px 6px 0 rgba(0, 0, 0, 0.2);
 }
@@ -83,7 +81,8 @@ html, body {
     --el-table-header-bg-color: var(--el-bg-color-container);
     --el-table-row-hover-bg-color: var(--el-fill-color-light);
 
-    th, td {
+    th,
+    td {
       background-color: var(--el-bg-color-container);
       border-bottom-color: var(--el-border-color);
     }
@@ -103,19 +102,19 @@ html, body {
 }
 
 /* 字体大小设置 */
-[data-size="small"] {
+[data-size='small'] {
   --el-font-size-base: 12px !important;
   --el-font-size-large: 14px !important;
   --el-font-size-small: 10px !important;
 }
 
-[data-size="default"] {
+[data-size='default'] {
   --el-font-size-base: 14px !important;
   --el-font-size-large: 16px !important;
   --el-font-size-small: 12px !important;
 }
 
-[data-size="large"] {
+[data-size='large'] {
   --el-font-size-base: 16px !important;
   --el-font-size-large: 18px !important;
   --el-font-size-small: 14px !important;
@@ -191,12 +190,24 @@ body {
 }
 
 /* 标题和特殊文本 */
-h1 { font-size: calc(var(--el-font-size-base) * 2); }
-h2 { font-size: calc(var(--el-font-size-base) * 1.75); }
-h3 { font-size: calc(var(--el-font-size-base) * 1.5); }
-h4 { font-size: calc(var(--el-font-size-base) * 1.25); }
-h5 { font-size: calc(var(--el-font-size-base) * 1.1); }
-h6 { font-size: var(--el-font-size-base); }
+h1 {
+  font-size: calc(var(--el-font-size-base) * 2);
+}
+h2 {
+  font-size: calc(var(--el-font-size-base) * 1.75);
+}
+h3 {
+  font-size: calc(var(--el-font-size-base) * 1.5);
+}
+h4 {
+  font-size: calc(var(--el-font-size-base) * 1.25);
+}
+h5 {
+  font-size: calc(var(--el-font-size-base) * 1.1);
+}
+h6 {
+  font-size: var(--el-font-size-base);
+}
 
 /* 表格内容 */
 .el-table th,
@@ -249,5 +260,4 @@ h6 { font-size: var(--el-font-size-base); }
 .el-popover__title {
   font-family: 'Handwriting', sans-serif !important;
 }
-
 </style>

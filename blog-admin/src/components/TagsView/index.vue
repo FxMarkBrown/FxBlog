@@ -13,8 +13,8 @@
           <component :is="tag.meta.icon" />
         </el-icon>
         {{ tag.meta?.title }}
-        <el-icon 
-          v-if="!isAffix(tag)" 
+        <el-icon
+          v-if="!isAffix(tag)"
           class="close-icon"
           @click.prevent.stop="closeSelectedTag(tag)"
         >
@@ -54,10 +54,17 @@
 </template>
 
 <script setup lang="ts">
-import {useRoute, useRouter} from 'vue-router'
-import {ArrowLeft, ArrowRight, CircleClose, Close, FolderDelete, Refresh} from '@element-plus/icons-vue'
-import {useTagsViewStore} from '@/store/modules/tagsView'
-import {useSettingsStore} from '@/store/modules/settings'
+import { useRoute, useRouter } from 'vue-router'
+import {
+  ArrowLeft,
+  ArrowRight,
+  CircleClose,
+  Close,
+  FolderDelete,
+  Refresh
+} from '@element-plus/icons-vue'
+import { useTagsViewStore } from '@/store/modules/tagsView'
+import { useSettingsStore } from '@/store/modules/settings'
 
 const route = useRoute()
 const router = useRouter()
@@ -142,7 +149,7 @@ const refreshSelectedTag = (view: any) => {
   }
   // 先删除缓存
   tagsViewStore.delCachedView(view)
-  
+
   const { fullPath, query, path } = view
   const redirectPath = '/redirect' + (fullPath || path)
   router.replace({
@@ -185,18 +192,18 @@ watch(
 // 添加鼠标滚轮处理函数
 const handleScroll = (e: WheelEvent) => {
   const delta = e.deltaY || e.detail
-  
+
   if (scrollbarRef.value) {
     // 使用 Element Plus scrollbar 的 scrollTo 方法
     const scrollbar = scrollbarRef.value
     const currentScroll = scrollbar.wrapRef.scrollLeft
     const scrollStep = 120
-    
+
     scrollbar.wrapRef.scrollTo({
       left: currentScroll + (delta > 0 ? scrollStep : -scrollStep),
       behavior: 'smooth'
     })
-    
+
     e.preventDefault()
   }
 }
@@ -223,7 +230,9 @@ onBeforeUnmount(() => {
   width: 100%;
   background-color: var(--el-bg-color);
   border-bottom: 1px solid var(--el-border-color-light);
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, .12), 0 0 3px 0 rgba(0, 0, 0, .04);
+  box-shadow:
+    0 1px 3px 0 rgba(0, 0, 0, 0.12),
+    0 0 3px 0 rgba(0, 0, 0, 0.04);
   position: relative;
   z-index: 10;
 }
@@ -246,7 +255,6 @@ onBeforeUnmount(() => {
       border-color: var(--el-color-primary);
       color: #fff;
     }
-  
   }
 
   .contextmenu {
@@ -272,7 +280,7 @@ onBeforeUnmount(() => {
 .tags-view-wrapper {
   height: 34px;
   width: 100%;
-  
+
   :deep(.scrollbar-wrapper) {
     height: 34px;
     white-space: nowrap;
@@ -361,7 +369,7 @@ onBeforeUnmount(() => {
   border-radius: 50%;
   box-sizing: content-box;
   transition: all 0.2s;
-  
+
   &:hover {
     background-color: rgba(0, 0, 0, 0.1);
     transform: scale(1.1);
@@ -417,7 +425,7 @@ onBeforeUnmount(() => {
   padding: 6px 8px 0;
   border-bottom: 1px solid #dcdfe6;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  
+
   .tags-view-wrapper {
     .tags-view-item {
       position: relative;
@@ -434,7 +442,7 @@ onBeforeUnmount(() => {
       align-items: center;
       justify-content: center;
       z-index: 1;
-      
+
       &::before,
       &::after {
         content: '';
@@ -445,32 +453,32 @@ onBeforeUnmount(() => {
         background: transparent;
         transition: all 0.2s;
       }
-      
+
       &::before {
         left: -8px;
         border-radius: 0 0 8px 0;
         box-shadow: 4px 4px 0 4px var(--el-fill-color-light);
       }
-      
+
       &::after {
         right: -8px;
         border-radius: 0 0 0 8px;
         box-shadow: -4px 4px 0 4px var(--el-fill-color-light);
       }
-      
+
       &:hover {
         background: var(--el-fill-color);
         z-index: 2;
-        
+
         &::before {
           box-shadow: 4px 4px 0 4px var(--el-fill-color);
         }
-        
+
         &::after {
           box-shadow: -4px 4px 0 4px var(--el-fill-color);
         }
       }
-      
+
       &.active {
         background: #fff;
         color: v-bind('settingsStore.themeColor');
@@ -478,11 +486,11 @@ onBeforeUnmount(() => {
         z-index: 3;
         margin-bottom: -1px;
         padding-bottom: 1px;
-        
+
         &::before {
           box-shadow: 4px 4px 0 4px #fff;
         }
-        
+
         &::after {
           box-shadow: -4px 4px 0 4px #fff;
         }
@@ -498,23 +506,23 @@ onBeforeUnmount(() => {
   :root[data-theme='dark'] & {
     background: #202124;
     border-bottom-color: var(--el-border-color-dark);
-    
+
     .tags-view-item {
       background: #292a2d;
-      
+
       &:hover {
         background: #323639;
       }
-      
+
       &.active {
         background: #323639;
         margin-bottom: -1px;
         padding-bottom: 1px;
-        
+
         &::before {
           box-shadow: 4px 4px 0 4px #323639;
         }
-        
+
         &::after {
           box-shadow: -4px 4px 0 4px #323639;
         }
@@ -533,18 +541,18 @@ onBeforeUnmount(() => {
     border: 1px solid var(--el-border-color);
     border-radius: 4px;
     position: relative;
-    
+
     &:hover {
       border-color: v-bind('settingsStore.themeColor');
       color: v-bind('settingsStore.themeColor');
     }
-    
+
     &.active {
       color: v-bind('settingsStore.themeColor');
       border-color: v-bind('settingsStore.themeColor');
       background: v-bind('`${settingsStore.themeColor}10`');
       font-weight: bold;
-      
+
       &::before {
         content: '';
         position: absolute;
@@ -566,7 +574,7 @@ onBeforeUnmount(() => {
   background: transparent;
   border: none;
   padding: 4px 8px;
-  
+
   .tags-view-item {
     margin: 0 4px;
     height: 32px;
@@ -576,7 +584,7 @@ onBeforeUnmount(() => {
     transition: all 0.3s;
     position: relative;
     overflow: hidden;
-    
+
     &::before {
       content: '';
       position: absolute;
@@ -587,21 +595,21 @@ onBeforeUnmount(() => {
       background: transparent;
       transition: all 0.3s;
     }
-    
+
     &:hover {
       background: var(--el-fill-color);
       transform: translateY(-1px);
-      
+
       &::before {
         background: v-bind('`${settingsStore.themeColor}50`');
       }
     }
-    
+
     &.active {
       background: v-bind('`${settingsStore.themeColor}10`');
       color: v-bind('settingsStore.themeColor');
       font-weight: bold;
-      
+
       &::before {
         background: v-bind('settingsStore.themeColor');
       }
@@ -622,7 +630,7 @@ onBeforeUnmount(() => {
 :root[data-theme='dark'] {
   .tags-view-container {
     background: #1d1e1f;
-    
+
     .tags-view-item {
       &.active {
         background-color: v-bind('`${settingsStore.themeColor}2a`');
@@ -633,14 +641,14 @@ onBeforeUnmount(() => {
 
   .card {
     background: #202124;
-    
+
     .tags-view-item {
       background: #292a2d;
-      
+
       &:hover {
         background: #323639;
       }
-      
+
       &.active {
         background: #323639;
       }

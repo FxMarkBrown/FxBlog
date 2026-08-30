@@ -31,4 +31,4 @@ export function clearCacheApi() {
     url: '/monitor/cache',
     method: 'delete'
   })
-} 
+}

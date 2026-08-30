@@ -33,19 +33,17 @@
       <template #header>
         <div class="card-header">
           <ButtonGroup>
-            <el-button
-              v-permission="['sys:dict:add']"
-              type="primary"
-              icon="Plus"
-              @click="handleAdd"
-            >新增</el-button>
+            <el-button v-permission="['sys:dict:add']" type="primary" icon="Plus" @click="handleAdd"
+              >新增</el-button
+            >
             <el-button
               v-permission="['sys:dict:deleteBatch']"
               type="danger"
               icon="Delete"
               :disabled="selectedIds.length === 0"
               @click="handleBatchDelete"
-            >批量删除</el-button>
+              >批量删除</el-button
+            >
           </ButtonGroup>
         </div>
       </template>
@@ -54,11 +52,11 @@
       <el-table
         v-loading="loading"
         :data="dictList"
-        @selection-change="handleSelectionChange"
         style="width: 100%"
+        @selection-change="handleSelectionChange"
       >
         <el-table-column type="selection" width="55" align="center" />
-        <el-table-column label="字典名称" prop="name" align="center"/>
+        <el-table-column label="字典名称" prop="name" align="center" />
         <el-table-column label="字典类型" prop="type" align="center">
           <template #default="{ row }">
             <el-tag type="warning">
@@ -89,7 +87,7 @@
             >
               修改
             </el-button>
-            <el-button 
+            <el-button
               v-permission="['sys:dict:delete']"
               type="danger"
               link
@@ -105,9 +103,9 @@
       <!-- 分页区域 -->
       <div class="pagination-container">
         <el-pagination
-          background
           v-model:current-page="queryParams.pageNum"
           v-model:page-size="queryParams.pageSize"
+          background
           :page-sizes="[10, 20, 30, 50]"
           :total="total"
           layout="total, sizes, prev, pager, next, jumper"
@@ -124,17 +122,16 @@
       width="500px"
       append-to-body
     >
-      <el-form
-        ref="dictFormRef"
-        :model="dictForm"
-        :rules="rules"
-        label-width="100px"
-      >
+      <el-form ref="dictFormRef" :model="dictForm" :rules="rules" label-width="100px">
         <el-form-item label="字典名称" prop="name">
           <el-input v-model="dictForm.name" placeholder="请输入字典名称" />
         </el-form-item>
         <el-form-item label="字典类型" prop="type">
-          <el-input :disabled="dialogType === 'edit'" v-model="dictForm.type" placeholder="请输入字典类型" />
+          <el-input
+            v-model="dictForm.type"
+            :disabled="dialogType === 'edit'"
+            placeholder="请输入字典类型"
+          />
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-radio-group v-model="dictForm.status">
@@ -143,11 +140,7 @@
           </el-radio-group>
         </el-form-item>
         <el-form-item label="备注" prop="remark">
-          <el-input
-            v-model="dictForm.remark"
-            type="textarea"
-            placeholder="请输入备注"
-          />
+          <el-input v-model="dictForm.remark" type="textarea" placeholder="请输入备注" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -166,21 +159,18 @@
       append-to-body
       :close-on-click-modal="false"
     >
-      <dict-data
-        :dict-id="currentDict?.id"
-        :dict-type="currentDict?.type"
-      />
+      <dict-data :dict-id="currentDict?.id" :dict-type="currentDict?.type" />
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import type {FormInstance} from 'element-plus'
-import {ElMessage, ElMessageBox} from 'element-plus'
-import {addDictApi, deleteDictApi, getDictListApi, updateDictApi} from '@/api/system/dict'
+import type { FormInstance } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { addDictApi, deleteDictApi, getDictListApi, updateDictApi } from '@/api/system/dict'
 import DictData from './components/DictData.vue'
 import ButtonGroup from '@/components/ButtonGroup/index.vue'
-import {Refresh, Search} from "@element-plus/icons-vue";
+import { Refresh, Search } from '@element-plus/icons-vue'
 
 const loading = ref(false)
 const total = ref(0)
@@ -209,15 +199,9 @@ const dictForm = reactive<Partial<any>>({
 
 // 表单校验规则
 const rules = {
-  name: [
-    { required: true, message: '请输入字典名称', trigger: 'blur' }
-  ],
-  type: [
-    { required: true, message: '请输入字典类型', trigger: 'blur' }
-  ],
-  status: [
-    { required: true, message: '请选择状态', trigger: 'change' }
-  ]
+  name: [{ required: true, message: '请输入字典名称', trigger: 'blur' }],
+  type: [{ required: true, message: '请输入字典类型', trigger: 'blur' }],
+  status: [{ required: true, message: '请选择状态', trigger: 'change' }]
 }
 
 // 获取字典列表
@@ -285,7 +269,7 @@ const submitForm = async () => {
   if (!dictFormRef.value) return
   const valid = await dictFormRef.value.validate().catch(() => false)
   if (!valid) return
-  
+
   submitLoading.value = true
   try {
     if (dialogType.value === 'add') {
@@ -306,20 +290,15 @@ const submitForm = async () => {
 // 删除字典
 const handleDelete = async (row: any) => {
   try {
-    await ElMessageBox.confirm(
-      `确定要删除字典"${row.name}"吗？`,
-      '警告',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
+    await ElMessageBox.confirm(`确定要删除字典"${row.name}"吗？`, '警告', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
     await deleteDictApi(row.id)
     ElMessage.success('删除成功')
     await getList()
-  } catch (error) {
-  }
+  } catch (error) {}
 }
 
 // 字典数据相关
@@ -348,7 +327,7 @@ const selectedIds = ref<number[]>([])
 
 // 选择变化
 const handleSelectionChange = (selection: any[]) => {
-  selectedIds.value = selection.map(item => item.id)
+  selectedIds.value = selection.map((item) => item.id)
 }
 
 // 批量删除
@@ -357,23 +336,18 @@ const handleBatchDelete = async () => {
     ElMessage.warning('请选择要删除的记录')
     return
   }
-  
+
   try {
-    await ElMessageBox.confirm(
-      `确定要删除选中的 ${selectedIds.value.length} 条记录吗？`,
-      '警告',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
+    await ElMessageBox.confirm(`确定要删除选中的 ${selectedIds.value.length} 条记录吗？`, '警告', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
     await deleteDictApi(selectedIds.value)
     selectedIds.value = []
     ElMessage.success('删除成功')
     await getList()
-  } catch (error) {
-  }
+  } catch (error) {}
 }
 
 watch(dialogVisible, (visible) => {
@@ -399,9 +373,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-
 .search-form {
   margin-bottom: 20px;
 }
-
-</style> 
+</style>

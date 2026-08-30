@@ -1,29 +1,24 @@
 <template>
-  <el-drawer
-    v-model="drawerVisible"
-    title="系统设置"
-    direction="rtl"
-    size="350px"
-  >
+  <el-drawer v-model="drawerVisible" title="系统设置" direction="rtl" size="350px">
     <div class="drawer-content">
       <el-divider>系统风格</el-divider>
       <div class="sidebar-style-list">
         <el-tooltip content="亮色侧边栏" placement="top">
-          <div 
-            class="system-style light" 
+          <div
+            class="system-style light"
             :class="{ active: tempSettings.sidebarStyle === 'light' }"
             @click="handleSave('sidebarStyle', 'light')"
           >
-            <div class="style-dot" v-show="tempSettings.sidebarStyle === 'light'"></div>
+            <div v-show="tempSettings.sidebarStyle === 'light'" class="style-dot"></div>
           </div>
         </el-tooltip>
         <el-tooltip content="暗色侧边栏" placement="top">
-          <div 
-            class="system-style dark" 
+          <div
+            class="system-style dark"
             :class="{ active: tempSettings.sidebarStyle === 'dark' }"
             @click="handleSave('sidebarStyle', 'dark')"
           >
-            <div class="style-dot" v-show="tempSettings.sidebarStyle === 'dark'"></div>
+            <div v-show="tempSettings.sidebarStyle === 'dark'" class="style-dot"></div>
           </div>
         </el-tooltip>
       </div>
@@ -46,26 +41,20 @@
         <el-color-picker
           v-model="tempSettings.themeColor"
           size="small"
-          @change="handleThemeChange"
           :predefine="predefineColors"
+          @change="handleThemeChange"
         />
       </div>
 
       <div class="setting-item">
         <span>灰色模式</span>
-        <el-switch
-          v-model="tempSettings.greyMode"
-          @change="(val) => handleSave('greyMode', val)"
-        />
+        <el-switch v-model="tempSettings.greyMode" @change="(val) => handleSave('greyMode', val)" />
       </div>
 
       <el-divider>界面设置</el-divider>
       <div class="setting-item">
         <span>显示 Logo</span>
-        <el-switch
-          v-model="tempSettings.showLogo"
-          @change="(val) => handleSave('showLogo', val)"
-        />
+        <el-switch v-model="tempSettings.showLogo" @change="(val) => handleSave('showLogo', val)" />
       </div>
       <div class="setting-item">
         <span>折叠菜单</span>
@@ -76,10 +65,7 @@
       </div>
       <div class="setting-item">
         <span>显示标签页</span>
-        <el-switch
-          v-model="tempSettings.showTags"
-          @change="(val) => handleSave('showTags', val)"
-        />
+        <el-switch v-model="tempSettings.showTags" @change="(val) => handleSave('showTags', val)" />
       </div>
 
       <div class="setting-item">
@@ -159,33 +145,33 @@
 </template>
 
 <script setup lang="ts">
-import {computed, ref} from "vue";
-import {ElMessage} from "element-plus";
-import type {SettingsState} from "@/store/modules/settings";
-import {useSettingsStore} from "@/store/modules/settings";
-import {setThemeMode} from "@/utils/theme";
+import { computed, ref } from 'vue'
+import { ElMessage } from 'element-plus'
+import type { SettingsState } from '@/store/modules/settings'
+import { useSettingsStore } from '@/store/modules/settings'
+import { setThemeMode } from '@/utils/theme'
 
 const props = defineProps<{
-  visible: boolean;
-  isCollapse: boolean;
-}>();
+  visible: boolean
+  isCollapse: boolean
+}>()
 
 const emit = defineEmits<{
-  "update:visible": [value: boolean];
-  "update:isCollapse": [value: boolean];
-}>();
+  'update:visible': [value: boolean]
+  'update:isCollapse': [value: boolean]
+}>()
 
-const settingsStore = useSettingsStore();
+const settingsStore = useSettingsStore()
 
 // 处理抽屉显示状态
 const drawerVisible = computed({
   get: () => props.visible,
-  set: (value) => emit("update:visible", value),
-});
+  set: (value) => emit('update:visible', value)
+})
 
 // 临时设置状态
 const tempSettings = ref<Partial<SettingsState>>({
-  theme: settingsStore.theme as "light" | "dark",
+  theme: settingsStore.theme as 'light' | 'dark',
   themeColor: settingsStore.themeColor,
   showLogo: settingsStore.showLogo,
   showTags: settingsStore.showTags,
@@ -196,48 +182,48 @@ const tempSettings = ref<Partial<SettingsState>>({
   tagsStyle: settingsStore.tagsStyle,
   dynamicTitle: settingsStore.dynamicTitle,
   showFooter: settingsStore.showFooter,
-  sidebarStyle: settingsStore.sidebarStyle,
-});
+  sidebarStyle: settingsStore.sidebarStyle
+})
 
 const predefineColors = ref([
-  "#ff4500",
-  "#ff8c00",
-  "#ffd700",
-  "#90ee90",
-  "#00ced1",
-  "#1e90ff",
-  "#c71585",
-]);
+  '#ff4500',
+  '#ff8c00',
+  '#ffd700',
+  '#90ee90',
+  '#00ced1',
+  '#1e90ff',
+  '#c71585'
+])
 
 // 处理保存
 const handleSave = (key: keyof SettingsState, value: any) => {
-  tempSettings.value[key] = value;
+  tempSettings.value[key] = value
 
   // 处理主题模式切换
-  if (key === "theme") {
-    setThemeMode(settingsStore, value);
-    return;
+  if (key === 'theme') {
+    setThemeMode(settingsStore, value)
+    return
   }
 
-  settingsStore.saveSettings(tempSettings.value);
+  settingsStore.saveSettings(tempSettings.value)
 
   // 处理字体大小切换
-  if (key === "fontSize") {
-    document.documentElement.setAttribute("data-size", value);
+  if (key === 'fontSize') {
+    document.documentElement.setAttribute('data-size', value)
   }
-};
+}
 
 // 处理主题色变化
 const handleThemeChange = (color: string | null) => {
   if (color) {
-    tempSettings.value.themeColor = color;
-    settingsStore.saveSettings(tempSettings.value);
+    tempSettings.value.themeColor = color
+    settingsStore.saveSettings(tempSettings.value)
   }
-};
+}
 
 // 重置设置
 const resetSettings = () => {
-  settingsStore.resetSettings();
+  settingsStore.resetSettings()
   tempSettings.value = {
     theme: settingsStore.theme,
     themeColor: settingsStore.themeColor,
@@ -248,17 +234,16 @@ const resetSettings = () => {
     pageAnimation: settingsStore.pageAnimation,
     dynamicTitle: settingsStore.dynamicTitle,
     showFooter: settingsStore.showFooter,
-    sidebarStyle: settingsStore.sidebarStyle,
-  };
-  ElMessage.success("已恢复默认设置");
-};
+    sidebarStyle: settingsStore.sidebarStyle
+  }
+  ElMessage.success('已恢复默认设置')
+}
 
 const tagsStyles = [
-  { label: "谷歌", value: "card" },
-  { label: "边框式", value: "border" },
-  { label: "现代风", value: "modern" },
-];
-
+  { label: '谷歌', value: 'card' },
+  { label: '边框式', value: 'border' },
+  { label: '现代风', value: 'modern' }
+]
 </script>
 
 <style scoped lang="scss">
@@ -315,7 +300,7 @@ const tagsStyles = [
   }
 
   &.active .style-preview {
-    border-color: v-bind("settingsStore.themeColor");
+    border-color: v-bind('settingsStore.themeColor');
   }
 }
 
@@ -336,7 +321,7 @@ const tagsStyles = [
   background: var(--el-bg-color);
 
   &.active {
-    background: v-bind("settingsStore.themeColor");
+    background: v-bind('settingsStore.themeColor');
     color: white;
   }
 }
@@ -381,7 +366,7 @@ const tagsStyles = [
   }
 
   &.active .style-preview {
-    border-color: v-bind("settingsStore.themeColor");
+    border-color: v-bind('settingsStore.themeColor');
   }
 }
 
@@ -402,7 +387,7 @@ const tagsStyles = [
   background: var(--el-bg-color);
 
   &.active {
-    background: v-bind("settingsStore.themeColor");
+    background: v-bind('settingsStore.themeColor');
     color: white;
   }
 }
@@ -424,9 +409,8 @@ const tagsStyles = [
   box-shadow: 0 1px 2.5px #0000002e;
   cursor: pointer;
 
-
   &::before {
-    content: "";
+    content: '';
     position: absolute;
     top: 0;
     left: 0;
@@ -436,7 +420,7 @@ const tagsStyles = [
     border-bottom-left-radius: 8px;
   }
   &::after {
-    content: "";
+    content: '';
     position: absolute;
     top: 0;
     height: 15px;
@@ -453,9 +437,8 @@ const tagsStyles = [
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background-color: v-bind("settingsStore.themeColor");
+    background-color: v-bind('settingsStore.themeColor');
   }
-
 }
 .light::before {
   background-color: #fff;

@@ -68,15 +68,14 @@ export function deleteDictDataApi(ids: number[] | number) {
     url: `/sys/dictData/delete/${ids}`,
     method: 'delete'
   })
-} 
-
+}
 
 /**
  * 根据字典类型获取字典数据
  */
-export function getDictDataByDictTypesApi(dictTypes : any) {
+export function getDictDataByDictTypesApi(dictTypes: any) {
   return request({
     url: `/sys/dictData/getDiceData/${dictTypes}`,
     method: 'get'
   })
-} 
+}

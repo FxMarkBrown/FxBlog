@@ -6,13 +6,10 @@
         <div class="time">{{ currentTime }}</div>
         <div class="date">{{ currentDate }}</div>
       </div>
-      
+
       <div class="user-info">
         <div class="avatar-wrapper">
-          <el-avatar 
-            :size="90" 
-            :src="userStore.user?.avatar" 
-          />
+          <el-avatar :size="90" :src="userStore.user?.avatar ?? undefined" />
           <div class="avatar-border"></div>
         </div>
         <h3 class="welcome">欢迎回来, {{ userStore.user?.nickname || '用户' }}</h3>
@@ -25,15 +22,15 @@
           type="password"
           placeholder="请输入密码解锁"
           prefix-icon="Lock"
-          @keyup.enter="handleUnlock"
           class="custom-input"
+          @keyup.enter="handleUnlock"
         >
           <template #append>
-            <el-button 
-              type="primary" 
-              :loading="loading" 
-              @click="handleUnlock"
+            <el-button
+              type="primary"
+              :loading="loading"
               class="unlock-button"
+              @click="handleUnlock"
             >
               <el-icon v-if="!loading"><Unlock /></el-icon>
               <span>解锁</span>
@@ -49,12 +46,12 @@
 </template>
 
 <script setup lang="ts">
-import {useUserStore} from '@/store/modules/user'
-import {ElMessage} from 'element-plus'
+import { useUserStore } from '@/store/modules/user'
+import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
-import {verifyPassword} from '@/api/system/user'
-import {Unlock} from "@element-plus/icons-vue";
+import { verifyPassword } from '@/api/system/user'
+import { Unlock } from '@element-plus/icons-vue'
 // 设置 dayjs 语言为中文
 dayjs.locale('zh-cn')
 
@@ -98,12 +95,12 @@ const handleUnlock = async () => {
     errorMessage.value = '请输入密码'
     return
   }
-  
+
   loading.value = true
   errorMessage.value = ''
-  
+
   try {
-    const {data} = await verifyPassword(password.value)
+    const { data } = await verifyPassword(password.value)
     if (data) {
       isLocked.value = false
       sessionStorage.removeItem('isLocked')
@@ -166,11 +163,7 @@ defineExpose({
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(
-    135deg,
-    rgba(0, 0, 0, 0.7) 0%,
-    rgba(0, 0, 0, 0.5) 100%
-  );
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.5) 100%);
   backdrop-filter: blur(10px);
 }
 
@@ -325,9 +318,23 @@ defineExpose({
 
 /* 密码错误抖动效果 */
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
-  20%, 40%, 60%, 80% { transform: translateX(4px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-4px);
+  }
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(4px);
+  }
 }
 
 .shake {
@@ -361,4 +368,4 @@ defineExpose({
 .el-message {
   z-index: 2100 !important;
 }
-</style> 
+</style>

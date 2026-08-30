@@ -1,11 +1,5 @@
 <template>
-  <img
-    class="logo-img"
-    :src="logoUrl"
-    :width="size"
-    :height="size"
-    alt="Logo"
-  />
+  <img class="logo-img" :src="logoUrl" :width="size" :height="size" alt="Logo" />
 </template>
 
 <script setup lang="ts">
@@ -13,7 +7,7 @@ defineProps({
   size: {
     type: [Number, String],
     default: 32
-  },
+  }
 })
 
 const logoUrl = import.meta.env.VITE_APP_LOGO
@@ -27,4 +21,4 @@ const logoUrl = import.meta.env.VITE_APP_LOGO
 .logo-img:hover {
   transform: scale(1.1);
 }
-</style> 
+</style>

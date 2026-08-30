@@ -19,11 +19,15 @@
       :placeholder="placeholder"
       :style="editorStyle"
       :toolbars="editorToolbars"
-      @onUploadImg="handleUploadImg"
-      @onHtmlChanged="handleHtmlChanged"
+      @on-upload-img="handleUploadImg"
+      @on-html-changed="handleHtmlChanged"
     >
       <template #defToolbars>
-        <DropdownToolbar title="插入对齐块" :visible="alignDropdownVisible" @on-change="handleAlignDropdownChange">
+        <DropdownToolbar
+          title="插入对齐块"
+          :visible="alignDropdownVisible"
+          @on-change="handleAlignDropdownChange"
+        >
           <template #default>
             <i class="fas fa-align-center custom-toolbar-icon"></i>
           </template>
@@ -46,7 +50,11 @@
           </template>
         </DropdownToolbar>
 
-        <DropdownToolbar title="插入链接" :visible="linkDropdownVisible" @on-change="handleLinkDropdownChange">
+        <DropdownToolbar
+          title="插入链接"
+          :visible="linkDropdownVisible"
+          @on-change="handleLinkDropdownChange"
+        >
           <template #default>
             <Link class="custom-toolbar-icon custom-toolbar-icon--svg" />
           </template>
@@ -115,7 +123,10 @@
       append-to-body
     >
       <div class="dialog-form-stack">
-        <el-input v-model="internalLinkTargetInput" placeholder="请输入文章 ID、/post/123 或其他站内路径" />
+        <el-input
+          v-model="internalLinkTargetInput"
+          placeholder="请输入文章 ID、/post/123 或其他站内路径"
+        />
         <el-input
           v-model="internalLinkTextInput"
           placeholder="请输入显示文字，可留空使用选中文本"
@@ -147,22 +158,56 @@
 </template>
 
 <script setup lang="ts">
-import {Link, VideoPlay} from '@element-plus/icons-vue'
-import {ElLoading, ElMessage} from 'element-plus'
-import {computed, onBeforeUnmount, onMounted, ref, watch} from 'vue'
-import {marked} from 'marked'
-import type {ExposeParam, InsertParam, ToolbarNames} from 'md-editor-v3'
-import {allToolbar, config, DropdownToolbar, MdEditor} from 'md-editor-v3'
+import { Link, VideoPlay } from '@element-plus/icons-vue'
+import { ElLoading, ElMessage } from 'element-plus'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { marked } from 'marked'
+import type { ExposeParam, InsertParam, ToolbarNames } from 'md-editor-v3'
+import { allToolbar, config, DropdownToolbar, MdEditor } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 
-import type {UploadedFileDetail} from '@/api/file'
-import {uploadApi} from '@/api/file'
-import {installMarkdownAlignPlugin} from '@/utils/markdownAlign'
+import type { UploadedFileDetail } from '@/api/file'
+import { uploadApi } from '@/api/file'
+import { installMarkdownAlignPlugin } from '@/utils/markdownAlign'
 
 let markdownAlignConfigured = false
 
+// 仅匹配真实 URL（http(s)://、data: 等带 scheme 的地址）。
+// md-editor-v3 内置 linkShortener 的默认规则会把以 / 开头的长片段也当作链接折叠成 ... 原子控件，
+// LaTeX 公式里的除号 / 会触发误判，导致长公式被整段收起且无法通过方向键进入编辑，
+// 因此通过 codeMirrorExtensions 覆盖其 findTexts，把折叠范围收紧到绝对 URL。
+const absoluteUrlRegex =
+  /(?:[a-z][a-z0-9.+-]*:\/\/|data:[a-z]+\/[a-z0-9.+-]+(?:;base64)?,)[^\s<>"'`()]+(?:\([^\s<>"'`]*\)[^\s<>"'`()]*)*/gi
+
 if (!markdownAlignConfigured) {
   config({
+    // md-editor-v3 的 editorConfig 类型定义未包含 codeMirrorExtensions（运行时实际支持），
+    // 这里通过断言绕过类型检查，仅为类型层面的处理
+    editorConfig: {
+      codeMirrorExtensions(extensions: any[]) {
+        return extensions.map((extension: any) => {
+          if (extension.type !== 'linkShortener') {
+            return extension
+          }
+
+          return {
+            ...extension,
+            options: {
+              ...(extension.options || {}),
+              findTexts: ({ lineText }: { lineText: string }) => {
+                const ranges: Array<[number, number]> = []
+                absoluteUrlRegex.lastIndex = 0
+                let match: RegExpExecArray | null
+                while ((match = absoluteUrlRegex.exec(lineText)) !== null) {
+                  ranges.push([match.index, match.index + match[0].length])
+                }
+                return ranges
+              }
+            }
+          }
+        })
+      }
+    } as any,
     markdownItConfig(md) {
       installMarkdownAlignPlugin(md)
     },
@@ -186,22 +231,26 @@ if (!markdownAlignConfigured) {
       })
     }
   })
+  // eslint-disable-next-line no-useless-assignment -- 模块在 HMR 下会重复求值，该标记用于防止 config 重复注册
   markdownAlignConfigured = true
 }
 
-const props = withDefaults(defineProps<{
-  modelValue?: string
-  height?: string
-  placeholder?: string
-  uploadType?: string
-  enableVideoInsert?: boolean
-}>(), {
-  modelValue: '',
-  height: '500px',
-  placeholder: '输入文章内容...',
-  uploadType: 'articlePicture',
-  enableVideoInsert: false
-})
+const props = withDefaults(
+  defineProps<{
+    modelValue?: string
+    height?: string
+    placeholder?: string
+    uploadType?: string
+    enableVideoInsert?: boolean
+  }>(),
+  {
+    modelValue: '',
+    height: '500px',
+    placeholder: '输入文章内容...',
+    uploadType: 'articlePicture',
+    enableVideoInsert: false
+  }
+)
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
@@ -231,7 +280,7 @@ const editorStyle = computed(() => ({
 }))
 
 const editorToolbars = computed(() => {
-  const toolbars: ToolbarNames[] = [...allToolbar]
+  const toolbars: ToolbarNames[] = [...allToolbar] as ToolbarNames[]
   const titleIndex = toolbars.indexOf('title')
   const alignInsertIndex = titleIndex === -1 ? toolbars.length : titleIndex + 1
   toolbars.splice(alignInsertIndex, 0, 0)
@@ -335,15 +384,17 @@ const normalizeInternalTarget = (target: string) => {
 /**
  * 生成 Markdown 链接插入片段。
  */
-const buildMarkdownLink = (url: string, explicitText: string) => (selectedText: string): InsertParam => {
-  const label = explicitText.trim() || selectedText || '链接文字'
-  return {
-    targetValue: `[${label}](${url})`,
-    select: !explicitText.trim() && !selectedText,
-    deviationStart: 1,
-    deviationEnd: 1 + label.length
+const buildMarkdownLink =
+  (url: string, explicitText: string) =>
+  (selectedText: string): InsertParam => {
+    const label = explicitText.trim() || selectedText || '链接文字'
+    return {
+      targetValue: `[${label}](${url})`,
+      select: !explicitText.trim() && !selectedText,
+      deviationStart: 1,
+      deviationEnd: 1 + label.length
+    }
   }
-}
 
 /**
  * 插入站外链接。

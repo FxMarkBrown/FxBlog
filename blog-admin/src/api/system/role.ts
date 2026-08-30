@@ -33,7 +33,6 @@ export function updateRoleApi(data: any) {
   })
 }
 
-
 /**
  * 删除角色
  */
@@ -42,7 +41,7 @@ export function deleteRoleApi(ids: number[] | number) {
     url: `/sys/role/delete/${ids}`,
     method: 'delete'
   })
-} 
+}
 
 /**
  * 获取角色的菜单权限
@@ -74,4 +73,3 @@ export function getAllRoleList() {
     method: 'get'
   })
 }
-

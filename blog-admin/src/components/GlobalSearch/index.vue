@@ -1,7 +1,11 @@
 <template>
   <div class="global-search">
     <!-- 搜索图标 -->
-    <div class="search-trigger" :class="{ 'is-dark': settingsStore.theme === 'dark' }" @click="handleSearchClick">
+    <div
+      class="search-trigger"
+      :class="{ 'is-dark': settingsStore.theme === 'dark' }"
+      @click="handleSearchClick"
+    >
       <el-icon class="search-icon"><Search /></el-icon>
       <span class="shortcut-hint">
         <span class="key">CTRL</span>
@@ -22,19 +26,19 @@
       :modal-class="'search-dialog-modal'"
     >
       <el-input
+        ref="searchInputRef"
         v-model="searchKeyword"
         placeholder="搜索菜单... (ESC 关闭, ↑↓ 选择, Enter 跳转)"
         clearable
-        @input="handleSearchInput"
-        ref="searchInputRef"
         class="search-input"
+        @input="handleSearchInput"
       >
         <template #prefix>
           <el-icon class="search-prefix-icon"><Search /></el-icon>
         </template>
       </el-input>
-      
-      <div class="search-result" v-if="searchResults.length">
+
+      <div v-if="searchResults.length" class="search-result">
         <el-scrollbar height="400px">
           <template v-for="group in searchResults" :key="group.title">
             <div class="menu-group-title">
@@ -42,13 +46,13 @@
               <span>{{ group.title }}</span>
               <span class="item-count">{{ group.children.length }}个结果</span>
             </div>
-            <div 
-              v-for="(item, idx) in group.children" 
+            <div
+              v-for="(item, idx) in group.children"
               :key="item.path"
               class="search-item"
-              :class="{ 'is-active': currentIndex === getItemIndex(group, idx) }"
+              :class="{ 'is-active': currentIndex === getItemIndex(group, idx as number) }"
               @click="handleSelectMenu(item)"
-              @mouseenter="currentIndex = getItemIndex(group, idx)"
+              @mouseenter="currentIndex = getItemIndex(group, idx as number)"
             >
               <el-icon class="item-icon"><component :is="item.icon" /></el-icon>
               <div class="item-content">
@@ -82,11 +86,11 @@
 </template>
 
 <script setup lang="ts">
-import {nextTick, onBeforeUnmount, onMounted, ref, watch} from 'vue'
-import {useRouter} from 'vue-router'
-import {ArrowRight, Search} from '@element-plus/icons-vue'
-import {useSettingsStore} from '@/store/modules/settings'
-import {usePermissionStore} from '@/store/modules/permission'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { ArrowRight, Search } from '@element-plus/icons-vue'
+import { useSettingsStore } from '@/store/modules/settings'
+import { usePermissionStore } from '@/store/modules/permission'
 
 const router = useRouter()
 const settingsStore = useSettingsStore()
@@ -113,32 +117,33 @@ const removeSearchKeydownListener = () => {
 const getMenuList = () => {
   const routes = permissionStore.routes
   return routes
-    .filter(route => !route.meta?.hidden)
-    .map(route => ({
+    .filter((route) => !route.meta?.hidden)
+    .map((route) => ({
       title: route.meta?.title || '',
       path: route.path,
       icon: route.meta?.icon || '',
-      children: route.children
-        ?.filter(child => !child.meta?.hidden)
-        .map(child => {
-          // 如果有三级菜单
-          if (child.children?.length) {
-            return child.children
-              .filter(grandChild => !grandChild.meta?.hidden)
-              .map(grandChild => ({
-                title: `${child.meta?.title} / ${grandChild.meta?.title}`, // 显示二级和三级菜单名称
-                path: `${route.path}/${child.path}/${grandChild.path}`,
-                icon: grandChild.meta?.icon || child.meta?.icon || ''
-              }))
-          }
-          // 返回二级菜单
-          return {
-            title: child.meta?.title || '',
-            path: `${route.path}/${child.path}`,
-            icon: child.meta?.icon || ''
-          }
-        })
-        .flat() || []
+      children:
+        route.children
+          ?.filter((child) => !child.meta?.hidden)
+          .map((child) => {
+            // 如果有三级菜单
+            if (child.children?.length) {
+              return child.children
+                .filter((grandChild) => !grandChild.meta?.hidden)
+                .map((grandChild) => ({
+                  title: `${child.meta?.title} / ${grandChild.meta?.title}`, // 显示二级和三级菜单名称
+                  path: `${route.path}/${child.path}/${grandChild.path}`,
+                  icon: grandChild.meta?.icon || child.meta?.icon || ''
+                }))
+            }
+            // 返回二级菜单
+            return {
+              title: child.meta?.title || '',
+              path: `${route.path}/${child.path}`,
+              icon: child.meta?.icon || ''
+            }
+          })
+          .flat() || []
     }))
 }
 
@@ -163,17 +168,18 @@ const handleSearchInput = () => {
     currentIndex.value = -1
     return
   }
-  
+
   const keyword = searchKeyword.value.toLowerCase()
   const menuList = getMenuList()
-  
+
   searchResults.value = menuList
-    .map(group => {
-      const matchedChildren = group.children?.filter(item =>
-        (typeof item.title === 'string' ? item.title : '').toLowerCase().includes(keyword) ||
-        (typeof item.path === 'string' ? item.path : '').toLowerCase().includes(keyword)
+    .map((group) => {
+      const matchedChildren = group.children?.filter(
+        (item) =>
+          (typeof item.title === 'string' ? item.title : '').toLowerCase().includes(keyword) ||
+          (typeof item.path === 'string' ? item.path : '').toLowerCase().includes(keyword)
       )
-      
+
       if (matchedChildren?.length > 0) {
         return {
           ...group,
@@ -188,7 +194,7 @@ const handleSearchInput = () => {
   flatSearchResults.value = searchResults.value.reduce((acc, group) => {
     return acc.concat(group.children)
   }, [])
-  
+
   // 重置选中索引
   currentIndex.value = flatSearchResults.value.length ? 0 : -1
 }
@@ -205,9 +211,8 @@ const handleKeydown = (e: KeyboardEvent) => {
       break
     case 'ArrowUp':
       e.preventDefault()
-      currentIndex.value = currentIndex.value <= 0 
-        ? flatSearchResults.value.length - 1 
-        : currentIndex.value - 1
+      currentIndex.value =
+        currentIndex.value <= 0 ? flatSearchResults.value.length - 1 : currentIndex.value - 1
       scrollToActive()
       break
     case 'Enter':
@@ -278,10 +283,10 @@ const getItemIndex = (group: any, idx: number) => {
     padding: 6px 10px;
     border-radius: 6px;
     transition: all 0.3s;
-    
+
     // 明亮模式样式
     background: #f5f7fa;
-    
+
     &:hover {
       background: #e6e8eb;
     }
@@ -289,7 +294,7 @@ const getItemIndex = (group: any, idx: number) => {
     // 深色模式样式
     &.is-dark {
       background: #363637;
-      
+
       &:hover {
         background: #404041;
       }
@@ -313,14 +318,14 @@ const getItemIndex = (group: any, idx: number) => {
     .shortcut-hint {
       display: flex;
       gap: 4px;
-      
+
       .key {
         padding: 2px 4px;
         font-size: 12px;
         background: #fff;
         border-radius: 4px;
         color: #909399;
-        box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+        box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
       }
     }
   }
@@ -343,7 +348,7 @@ const getItemIndex = (group: any, idx: number) => {
   :deep(.el-input__wrapper) {
     padding: 8px 12px;
     border-radius: 8px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
   }
 
   .search-prefix-icon {
@@ -371,7 +376,7 @@ const getItemIndex = (group: any, idx: number) => {
     color: #606266;
     font-size: 14px;
     font-weight: 500;
-    
+
     .el-icon {
       font-size: 16px;
       margin-right: 8px;
@@ -399,7 +404,7 @@ const getItemIndex = (group: any, idx: number) => {
     &:not(:first-child) {
       margin-left: 24px;
       padding-left: 24px;
-      
+
       &::before {
         content: '';
         position: absolute;
@@ -429,7 +434,8 @@ const getItemIndex = (group: any, idx: number) => {
         transform: translateX(0);
       }
 
-      &::before, &::after {
+      &::before,
+      &::after {
         background-color: v-bind('settingsStore.themeColor');
       }
     }
@@ -467,20 +473,21 @@ const getItemIndex = (group: any, idx: number) => {
 
     &.is-active {
       background-color: v-bind('`${settingsStore.themeColor}1a`');
-      
+
       .enter-icon {
         opacity: 1;
         transform: translateX(0);
       }
-      
-      &::before, &::after {
+
+      &::before,
+      &::after {
         background-color: v-bind('settingsStore.themeColor');
       }
-      
+
       .item-icon {
         color: v-bind('settingsStore.themeColor');
       }
-      
+
       .item-title {
         color: v-bind('settingsStore.themeColor');
       }
@@ -492,8 +499,6 @@ const getItemIndex = (group: any, idx: number) => {
   padding: 40px 0;
 }
 
-
-
 .keyboard-tips {
   margin-top: 16px;
   padding: 12px;
@@ -502,12 +507,12 @@ const getItemIndex = (group: any, idx: number) => {
   align-items: center;
   justify-content: center;
   gap: 16px;
-  
+
   .tip-item {
     display: flex;
     align-items: center;
     gap: 6px;
-    
+
     .key {
       padding: 2px 6px;
       font-size: 12px;
@@ -515,7 +520,7 @@ const getItemIndex = (group: any, idx: number) => {
       border-radius: 4px;
       color: #909399;
     }
-    
+
     .desc {
       font-size: 12px;
       color: #909399;
@@ -527,12 +532,10 @@ const getItemIndex = (group: any, idx: number) => {
 :root[data-theme='dark'] {
   .keyboard-tips {
     border-color: var(--el-border-color-darker);
-    
+
     .tip-item .key {
       background: var(--el-fill-color-darker);
     }
   }
 }
-
-
-</style> 
+</style>

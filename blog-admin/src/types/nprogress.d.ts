@@ -4,7 +4,7 @@ declare module 'nprogress' {
     done(): void
     configure(options: { showSpinner: boolean }): void
   }
-  
+
   const nprogress: NProgressStatic
   export default nprogress
-} 
+}

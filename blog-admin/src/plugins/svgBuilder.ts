@@ -1,4 +1,4 @@
-import {existsSync, readdirSync, readFileSync} from 'fs'
+import { existsSync, readdirSync, readFileSync } from 'fs'
 import path from 'path'
 
 interface HtmlTransformPlugin {
@@ -34,14 +34,17 @@ function findSvgFile(dir: string): string[] {
       .replace(svgTitle, (_fullMatch: string, attrs: string) => {
         let width = '0'
         let height = '0'
-        let content = attrs.replace(clearHeightWidth, (_attrMatch: string, attrName: string, attrValue: string) => {
-          if (attrName === 'width') {
-            width = attrValue
-          } else if (attrName === 'height') {
-            height = attrValue
+        let content = attrs.replace(
+          clearHeightWidth,
+          (_attrMatch: string, attrName: string, attrValue: string) => {
+            if (attrName === 'width') {
+              width = attrValue
+            } else if (attrName === 'height') {
+              height = attrValue
+            }
+            return ''
           }
-          return ''
-        })
+        )
         if (!hasViewBox.test(attrs)) {
           content += `viewBox="0 0 ${width} ${height}"`
         }

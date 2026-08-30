@@ -9,7 +9,8 @@
               type="primary"
               icon="Plus"
               @click="handleAdd(null)"
-            >新增</el-button>
+              >新增</el-button
+            >
           </ButtonGroup>
         </div>
       </template>
@@ -30,8 +31,22 @@
         </el-table-column>
         <el-table-column label="类型" align="center" width="80">
           <template #default="{ row }">
-            <el-tag :type="row.type === MenuTypeEnum.CATALOG ? 'primary' : row.type === MenuTypeEnum.MENU ? 'success' : 'info'">
-              {{ row.type === MenuTypeEnum.CATALOG ? '目录' : row.type === MenuTypeEnum.MENU ? '菜单' : '按钮' }}
+            <el-tag
+              :type="
+                row.type === MenuTypeEnum.CATALOG
+                  ? 'primary'
+                  : row.type === MenuTypeEnum.MENU
+                    ? 'success'
+                    : 'info'
+              "
+            >
+              {{
+                row.type === MenuTypeEnum.CATALOG
+                  ? '目录'
+                  : row.type === MenuTypeEnum.MENU
+                    ? '菜单'
+                    : '按钮'
+              }}
             </el-tag>
           </template>
         </el-table-column>
@@ -39,7 +54,7 @@
         <el-table-column label="组件路径" prop="component" show-overflow-tooltip />
         <el-table-column label="权限标识" prop="perm" show-overflow-tooltip />
         <el-table-column label="排序" prop="sort" width="60" align="center" />
-     
+
         <el-table-column label="状态" align="center" width="80">
           <template #default="{ row }">
             <el-tag :type="row.hidden === 0 ? 'success' : 'info'">
@@ -49,13 +64,23 @@
         </el-table-column>
         <el-table-column label="操作" width="200" align="center">
           <template #default="{ row }">
-            <el-button type="success" link @click="handleAdd(row)" v-permission="['sys:menu:add']">
+            <el-button v-permission="['sys:menu:add']" type="success" link @click="handleAdd(row)">
               <el-icon><Plus /></el-icon>新增
             </el-button>
-            <el-button type="primary" link @click="handleEdit(row)" v-permission="['sys:menu:update']">
+            <el-button
+              v-permission="['sys:menu:update']"
+              type="primary"
+              link
+              @click="handleEdit(row)"
+            >
               <el-icon><Edit /></el-icon>修改
             </el-button>
-            <el-button type="danger" link @click="handleDelete(row)" v-permission="['sys:menu:delete']">
+            <el-button
+              v-permission="['sys:menu:delete']"
+              type="danger"
+              link
+              @click="handleDelete(row)"
+            >
               <el-icon><Delete /></el-icon>删除
             </el-button>
           </template>
@@ -70,12 +95,7 @@
       width="700px"
       append-to-body
     >
-      <el-form
-        ref="menuFormRef"
-        :model="menuForm"
-        :rules="rules"
-        label-width="100px"
-      >
+      <el-form ref="menuFormRef" :model="menuForm" :rules="rules" label-width="100px">
         <el-row :gutter="20">
           <el-col :span="24">
             <el-form-item label="上级菜单" prop="parentId">
@@ -114,7 +134,7 @@
             </el-form-item>
           </el-col>
 
-          <el-col :span="24" v-if="menuForm.type !== MenuTypeEnum.BUTTON">
+          <el-col v-if="menuForm.type !== MenuTypeEnum.BUTTON" :span="24">
             <el-form-item label="图标">
               <el-input v-model="menuForm.icon" placeholder="点击选择图标" readonly>
                 <template #prefix>
@@ -131,19 +151,19 @@
             </el-form-item>
           </el-col>
 
-          <el-col :span="24" v-if="menuForm.type !== MenuTypeEnum.BUTTON">
+          <el-col v-if="menuForm.type !== MenuTypeEnum.BUTTON" :span="24">
             <el-form-item label="路由地址" prop="path">
               <el-input v-model="menuForm.path" placeholder="请输入路由地址" />
             </el-form-item>
           </el-col>
 
-          <el-col :span="24" >
+          <el-col :span="24">
             <el-form-item label="重定向地址" prop="redirect">
               <el-input v-model="menuForm.redirect" placeholder="请输入重定向地址" />
             </el-form-item>
           </el-col>
 
-          <el-col :span="24" v-if="menuForm.type === MenuTypeEnum.MENU">
+          <el-col v-if="menuForm.type === MenuTypeEnum.MENU" :span="24">
             <el-form-item label="页面路径" prop="component">
               <el-input v-model="menuForm.component" placeholder="/system/user/index">
                 <template #prepend>src/views</template>
@@ -152,7 +172,7 @@
             </el-form-item>
           </el-col>
 
-          <el-col :span="24" v-if="menuForm.type === MenuTypeEnum.BUTTON">
+          <el-col v-if="menuForm.type === MenuTypeEnum.BUTTON" :span="24">
             <el-form-item label="权限标识" prop="perm">
               <el-input v-model="menuForm.perm" placeholder="请输入权限标识" />
             </el-form-item>
@@ -187,20 +207,17 @@
     </el-dialog>
 
     <!-- 图标选择器组件 -->
-    <icon-select
-      v-model="menuForm.icon"
-      v-model:visible="showIconSelect"
-    />
+    <icon-select v-model="menuForm.icon" v-model:visible="showIconSelect" />
   </div>
 </template>
 
 <script setup lang="ts">
-import type {FormInstance} from 'element-plus'
-import {ElMessage, ElMessageBox, ElTreeSelect} from 'element-plus'
+import type { FormInstance } from 'element-plus'
+import { ElMessage, ElMessageBox, ElTreeSelect } from 'element-plus'
 import IconSelect from '@/components/IconSelect/index.vue'
-import {createMenuApi, deleteMenuApi, getMenuListApi, updateMenuApi,} from '@/api/system/menu'
-import {MenuTypeEnum} from "@/enum/MenuTypeEnum";
-import {Delete, Edit, Plus, View} from "@element-plus/icons-vue";
+import { createMenuApi, deleteMenuApi, getMenuListApi, updateMenuApi } from '@/api/system/menu'
+import { MenuTypeEnum } from '@/enum/MenuTypeEnum'
+import { Delete, Edit, Plus, View } from '@element-plus/icons-vue'
 
 const loading = ref(false)
 const dialogVisible = ref(false)
@@ -211,27 +228,13 @@ const submitLoading = ref(false)
 
 // 表单校验规则
 const rules = {
-  parentId: [
-    { required: true, message: '请选择父级菜单', trigger: 'blur' }
-  ],
-  title: [
-    { required: true, message: '请输入菜单名称', trigger: 'blur' }
-  ],
-  sort: [
-    { required: true, message: '请输入排序', trigger: 'blur' }
-  ],
-  path: [
-    { required: true, message: '请输入路由地址', trigger: 'blur' }
-  ],
-  component: [
-    { required: false, message: '请输入页面路径', trigger: 'blur' }
-  ],
-  perm: [
-    { required: true, message: '请输入权限标识', trigger: 'blur' }
-  ],
-  hidden: [
-    { required: true, message: '请选择状态', trigger: 'blur' }
-  ]
+  parentId: [{ required: true, message: '请选择父级菜单', trigger: 'blur' }],
+  title: [{ required: true, message: '请输入菜单名称', trigger: 'blur' }],
+  sort: [{ required: true, message: '请输入排序', trigger: 'blur' }],
+  path: [{ required: true, message: '请输入路由地址', trigger: 'blur' }],
+  component: [{ required: false, message: '请输入页面路径', trigger: 'blur' }],
+  perm: [{ required: true, message: '请输入权限标识', trigger: 'blur' }],
+  hidden: [{ required: true, message: '请选择状态', trigger: 'blur' }]
 }
 
 // 菜单表单对象
@@ -242,7 +245,7 @@ const menuForm = reactive<any>({
   sort: 0,
   path: '',
   component: '',
-  redirect:'',
+  redirect: '',
   type: MenuTypeEnum.CATALOG,
   perm: '',
   icon: '',
@@ -262,7 +265,7 @@ const getList = async () => {
   try {
     const { data } = await getMenuListApi()
     menuList.value = data
-    const topMenu = {id: 0,title: '顶级菜单',  children: data}
+    const topMenu = { id: 0, title: '顶级菜单', children: data }
     menuOptions.value = [topMenu]
   } catch (error) {
     menuList.value = []
@@ -277,12 +280,12 @@ const submitForm = async () => {
   if (!menuFormRef.value) return
   const valid = await menuFormRef.value.validate().catch(() => false)
   if (!valid) return
-  
+
   submitLoading.value = true
   try {
     const formData = { ...menuForm }
     formData.icon = formatIconName(formData.icon)
-    
+
     if (dialogType.value === 'add') {
       await createMenuApi(formData)
       ElMessage.success('新增成功')
@@ -301,20 +304,15 @@ const submitForm = async () => {
 // 删除菜单
 const handleDelete = async (row: any) => {
   try {
-    await ElMessageBox.confirm(
-      `确定要删除菜单"${row.title}"吗？`,
-      '警告',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
+    await ElMessageBox.confirm(`确定要删除菜单"${row.title}"吗？`, '警告', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
     await deleteMenuApi(row.id)
     ElMessage.success('删除成功')
     await getList()
-  } catch (error) {
-  }
+  } catch (error) {}
 }
 
 // 重置表单
