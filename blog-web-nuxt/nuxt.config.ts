@@ -124,6 +124,10 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     apiBaseServer: apiServer,
+    // IndexNow（Bing 即时收录）：key 会托管在 /{key}.txt 供搜索引擎验证，可公开；
+    // secret 是本站提交接口 /api/indexnow 的触发口令，不公开
+    indexnowKey: readEnvValue('NUXT_INDEXNOW_KEY', '9900ff0526f7eb6814f2e8c85bf105da'),
+    indexnowSecret: readEnvValue('NUXT_INDEXNOW_SECRET', ''),
     public: {
       siteUrl,
       siteName,

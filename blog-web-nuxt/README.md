@@ -70,6 +70,8 @@ bun install
 - `NUXT_PUBLIC_SITE_NAME`
 - `NUXT_PUBLIC_RECORD_NUM`
 - `NUXT_PUBLIC_ADMIN_URL`
+- `NUXT_INDEXNOW_KEY`（可选，IndexNow 验证 key，默认使用仓库内置值并托管在 `/{key}.txt`）
+- `NUXT_INDEXNOW_SECRET`（可选，配置后开启全站 URL 提交接口 `POST /indexnow?token=<secret>`）
 
 示例：
 
@@ -78,6 +80,20 @@ NUXT_API_BASE_SERVER=http://127.0.0.1:8800
 NUXT_PUBLIC_SITE_URL=http://localhost:3000
 NUXT_PUBLIC_SITE_NAME=Blog
 NUXT_PUBLIC_ADMIN_URL=http://localhost:3001
+```
+
+#### IndexNow（Bing 即时收录）
+
+部署后可随时向 Bing/Yandex 等支持 IndexNow 的搜索引擎推送全站或指定 URL：
+
+```bash
+# 提交全站 URL（静态页 + 全部文章 + 相册）
+curl -X POST "https://你的域名/indexnow?token=$NUXT_INDEXNOW_SECRET"
+
+# 只提交指定 URL（如文章发布后）
+curl -X POST "https://你的域名/indexnow?token=$NUXT_INDEXNOW_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"urls": ["https://你的域名/post/123"]}'
 ```
 
 ### 3. 启动开发环境
