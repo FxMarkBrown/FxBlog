@@ -25,6 +25,7 @@ const routes: MobileMenuEntry[] = [
   { path: '/', title: '首页', icon: 'fas fa-home' },
   { path: '/archive', title: '归档', icon: 'fas fa-archive' },
   { path: '/categories', title: '分类', icon: 'fas fa-folder' },
+  { path: '/series', title: '系列', icon: 'fas fa-book-open' },
   { path: '/tags', title: '标签', icon: 'fas fa-tags' },
   { path: '/moments', title: '说说', icon: 'fas fa-comment-dots' },
   { path: '/photos', title: '相册', icon: 'fas fa-images' },

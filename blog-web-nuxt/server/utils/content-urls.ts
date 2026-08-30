@@ -1,4 +1,4 @@
-import type { AlbumSummary, ArticleSummary } from '@/types/article'
+import type { AlbumSummary, ArticleSummary, SeriesInfo } from '@/types/article'
 import type { ApiResponse, PageResult } from '@/types/common'
 import type { H3Event } from 'h3'
 
@@ -9,7 +9,7 @@ export interface ContentUrlEntry {
 
 /**
  * 收集全站内容 URL（供 sitemap.xml 与 IndexNow 提交共用）：
- * 静态页面 + 全部文章 + 全部相册，已按 URL 去重。
+ * 静态页面 + 全部文章 + 全部相册 + 全部系列，已按 URL 去重。
  * @param event 请求事件（用于读取 runtimeConfig）
  * @returns 内容条目（含最后更新时间）
  */
@@ -28,6 +28,7 @@ export async function collectContentUrls(event: H3Event): Promise<ContentUrlEntr
     { loc: `${siteUrl}/` },
     { loc: `${siteUrl}/archive` },
     { loc: `${siteUrl}/categories` },
+    { loc: `${siteUrl}/series` },
     { loc: `${siteUrl}/tags` },
     { loc: `${siteUrl}/moments` },
     { loc: `${siteUrl}/photos` },
@@ -36,14 +37,15 @@ export async function collectContentUrls(event: H3Event): Promise<ContentUrlEntr
     { loc: `${siteUrl}/about` }
   ]
 
-  const [articleResult, albumResult] = await Promise.allSettled([
+  const [articleResult, albumResult, seriesResult] = await Promise.allSettled([
     $fetch<ApiResponse<PageResult<ArticleSummary>>>(`${apiServer}/api/article/list`, {
       query: {
         pageNum: 1,
         pageSize: 1000
       }
     }),
-    $fetch<ApiResponse<AlbumSummary[]>>(`${apiServer}/api/album/list`)
+    $fetch<ApiResponse<AlbumSummary[]>>(`${apiServer}/api/album/list`),
+    $fetch<ApiResponse<SeriesInfo[]>>(`${apiServer}/api/series/list`)
   ])
 
   if (articleResult.status === 'fulfilled') {
@@ -63,6 +65,16 @@ export async function collectContentUrls(event: H3Event): Promise<ContentUrlEntr
         entries.push({
           loc: `${siteUrl}/photos/${album.id}`,
           lastmod: String(album.createTime || '')
+        })
+      }
+    }
+  }
+
+  if (seriesResult.status === 'fulfilled') {
+    for (const series of seriesResult.value?.data || []) {
+      if (series?.id) {
+        entries.push({
+          loc: `${siteUrl}/series/${series.id}`
         })
       }
     }

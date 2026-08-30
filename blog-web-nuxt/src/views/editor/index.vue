@@ -6,8 +6,9 @@ import { getDictDataApi } from '@/api/dict'
 import type { UploadedFileDetail } from '@/api/file'
 import { uploadFileApi } from '@/api/file'
 import { getCategoriesApi, getTagsApi } from '@/api/tags'
+import { getSeriesListApi } from '@/api/series'
 import { useNoIndexSeo } from '@/composables/useSeo'
-import type { ArticleDetail, TagSummary } from '@/types/article'
+import type { ArticleDetail, SeriesInfo, TagSummary } from '@/types/article'
 import { message } from '@/utils/feedback'
 import { unwrapResponseData } from '@/utils/response'
 
@@ -23,6 +24,7 @@ interface ArticleFormState {
   originalUrl: string
   categoryId: number | string | ''
   tagIds: Array<number | string>
+  seriesName: string
   status: number | string | ''
 }
 
@@ -68,6 +70,7 @@ const loading = ref(false)
 const bootstrapping = ref(true)
 const categories = ref<CategoryItem[]>([])
 const tags = ref<TagSummary[]>([])
+const seriesList = ref<SeriesInfo[]>([])
 const statusList = ref<DictItem[]>([])
 
 const articleForm = reactive<ArticleFormState>(createDefaultArticleForm())
@@ -76,6 +79,9 @@ const categoryOptions = computed(() =>
   categories.value.map((item) => ({ label: item.name, value: item.id }))
 )
 const tagOptions = computed(() => tags.value.map((item) => ({ label: item.name, value: item.id })))
+const seriesOptions = computed(() =>
+  seriesList.value.map((item) => ({ label: item.name, value: item.name }))
+)
 
 const rules = reactive<FormRules>({
   title: [
@@ -134,6 +140,7 @@ function createDefaultArticleForm(): ArticleFormState {
     originalUrl: '',
     categoryId: '',
     tagIds: [],
+    seriesName: '',
     status: ''
   }
 }
@@ -250,12 +257,13 @@ async function initializePage() {
 }
 
 /**
- * 拉取编辑页所需的分类、标签和状态字典。
+ * 拉取编辑页所需的分类、标签、系列和状态字典。
  */
 async function loadEditorOptions() {
-  const [categoriesResult, tagsResult, statusResult] = await Promise.allSettled([
+  const [categoriesResult, tagsResult, seriesResult, statusResult] = await Promise.allSettled([
     getCategoriesApi(),
     getTagsApi(),
+    getSeriesListApi(),
     getDictDataApi('article_status')
   ])
 
@@ -269,6 +277,12 @@ async function loadEditorOptions() {
     tags.value = unwrapResponseData<TagSummary[] | null>(tagsResult.value) || []
   } else {
     showError('获取标签列表失败')
+  }
+
+  if (seriesResult.status === 'fulfilled') {
+    seriesList.value = unwrapResponseData<SeriesInfo[] | null>(seriesResult.value) || []
+  } else {
+    showError('获取系列列表失败')
   }
 
   if (statusResult.status === 'fulfilled') {
@@ -314,6 +328,7 @@ function normalizeArticleForm(data: ArticleFormInput) {
     id: source.id ?? articleForm.id,
     categoryId: source.categoryId ?? '',
     tagIds: normalizedTagIds,
+    seriesName: String(source.seriesName || ''),
     cover: String(source.cover || ''),
     contentMd: String(source.contentMd || ''),
     content: String(source.content || '')
@@ -377,7 +392,8 @@ async function submitArticle() {
 
   try {
     const api = articleForm.id ? updateArticleApi : createArticleApi
-    await api(articleForm)
+    // NSelect 清空后 seriesName 可能为 null，统一归一为空字符串
+    await api({ ...articleForm, seriesName: articleForm.seriesName || '' })
     showSuccess('保存成功')
     await router.push('/user/profile')
   } catch (error) {
@@ -530,6 +546,21 @@ function removeCover() {
                 tag
                 :options="tagOptions"
                 placeholder="请选择标签"
+              />
+            </NFormItem>
+          </div>
+
+          <div class="sidebar-section">
+            <h3 class="section-title">
+              <i class="fas fa-book-open"></i>
+              所属系列
+            </h3>
+            <NFormItem path="seriesName">
+              <NSelect
+                v-model:value="articleForm.seriesName"
+                clearable
+                :options="seriesOptions"
+                placeholder="请选择所属系列（可选）"
               />
             </NFormItem>
           </div>

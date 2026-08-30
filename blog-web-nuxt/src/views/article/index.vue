@@ -9,11 +9,12 @@ import {
   likeArticleApi,
   unlikeArticleApi
 } from '@/api/article'
+import { getSeriesArticlesApi } from '@/api/series'
 import ArticleShareCard from '@/components/ArticleShareCard/index.vue'
 import Comment from '@/components/Comment/index.vue'
 import ImagePreview from '@/components/Common/ImagePreview.vue'
 import { usePageSeo } from '@/composables/useSeo'
-import type { ArticleDetail } from '@/types/article'
+import type { ArticleDetail, ArticleSummary } from '@/types/article'
 import { message } from '@/utils/feedback'
 import { unwrapResponseData } from '@/utils/response'
 
@@ -39,6 +40,7 @@ const tocItems = ref<TocItem[]>([])
 const images = ref<string[]>([])
 const activeHeading = ref('')
 const readProgress = ref(0)
+const progressBarTop = ref('64px')
 const readTime = ref(1)
 const shareCardVisible = ref(false)
 const loading = ref(false)
@@ -141,6 +143,42 @@ const { data: articleData, pending: articlePending } = await useAsyncData(
   }
 )
 
+const { data: seriesArticlesData } = await useAsyncData(
+  () => `series-articles:${articleData.value?.seriesId || ''}`,
+  async () => {
+    const currentSeriesId = Number(articleData.value?.seriesId || 0)
+    if (!currentSeriesId) {
+      return [] as ArticleSummary[]
+    }
+
+    const response = await getSeriesArticlesApi(currentSeriesId).catch(() => null)
+    return unwrapResponseData<ArticleSummary[] | null>(response) || []
+  },
+  {
+    watch: [() => articleData.value?.seriesId]
+  }
+)
+
+const seriesArticles = computed(() => seriesArticlesData.value || [])
+const seriesIndex = computed(() => {
+  if (!seriesArticles.value.length) {
+    return -1
+  }
+  return seriesArticles.value.findIndex((item) => String(item.id) === articleId.value)
+})
+const prevSeriesArticle = computed(() =>
+  seriesIndex.value > 0 ? seriesArticles.value[seriesIndex.value - 1] || null : null
+)
+const nextSeriesArticle = computed(() => {
+  if (seriesIndex.value < 0 || seriesIndex.value >= seriesArticles.value.length - 1) {
+    return null
+  }
+  return seriesArticles.value[seriesIndex.value + 1] || null
+})
+const showSeriesCard = computed(() =>
+  Boolean(article.value?.seriesId && seriesArticles.value.length > 0)
+)
+
 /**
  * 估算文章阅读时长。
  */
@@ -190,6 +228,7 @@ async function refreshArticleEnhancements() {
     initImagePreview()
     updateActionBarPosition()
     restoreRequestedHeading()
+    restoreReadingPosition()
     updateActiveHeading()
   }, 80)
 }
@@ -458,7 +497,7 @@ function handleScroll() {
 /**
  * 滚动到指定标题。
  */
-function scrollToHeading(id: string) {
+function scrollToHeading(id: string, behavior: ScrollBehavior = 'smooth') {
   if (!import.meta.client) {
     return
   }
@@ -472,8 +511,52 @@ function scrollToHeading(id: string) {
   const headerHeight = header?.offsetHeight || 0
   window.scrollTo({
     top: Math.max(element.offsetTop - headerHeight - 20, 0),
-    behavior: 'smooth'
+    behavior
   })
+}
+
+/**
+ * 保存当前阅读到的标题位置（localStorage，key 含文章 id）。
+ */
+function persistReadingPosition(headingId: string) {
+  if (!import.meta.client || !articleId.value || !headingId) {
+    return
+  }
+
+  try {
+    window.localStorage.setItem(
+      `article-read-pos:${articleId.value}`,
+      JSON.stringify({ headingId, savedAt: Date.now() })
+    )
+  } catch {
+    // 隐私模式等场景 localStorage 可能不可用，忽略即可
+  }
+}
+
+/**
+ * 恢复上次阅读位置（仅在路由未指定锚点/章节时）。
+ */
+function restoreReadingPosition() {
+  if (!import.meta.client || getRequestedHeadingId() || route.hash) {
+    return
+  }
+
+  let saved: { headingId?: string; savedAt?: number } | null = null
+  try {
+    const raw = window.localStorage.getItem(`article-read-pos:${articleId.value}`)
+    saved = raw ? (JSON.parse(raw) as { headingId?: string; savedAt?: number }) : null
+  } catch {
+    return
+  }
+
+  const headingId = String(saved?.headingId || '')
+  if (!headingId || !tocItems.value.some((item) => item.id === headingId)) {
+    return
+  }
+
+  scrollToHeading(headingId, 'instant')
+  activeHeading.value = headingId
+  message.success('已定位到上次阅读位置')
 }
 
 /**
@@ -497,6 +580,10 @@ function updateActiveHeading() {
       activeHeading.value = heading.id
       break
     }
+  }
+
+  if (activeHeading.value) {
+    persistReadingPosition(activeHeading.value)
   }
 }
 
@@ -726,21 +813,35 @@ watch(
   }
 )
 
+/**
+ * 同步移动端阅读进度条距顶距离（跟随固定 header 实际高度）。
+ */
+function syncHeaderHeight() {
+  if (!import.meta.client) {
+    return
+  }
+  const header = document.querySelector('.site-header') as HTMLElement | null
+  progressBarTop.value = `${header?.offsetHeight || 64}px`
+}
+
 onMounted(() => {
   if (!siteStore.loaded) {
     void siteStore.fetchWebsiteInfo().catch(() => null)
   }
   syncTheme()
+  syncHeaderHeight()
   void refreshArticleEnhancements()
   window.addEventListener('theme-change', syncTheme)
   window.addEventListener('scroll', queueActiveHeadingUpdate, { passive: true })
   window.addEventListener('resize', updateActionBarPosition)
+  window.addEventListener('resize', syncHeaderHeight)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('theme-change', syncTheme)
   window.removeEventListener('scroll', queueActiveHeadingUpdate)
   window.removeEventListener('resize', updateActionBarPosition)
+  window.removeEventListener('resize', syncHeaderHeight)
   cleanupArticleEffects()
 })
 </script>
@@ -748,6 +849,13 @@ onBeforeUnmount(() => {
 <template>
   <div v-loading="loading" class="article-page">
     <template v-if="article">
+      <ClientOnly>
+        <div
+          class="mobile-read-progress"
+          :style="{ top: progressBarTop, width: `${readProgress}%` }"
+        ></div>
+      </ClientOnly>
+
       <ClientOnly>
         <div class="floating-action-bar" :style="{ left: actionBarLeft }">
           <NTooltip placement="top-start">
@@ -943,6 +1051,47 @@ onBeforeUnmount(() => {
         </main>
 
         <aside v-if="showSidebar" class="article-sidebar desktop-only">
+          <div v-if="showSeriesCard" class="series-card">
+            <div class="series-card-header">
+              <i class="fas fa-book-open"></i>
+              <span>所属系列</span>
+              <NuxtLink :to="`/series/${article.seriesId}`" class="series-name">
+                {{ article.seriesName || '查看系列' }}
+              </NuxtLink>
+            </div>
+            <div class="series-card-body">
+              <span v-if="seriesIndex >= 0" class="series-progress">
+                <i class="fas fa-list-ol"></i>
+                第 {{ seriesIndex + 1 }} / {{ seriesArticles.length }} 篇
+              </span>
+              <div class="series-nav">
+                <NuxtLink
+                  v-if="prevSeriesArticle"
+                  :to="`/post/${prevSeriesArticle.id}`"
+                  class="series-nav-link"
+                >
+                  <i class="fas fa-chevron-left"></i>
+                  <span class="series-nav-title">{{ prevSeriesArticle.title }}</span>
+                </NuxtLink>
+                <span v-else class="series-nav-link disabled">
+                  <i class="fas fa-chevron-left"></i>
+                  <span class="series-nav-title">已是第一篇</span>
+                </span>
+                <NuxtLink
+                  v-if="nextSeriesArticle"
+                  :to="`/post/${nextSeriesArticle.id}`"
+                  class="series-nav-link"
+                >
+                  <span class="series-nav-title">{{ nextSeriesArticle.title }}</span>
+                  <i class="fas fa-chevron-right"></i>
+                </NuxtLink>
+                <span v-else class="series-nav-link disabled">
+                  <span class="series-nav-title">已是最后一篇</span>
+                  <i class="fas fa-chevron-right"></i>
+                </span>
+              </div>
+            </div>
+          </div>
           <div class="toc-container">
             <div class="toc-header">
               <div class="title-wrapper">
@@ -1771,6 +1920,125 @@ onBeforeUnmount(() => {
 }
 
 .article-sidebar {
+  .series-card {
+    background: var(--card-bg);
+    border-radius: $border-radius-lg;
+    box-shadow: var(--shadow-card);
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    margin-bottom: $spacing-md;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    .series-card-header {
+      padding: $spacing-md $spacing-lg;
+      background: var(--hover-bg);
+      color: var(--text-secondary);
+      font-size: 0.9em;
+      display: flex;
+      align-items: center;
+      gap: $spacing-sm;
+      border-bottom: 1px solid var(--border-color);
+
+      > i {
+        color: $primary;
+        font-size: 1.1em;
+      }
+
+      .series-name {
+        margin-left: auto;
+        color: $primary;
+        font-weight: 600;
+        text-decoration: none;
+        max-width: 55%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        transition: opacity 0.3s ease;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+    }
+
+    .series-card-body {
+      padding: $spacing-md $spacing-lg;
+      display: flex;
+      flex-direction: column;
+      gap: $spacing-sm;
+    }
+
+    .series-progress {
+      align-self: flex-start;
+      display: inline-flex;
+      align-items: center;
+      gap: $spacing-xs;
+      padding: 4px 8px;
+      background: rgba($primary, 0.05);
+      border-radius: $border-radius-lg;
+      font-size: 0.85em;
+      color: var(--text-secondary);
+
+      i {
+        color: $primary;
+        font-size: 0.9em;
+      }
+    }
+
+    .series-nav {
+      display: flex;
+      flex-direction: column;
+      gap: $spacing-xs;
+    }
+
+    .series-nav-link {
+      display: flex;
+      align-items: center;
+      gap: $spacing-sm;
+      padding: $spacing-xs $spacing-sm;
+      border-radius: $border-radius-sm;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.85em;
+      line-height: 1.4;
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      i {
+        color: $primary;
+        font-size: 0.8em;
+        flex-shrink: 0;
+      }
+
+      .series-nav-title {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      &:hover {
+        color: var(--text-primary);
+        background: linear-gradient(90deg, rgba($primary, 0.08), rgba($primary, 0.02));
+      }
+
+      &.disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+
+        i {
+          color: var(--text-secondary);
+        }
+
+        &:hover {
+          color: var(--text-secondary);
+          background: transparent;
+        }
+      }
+    }
+  }
+
   .toc-container {
     position: sticky;
     top: 90px;
@@ -2062,6 +2330,26 @@ onBeforeUnmount(() => {
 
   .article-title {
     font-size: 1.45em;
+  }
+}
+
+// 移动端顶部阅读进度条（桌面端进度显示在侧栏 TOC，不重复展示）
+.mobile-read-progress {
+  position: fixed;
+  left: 0;
+  top: 64px;
+  height: 3px;
+  z-index: 999;
+  background: linear-gradient(90deg, $primary, var(--accent-color));
+  border-radius: 0 2px 2px 0;
+  transition: width 0.1s linear;
+  pointer-events: none;
+  display: none;
+}
+
+@media (max-width: $breakpoint-md) {
+  .mobile-read-progress {
+    display: block;
   }
 }
 </style>

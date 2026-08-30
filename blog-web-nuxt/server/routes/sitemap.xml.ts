@@ -10,6 +10,7 @@ const STATIC_META: Record<string, { changefreq: string; priority: string }> = {
   '/': { changefreq: 'daily', priority: '1.0' },
   '/archive': { changefreq: 'daily', priority: '0.9' },
   '/categories': { changefreq: 'weekly', priority: '0.8' },
+  '/series': { changefreq: 'weekly', priority: '0.8' },
   '/tags': { changefreq: 'weekly', priority: '0.8' },
   '/moments': { changefreq: 'daily', priority: '0.8' },
   '/photos': { changefreq: 'weekly', priority: '0.8' },
@@ -20,6 +21,7 @@ const STATIC_META: Record<string, { changefreq: string; priority: string }> = {
 
 const ARTICLE_META = { changefreq: 'weekly', priority: '0.8' }
 const ALBUM_META = { changefreq: 'weekly', priority: '0.7' }
+const SERIES_META = { changefreq: 'weekly', priority: '0.7' }
 
 export default defineEventHandler(async (event) => {
   const runtimeConfig = useRuntimeConfig(event)
@@ -30,7 +32,13 @@ export default defineEventHandler(async (event) => {
 
   const entries = (await collectContentUrls(event)).map<SitemapEntry>((entry) => {
     const path = entry.loc.replace(siteUrl, '')
-    const meta = STATIC_META[path] || (path.startsWith('/post/') ? ARTICLE_META : ALBUM_META)
+    const meta =
+      STATIC_META[path] ||
+      (path.startsWith('/post/')
+        ? ARTICLE_META
+        : path.startsWith('/series/')
+          ? SERIES_META
+          : ALBUM_META)
     return { ...entry, ...meta }
   })
 

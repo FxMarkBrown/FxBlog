@@ -20,6 +20,16 @@ const emit = defineEmits<{
   pageChange: [page: number]
 }>()
 
+const router = useRouter()
+
+/**
+ * 跳转到系列详情页
+ * @param id 系列ID
+ */
+function goToSeries(id: number) {
+  router.push(`/series/${id}`)
+}
+
 /**
  * 处理图片异常
  * @param event 图片事件
@@ -91,6 +101,14 @@ function getTagNames(post: ArticleSummary): string[] {
           <p class="post-excerpt">{{ post.summary }}</p>
 
           <div class="post-tags">
+            <span
+              v-if="post.seriesName && post.seriesId"
+              class="series-pill"
+              @click.stop="goToSeries(post.seriesId)"
+            >
+              <i class="fas fa-book-open"></i>
+              {{ post.seriesName }}
+            </span>
             <span v-if="post.categoryName" class="tag-pill">
               <i class="fas fa-folder-open"></i>
               {{ post.categoryName }}
@@ -287,6 +305,30 @@ function getTagNames(post: ArticleSummary): string[] {
   &:hover {
     background: var(--accent-color);
     color: #fff;
+  }
+}
+
+// 主色调系列徽章：与灰底 tag-pill 区分（参考 stick-tag 的主色用法）
+.series-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-base;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.85em;
+  color: #fff;
+  background: linear-gradient(135deg, $primary, color.adjust($primary, $lightness: -10%));
+  box-shadow: 0 2px 8px rgba($primary, 0.3);
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  i {
+    font-size: 0.9em;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba($primary, 0.45);
   }
 }
 

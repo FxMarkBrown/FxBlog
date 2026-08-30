@@ -34,12 +34,21 @@ export interface ArticleSummary {
   cover?: string
   createTime?: string
   categoryName?: string
+  seriesId?: number
+  seriesName?: string
   avatar?: string
   nickname?: string
   quantity?: number
   contentMd?: string
   isStick?: boolean
   [key: string]: unknown
+}
+
+export interface SeriesInfo {
+  id: number
+  name: string
+  description: string | null
+  articleCount: number
 }
 
 export interface ArticleCategoryInfo {

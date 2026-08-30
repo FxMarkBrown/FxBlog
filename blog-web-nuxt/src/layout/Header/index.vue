@@ -52,6 +52,7 @@ const menuItems: MenuEntry[] = [
     children: [
       { name: '归档', path: '/archive', icon: 'fas fa-clock', colorClass: 'clock-link' },
       { name: '分类', path: '/categories', icon: 'fas fa-folder', colorClass: 'category-link' },
+      { name: '系列', path: '/series', icon: 'fas fa-book-open', colorClass: 'series-link' },
       { name: '标签', path: '/tags', icon: 'fas fa-tags', colorClass: 'tag-link' }
     ]
   },
@@ -631,6 +632,9 @@ onBeforeUnmount(() => {
     }
     &.category-link i {
       color: #ff9800;
+    }
+    &.series-link i {
+      color: #8bc34a;
     }
     &.tag-link i {
       color: #e91e63;

@@ -137,19 +137,110 @@ function normalizeMarkdownUrl(url: string | null | undefined) {
 
 /**
  * 上传编辑器插入的图片并回填链接。
+ * 先弹窗让用户重命名（微信/QQ 粘贴的图片名多为无意义 UUID），确认后再上传。
  */
-async function handleUploadImg(files: File[], callback: (urls: string[]) => void) {
-  const urls = await Promise.all(
-    files.map(async (file) => {
-      const formData = new FormData()
-      formData.append('file', file)
-      const response = await uploadFileApi(formData, props.uploadType)
-      return normalizeMarkdownUrl(unwrapResponseData<UploadedFileDetail | null>(response)?.url)
-    })
-  )
-
-  callback(urls.filter(Boolean))
+interface UploadRenameItem {
+  id: number
+  file: File
+  name: string
+  defaultName: string
+  ext: string
+  previewUrl: string
 }
+
+const uploadRenameDialogVisible = ref(false)
+const uploadRenaming = ref(false)
+const uploadRenameItems = ref<UploadRenameItem[]>([])
+let uploadRenameSeq = 0
+let pendingUploadCallback: ((urls: string[]) => void) | null = null
+
+// 无意义文件名（UUID、纯数字、image/截图等）不预填，引导用户起个可检索的名字
+const meaninglessNameRegex =
+  /^(?:[0-9a-f]{8,}(?:-[0-9a-f]+)*|\d+|img_?\d*|image_?\d*|picture_?\d*|screenshot[\w-]*|clipboard[\w-]*|屏幕截图[\w-]*|截图[\w-]*)$/i
+
+function sanitizeFileName(name: string) {
+  return name
+    .trim()
+    .replace(/[/\\:*?"<>|]/g, '')
+    .slice(0, 60)
+}
+
+async function handleUploadImg(files: File[], callback: (urls: string[]) => void) {
+  if (!files.length) {
+    callback([])
+    return
+  }
+
+  uploadRenameItems.value = files.map((file) => {
+    const dotIndex = file.name.lastIndexOf('.')
+    const base = dotIndex > 0 ? file.name.slice(0, dotIndex) : file.name
+    const ext = dotIndex > 0 ? file.name.slice(dotIndex).toLowerCase() : ''
+    return {
+      id: ++uploadRenameSeq,
+      file,
+      name: meaninglessNameRegex.test(base.trim()) ? '' : base,
+      defaultName: base || '图片',
+      ext,
+      previewUrl: URL.createObjectURL(file)
+    }
+  })
+  pendingUploadCallback = callback
+  uploadRenameDialogVisible.value = true
+}
+
+function releaseUploadRenamePreviews() {
+  uploadRenameItems.value.forEach((item) => URL.revokeObjectURL(item.previewUrl))
+}
+
+async function handleUploadRenameConfirm() {
+  if (uploadRenaming.value || !pendingUploadCallback) {
+    return
+  }
+
+  uploadRenaming.value = true
+  const callback = pendingUploadCallback
+  try {
+    const results = await Promise.allSettled(
+      uploadRenameItems.value.map(async (item) => {
+        const base = sanitizeFileName(item.name) || sanitizeFileName(item.defaultName) || '图片'
+        const renamed = new File([item.file], `${base}${item.ext}`, {
+          type: item.file.type,
+          lastModified: item.file.lastModified
+        })
+        return await uploadSingleFile(renamed)
+      })
+    )
+
+    const urls = results
+      .filter(
+        (result): result is PromiseFulfilledResult<string> =>
+          result.status === 'fulfilled' && Boolean(result.value)
+      )
+      .map((result) => result.value)
+    const failedCount = results.length - urls.length
+    if (failedCount > 0) {
+      message.warning(`${failedCount} 张图片上传失败`)
+    }
+    pendingUploadCallback = null
+    callback(urls)
+  } finally {
+    uploadRenaming.value = false
+    releaseUploadRenamePreviews()
+    uploadRenameItems.value = []
+    uploadRenameDialogVisible.value = false
+  }
+}
+
+// 对话框无论经何种途径关闭（取消/X/Esc/遮罩），都要回调空数组，否则编辑器会一直显示上传中
+watch(uploadRenameDialogVisible, (visible) => {
+  if (!visible && pendingUploadCallback) {
+    const callback = pendingUploadCallback
+    pendingUploadCallback = null
+    releaseUploadRenamePreviews()
+    uploadRenameItems.value = []
+    callback([])
+  }
+})
 
 /**
  * 缓存当前 Markdown 渲染后的 HTML 内容。
@@ -572,6 +663,43 @@ defineExpose({
         </div>
       </template>
     </NModal>
+
+    <NModal
+      v-model:show="uploadRenameDialogVisible"
+      preset="card"
+      title="上传前重命名"
+      style="width: min(92vw, 520px)"
+      :mask-closable="false"
+    >
+      <div class="upload-rename-list">
+        <div v-for="item in uploadRenameItems" :key="item.id" class="upload-rename-item">
+          <img v-if="item.previewUrl" :src="item.previewUrl" class="upload-rename-thumb" alt="" />
+          <span v-else class="upload-rename-thumb upload-rename-thumb--file">
+            {{ item.ext || 'FILE' }}
+          </span>
+          <NInput
+            v-model:value="item.name"
+            :placeholder="`可留空，默认 ${item.defaultName}`"
+            maxlength="60"
+            clearable
+          >
+            <template #suffix>{{ item.ext }}</template>
+          </NInput>
+        </div>
+      </div>
+      <div class="upload-rename-tip">
+        微信 / QQ 粘贴的图片多为无意义 UUID 文件名，改个名字方便日后在文件管理中检索。
+      </div>
+
+      <template #footer>
+        <div class="video-dialog-footer">
+          <NButton @click="uploadRenameDialogVisible = false">取 消</NButton>
+          <NButton type="primary" :loading="uploadRenaming" @click="handleUploadRenameConfirm">
+            上 传
+          </NButton>
+        </div>
+      </template>
+    </NModal>
   </div>
 </template>
 
@@ -631,6 +759,44 @@ defineExpose({
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.upload-rename-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.upload-rename-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.upload-rename-thumb {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid var(--border-color);
+}
+
+.upload-rename-thumb--file {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.upload-rename-tip {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 
 .markdown-fallback {
