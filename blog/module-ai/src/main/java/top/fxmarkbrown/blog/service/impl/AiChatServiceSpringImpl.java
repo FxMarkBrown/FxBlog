@@ -5,7 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
-import org.springframework.ai.chat.client.advisor.ToolCallAdvisor;
+import org.springframework.ai.chat.client.advisor.ToolCallingAdvisor;
 import org.springframework.ai.chat.client.advisor.api.BaseAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -16,6 +16,7 @@ import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.model.tool.ToolCallingManager;
 import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
@@ -74,6 +75,8 @@ public class AiChatServiceSpringImpl implements AiChatService {
             如果检索片段提供了“可用站内跳转”，只有这些链接可以被当作相关文章引用输出，必须保持原始 Markdown 链接格式。
             如果检索片段提供了“可用媒体资源”或“可用分类标签跳转”，只有这些链接可以被当作资源或聚合页引用输出，必须保持原始 Markdown 链接格式。
             """;
+
+    private static final String DEFAULT_CONVERSATION_ID = "default";
 
     private final AiProperties aiProperties;
     private final AiRagProperties aiRagProperties;
@@ -208,36 +211,39 @@ public class AiChatServiceSpringImpl implements AiChatService {
                                              String latestUserQuestion,
                                              boolean stream) {
         AiToolBundle toolBundle = aiArticleToolService.buildToolBundle(conversation, citations);
+        String conversationId = resolveConversationId(conversation);
         ChatClient.ChatClientRequestSpec requestSpec = chatClient.prompt()
                 .advisors(buildChatMemoryAdvisor(conversation, historyMessages))
+                .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, conversationId))
                 .advisors(buildToolCallAdvisor())
                 .system(buildSystemPrompt(conversation, citations))
                 .user(latestUserQuestion)
-                .toolCallbacks(toolBundle.toolCallbacks())
+                .tools(ToolCallbackProvider.from(toolBundle.toolCallbacks()))
                 .toolContext(toolBundle.toolContext())
                 .options(OpenAiChatOptions.builder()
-                        .streamUsage(stream)
-                        .build());
+                        .streamUsage(stream));
         return new AiChatInvocation(requestSpec, toolBundle.toolCalls());
     }
 
-    private MessageChatMemoryAdvisor buildChatMemoryAdvisor(SysAiConversation conversation, List<SysAiMessage> historyMessages) {
-        String conversationId = conversation == null || conversation.getId() == null
-                ? ChatMemory.DEFAULT_CONVERSATION_ID
+    private String resolveConversationId(SysAiConversation conversation) {
+        return conversation == null || conversation.getId() == null
+                ? DEFAULT_CONVERSATION_ID
                 : String.valueOf(conversation.getId());
+    }
+
+    private MessageChatMemoryAdvisor buildChatMemoryAdvisor(SysAiConversation conversation, List<SysAiMessage> historyMessages) {
+        String conversationId = resolveConversationId(conversation);
         ChatMemory chatMemory = buildChatMemory(conversationId, historyMessages);
         return MessageChatMemoryAdvisor.builder(chatMemory)
                 .order(BaseAdvisor.HIGHEST_PRECEDENCE + 200)
-                .conversationId(conversationId)
                 .build();
     }
 
-    private ToolCallAdvisor buildToolCallAdvisor() {
-        return ToolCallAdvisor.builder()
+    private ToolCallingAdvisor buildToolCallAdvisor() {
+        return ToolCallingAdvisor.builder()
                 .advisorOrder(BaseAdvisor.HIGHEST_PRECEDENCE + 300)
                 .toolCallingManager(toolCallingManager)
                 .disableInternalConversationHistory()
-                .streamToolCallResponses(true)
                 .build();
     }
 

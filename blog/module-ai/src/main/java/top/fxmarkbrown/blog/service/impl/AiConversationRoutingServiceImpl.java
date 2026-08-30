@@ -60,8 +60,7 @@ public class AiConversationRoutingServiceImpl implements AiConversationRoutingSe
                     .user(buildRouterUserPrompt(conversation, latestUserQuestion))
                     .options(OpenAiChatOptions.builder()
                             .model(resolvedChatModel.modelName())
-                            .temperature(0D)
-                            .build())
+                            .temperature(0D))
                     .call()
                     .entity(AiConversationRouteDecision.class);
             return normalizeDecision(conversation, decision);

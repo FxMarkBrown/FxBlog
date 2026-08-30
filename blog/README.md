@@ -1,8 +1,8 @@
 # 博客后端
 
 ![Java](https://img.shields.io/badge/Java-25-437291?logo=openjdk&logoColor=white)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.0--M2-6DB33F?logo=springboot&logoColor=white)
-![Spring AI](https://img.shields.io/badge/Spring%20AI-2.0.0--M3-6DB33F)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.1-6DB33F?logo=springboot&logoColor=white)
+![Spring AI](https://img.shields.io/badge/Spring%20AI-2.0.1-6DB33F)
 ![Qdrant](https://img.shields.io/badge/Qdrant-Vector%20DB-DC244C)
 ![Swagger](https://img.shields.io/badge/Swagger-OpenAPI%203-85EA2D?logo=swagger&logoColor=black)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-4169E1?logo=postgresql&logoColor=white)

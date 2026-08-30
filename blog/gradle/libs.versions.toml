@@ -1,7 +1,7 @@
 [versions]
-spring-boot = "4.1.0-M2"
+spring-boot = "4.1.1"
 mybatis-plus = "3.5.16"
-sa-token = "1.45.0"
+sa-token = "1.46.0"
 knife4j = "4.5.0"
 lombok = "1.18.44"
 ip2region = "2.7.0"
@@ -9,7 +9,6 @@ oshi = "6.6.5"
 user-agent = "1.21"
 jsoup = "1.18.3"
 grpc = "1.76.1"
-flexmark = "0.64.8"
 commons-io = "2.21.0"
 weixin-java = "4.7.0"
 justauth = "1.16.7"
@@ -17,7 +16,8 @@ x-file-storage = "2.3.0"
 qiniu = "7.18.0"
 aliyun-oss = "3.18.1"
 cos-api = "5.6.245"
-spring-ai = "2.0.0-M3"
+spring-ai = "2.0.1"
+openai-java = "4.49.0"
 
 [libraries]
 spring-boot-bom = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "spring-boot" }
@@ -42,7 +42,6 @@ postgresql = { module = "org.postgresql:postgresql" }
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 grpc-bom = { module = "io.grpc:grpc-bom", version.ref = "grpc" }
 grpc = { module = "io.grpc:grpc-api", version.ref = "grpc" }
-flexmark = { module = "com.vladsch.flexmark:flexmark-all", version.ref = "flexmark" }
 commons-io = { module = "commons-io:commons-io", version.ref = "commons-io" }
 weixin-java-mp = { module = "com.github.binarywang:weixin-java-mp", version.ref = "weixin-java" }
 justauth = { module = "me.zhyd.oauth:JustAuth", version.ref = "justauth" }
@@ -54,6 +53,7 @@ spring-ai-bom = { module = "org.springframework.ai:spring-ai-bom", version.ref =
 spring-ai-openai = { module = "org.springframework.ai:spring-ai-openai", version.ref = "spring-ai" }
 spring-ai-qdrant = { module = "org.springframework.ai:spring-ai-qdrant-store", version.ref = "spring-ai" }
 spring-ai-chatclient = { module = "org.springframework.ai:spring-ai-client-chat", version.ref = "spring-ai" }
+openai-java-client-okhttp = { module = "com.openai:openai-java-client-okhttp", version.ref = "openai-java" }
 
 [plugins]
 spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }

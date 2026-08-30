@@ -281,8 +281,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
                 .options(OpenAiChatOptions.builder()
                         .model(preparation.resolvedChatModel().modelName())
                         .temperature(Math.min(preparation.resolvedChatModel().temperature(), 0.35D))
-                        .streamUsage(true)
-                        .build())
+                        .streamUsage(true))
                 .stream()
                 .chatResponse()
                 .subscribe(
@@ -1221,7 +1220,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
     private int resolveDescendantDepth(AiDocumentNodeAskDto askDto, String queryMode) {
         Integer specifiedDepth = askDto == null ? null : askDto.getDescendantDepth();
         if (specifiedDepth != null) {
-            return Math.max(0, Math.min(specifiedDepth, 4));
+            return Math.clamp(specifiedDepth, 0, 4);
         }
         return switch (queryMode) {
             case "summarize" -> 3;
@@ -1249,7 +1248,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
     private int resolveMaxRetrievedNodes(AiDocumentNodeAskDto askDto, String queryMode) {
         Integer specifiedCount = askDto == null ? null : askDto.getMaxRetrievedNodes();
         if (specifiedCount != null) {
-            return Math.max(0, Math.min(specifiedCount, 6));
+            return Math.clamp(specifiedCount, 0, 6);
         }
         return switch (queryMode) {
             case "compare" -> 3;
@@ -1322,7 +1321,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
             case "summarize" -> 2;
             default -> 1;
         };
-        return Math.min(Math.max(configuredDepth, 0), cap);
+        return Math.clamp(configuredDepth, 0, cap);
     }
 
     private int resolveSelectedDescendantSupportDepth(String queryMode, int configuredDepth, List<AiDocumentTreeNodeVo> selectedNodes) {
@@ -1333,7 +1332,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
             case "compare", "summarize" -> 1;
             default -> 0;
         };
-        return Math.min(Math.max(configuredDepth, 0), cap);
+        return Math.clamp(configuredDepth, 0, cap);
     }
 
     private List<ContextCandidate> collectRetrievedCandidates(AiDocumentTaskDetailVo detail,
@@ -2281,7 +2280,7 @@ public class AiDocumentTaskServiceImpl implements AiDocumentTaskService {
                 overlap += 1;
             }
         }
-        return overlap / (double) Math.max(1, Math.min(leftSet.size(), rightSet.size()));
+        return overlap / (double) Math.clamp(leftSet.size(), 1, rightSet.size());
     }
 
     private List<AiDocumentKnowledgeFlowEdgeVo> buildKnowledgeFlowEdges(AiDocumentTreeNodeVo currentNode,

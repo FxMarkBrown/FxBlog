@@ -1,5 +1,7 @@
 package top.fxmarkbrown.blog.config.ai;
 
+import com.openai.client.OpenAIClient;
+import com.openai.client.okhttp.OpenAIOkHttpClient;
 import io.qdrant.client.QdrantClient;
 import io.qdrant.client.QdrantGrpcClient;
 import org.springframework.ai.document.MetadataMode;
@@ -7,7 +9,6 @@ import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.model.tool.ToolCallingManager;
 import org.springframework.ai.openai.OpenAiEmbeddingModel;
 import org.springframework.ai.openai.OpenAiEmbeddingOptions;
-import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -32,7 +33,11 @@ public class AiModelConfiguration {
         OpenAiEmbeddingOptions options = OpenAiEmbeddingOptions.builder()
                 .model(embeddingConfig.getModel())
                 .build();
-        return new OpenAiEmbeddingModel(buildOpenAiApi(provider), MetadataMode.EMBED, options);
+        return OpenAiEmbeddingModel.builder()
+                .openAiClient(buildOpenAiClient(provider))
+                .metadataMode(MetadataMode.EMBED)
+                .options(options)
+                .build();
     }
 
     @Bean
@@ -51,12 +56,10 @@ public class AiModelConfiguration {
         return new QdrantClient(grpcBuilder.build());
     }
 
-    private OpenAiApi buildOpenAiApi(AiProperties.OpenAiCompatibleProvider provider) {
-        return OpenAiApi.builder()
+    private OpenAIClient buildOpenAiClient(AiProperties.OpenAiCompatibleProvider provider) {
+        return OpenAIOkHttpClient.builder()
                 .baseUrl(provider.getBaseUrl().trim())
                 .apiKey(provider.getApiKey().trim())
-                .restClientBuilder(org.springframework.web.client.RestClient.builder())
-                .webClientBuilder(org.springframework.web.reactive.function.client.WebClient.builder())
                 .build();
     }
 }

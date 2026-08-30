@@ -1,12 +1,12 @@
 package top.fxmarkbrown.blog.service.impl;
 
+import com.openai.client.OpenAIClient;
+import com.openai.client.okhttp.OpenAIOkHttpClient;
 import io.micrometer.observation.ObservationRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.model.tool.ToolCallingManager;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
-import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import top.fxmarkbrown.blog.config.ai.AiProperties;
@@ -27,7 +27,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AiChatModelServiceImpl implements AiChatModelService {
 
     private final AiProperties aiProperties;
-    private final ToolCallingManager toolCallingManager;
     private final Map<String, ChatClient> chatClientCache = new ConcurrentHashMap<>();
 
     @Override
@@ -105,20 +104,17 @@ public class AiChatModelServiceImpl implements AiChatModelService {
                 .temperature(resolvedChatModel.temperature())
                 .build();
         OpenAiChatModel chatModel = OpenAiChatModel.builder()
-                .openAiApi(buildOpenAiApi(provider))
-                .defaultOptions(options)
-                .toolCallingManager(toolCallingManager)
+                .openAiClient(buildOpenAiClient(provider))
+                .options(options)
                 .observationRegistry(ObservationRegistry.NOOP)
                 .build();
         return ChatClient.builder(chatModel).build();
     }
 
-    private OpenAiApi buildOpenAiApi(AiProperties.OpenAiCompatibleProvider provider) {
-        return OpenAiApi.builder()
+    private OpenAIClient buildOpenAiClient(AiProperties.OpenAiCompatibleProvider provider) {
+        return OpenAIOkHttpClient.builder()
                 .baseUrl(provider.getBaseUrl().trim())
                 .apiKey(provider.getApiKey().trim())
-                .restClientBuilder(org.springframework.web.client.RestClient.builder())
-                .webClientBuilder(org.springframework.web.reactive.function.client.WebClient.builder())
                 .build();
     }
 

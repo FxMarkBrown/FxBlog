@@ -5,6 +5,7 @@ dependencies {
     implementation(platform(libs.spring.ai.bom))
     implementation(enforcedPlatform(libs.grpc.bom))
     implementation(libs.spring.ai.openai)
+    implementation(libs.openai.java.client.okhttp)
     implementation(libs.spring.ai.qdrant)
     implementation(libs.spring.ai.chatclient)
     implementation(libs.grpc)
