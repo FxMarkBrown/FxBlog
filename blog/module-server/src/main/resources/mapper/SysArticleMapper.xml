@@ -42,13 +42,13 @@
         <result property="originalUrl" column="original_Url"/>
         <result property="createTime" column="create_time"/>
         <result property="updateTime" column="update_time"/>
+        <result property="seriesId" column="series_id"/>
+        <result property="seriesName" column="seriesName"/>
         <!-- 一对一映射 -->
         <association property="category" javaType="top.fxmarkbrown.blog.entity.SysCategory">
             <id property="id" column="categoryId"/>
             <result property="name" column="categoryName"/>
         </association>
-        <result property="seriesId" column="series_id"/>
-        <result property="seriesName" column="seriesName"/>
         <collection property="tags" ofType="top.fxmarkbrown.blog.vo.tag.TagListVo" column="id" select="top.fxmarkbrown.blog.mapper.SysTagMapper.getTagByArticleId" />
     </resultMap>
 
